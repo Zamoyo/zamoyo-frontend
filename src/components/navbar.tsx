@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
   Search, ShoppingCart, User, MapPin, HelpCircle,
-  Store, ChevronDown, Flame, Menu, X, Heart, Package, LogOut,
+  Store, ChevronDown, Flame, Menu, X, Heart, Package, LogOut, Settings
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -149,7 +149,8 @@ function LoggedOutMenu({ onDevToggleAuth }: { onDevToggleAuth: () => void }) {
         Don&apos;t have an account? <Link href="/auth/register" className="font-bold text-[#FF6B00] hover:underline">Register</Link>
       </p>
       <Divider />
-      <Link href="/orders" className={DROPDOWN_LINK}><Package className="h-4 w-4 text-zinc-400" /> My Orders</Link>
+      {/* Routed directly to the new orders portal */}
+      <Link href="/account/orders" className={DROPDOWN_LINK}><Package className="h-4 w-4 text-zinc-400" /> My Orders</Link>
       <Link href="/help" className={DROPDOWN_LINK}><HelpCircle className="h-4 w-4 text-zinc-400" /> Help Center</Link>
       <DevAuthToggle label="Switch to Logged-In View" onToggle={onDevToggleAuth} />
     </>
@@ -164,9 +165,11 @@ function LoggedInMenu({ onDevToggleAuth }: { onDevToggleAuth: () => void }) {
         <p className="text-sm font-bold text-zinc-900 truncate">john.banda@example.com</p>
       </div>
       <Divider />
-      <Link href="/account" className={DROPDOWN_LINK}><User className="h-4 w-4 text-zinc-400" /> My Account</Link>
-      <Link href="/orders" className={DROPDOWN_LINK}><Package className="h-4 w-4 text-zinc-400" /> Orders</Link>
-      <Link href="/wishlist" className={DROPDOWN_LINK}><Heart className="h-4 w-4 text-zinc-400" /> Wishlist</Link>
+      {/* All links now successfully point to our new nested layout */}
+      <Link href="/account" className={DROPDOWN_LINK}><User className="h-4 w-4 text-zinc-400" /> Account Overview</Link>
+      <Link href="/account/orders" className={DROPDOWN_LINK}><Package className="h-4 w-4 text-zinc-400" /> My Orders</Link>
+      <Link href="/account/saved" className={DROPDOWN_LINK}><Heart className="h-4 w-4 text-zinc-400" /> Saved Items</Link>
+      <Link href="/account/settings" className={DROPDOWN_LINK}><Settings className="h-4 w-4 text-zinc-400" /> Settings</Link>
       <Divider />
       <button className="flex items-center gap-2 text-sm font-semibold text-red-600 hover:text-red-700 transition-colors px-3 py-2.5 rounded-xl hover:bg-red-50/50 text-left w-full">
         <LogOut className="h-4 w-4 text-red-500" /> Log Out
