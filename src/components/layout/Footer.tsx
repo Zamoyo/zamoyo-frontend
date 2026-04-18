@@ -1,11 +1,63 @@
+"use client";
+
 import Link from "next/link";
-import { Facebook, Twitter, Instagram, Send, CreditCard, Smartphone, ShieldCheck } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { Facebook, Instagram, Send, CreditCard, Smartphone, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
+// --- DATA ARRAYS ---
+const COMPANY_LINKS = [
+  { label: "About Zamoyo", href: "/about" },
+  { label: "Careers", href: "/careers" },
+  { label: "Become a Seller", href: "/sell" }, // Fixed route
+  { label: "Terms & Conditions", href: "/terms" },
+];
+
+const SUPPORT_LINKS = [
+  { label: "Help Center", href: "/help" },
+  { label: "Track Order", href: "/track-order" },
+  { label: "Returns Policy", href: "/returns" },
+  { label: "Privacy Policy", href: "/privacy" },
+];
+
+const CATEGORY_LINKS = [
+  { label: "Phones & Tablets", href: "/category/phones-and-tablets" },
+  { label: "Computing", href: "/category/computing" },
+  { label: "Fashion", href: "/category/fashion" },
+  { label: "Supermarket", href: "/category/supermarket" },
+];
+
+// --- MAIN EXPORT ---
 export function Footer() {
+  const pathname = usePathname();
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const hiddenRoutes = ["/auth", "/seller"];
+  if (hiddenRoutes.some((route) => pathname?.startsWith(route))) {
+    return null;
+  }
+
+  const handleSubscribe = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setEmail("");
+      toast.success("Welcome to the Zamoyo Insider list!");
+    }, 700);
+  };
+
   return (
-    <footer className="bg-zinc-950 text-zinc-300 pt-10 pb-6 border-t border-zinc-900 mt-10 md:mt-16">
+    <footer className="relative bg-zinc-900 text-zinc-300 pt-10 pb-6 border-t border-zinc-900">
+
       <div className="container mx-auto max-w-7xl px-4 md:px-6">
         
         {/* Main Footer Grid - Tightened gaps and margins */}
@@ -27,7 +79,8 @@ export function Footer() {
                 <Facebook className="h-4 w-4" />
               </Link>
               <Link href="#" className="h-8 w-8 rounded-full bg-zinc-900 flex items-center justify-center hover:bg-[#009E49] hover:text-white transition-colors">
-                <Twitter className="h-4 w-4" />
+                <X className="h-4 w-4" />
+                
               </Link>
               <Link href="#" className="h-8 w-8 rounded-full bg-zinc-900 flex items-center justify-center hover:bg-[#009E49] hover:text-white transition-colors">
                 <Instagram className="h-4 w-4" />
@@ -41,10 +94,24 @@ export function Footer() {
             <div className="space-y-3">
               <h4 className="text-white font-bold tracking-wide text-sm">Company</h4>
               <ul className="space-y-2 text-xs md:text-sm">
-                <li><Link href="/about" className="hover:text-[#FF6B00] transition-colors">About Zamoyo</Link></li>
-                <li><Link href="/careers" className="hover:text-[#FF6B00] transition-colors">Careers</Link></li>
-                <li><Link href="/seller" className="hover:text-[#FF6B00] transition-colors">Become a Seller</Link></li>
-                <li><Link href="/terms" className="hover:text-[#FF6B00] transition-colors">Terms & Conditions</Link></li>
+                {COMPANY_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="hover:text-[#FF6B00] transition-colors">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-zinc-100 font-bold tracking-wide text-[13px] uppercase">Support</h4>
+              <ul className="space-y-2.5 text-sm">
+                {SUPPORT_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="hover:text-white transition-colors">{link.label}</Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -52,10 +119,13 @@ export function Footer() {
             <div className="space-y-3">
               <h4 className="text-white font-bold tracking-wide text-sm">Categories</h4>
               <ul className="space-y-2 text-xs md:text-sm">
-                <li><Link href="/category/phones-and-tablets" className="hover:text-[#FF6B00] transition-colors">Phones & Tablets</Link></li>
-                <li><Link href="/category/computing" className="hover:text-[#FF6B00] transition-colors">Computing</Link></li>
-                <li><Link href="/category/fashion" className="hover:text-[#FF6B00] transition-colors">Fashion</Link></li>
-                <li><Link href="/category/supermarket" className="hover:text-[#FF6B00] transition-colors">Supermarket</Link></li>
+                {CATEGORY_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="hover:text-[#FF6B00] transition-colors">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -64,14 +134,16 @@ export function Footer() {
           <div className="space-y-3 lg:col-span-1">
             <h4 className="text-white font-bold tracking-wide text-sm">Stay in the Loop</h4>
             <p className="text-[11px] md:text-xs text-zinc-400">Exclusive deals straight to your inbox.</p>
-            <form className="flex flex-col gap-2" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex flex-col gap-2" onSubmit={handleSubscribe}>
               <div className="relative">
                 <Input 
                   type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter email" 
                   className="bg-zinc-900 border-zinc-800 text-white text-xs placeholder:text-zinc-500 h-10 pr-10 rounded-xl focus-visible:ring-[#FF6B00]"
                 />
-                <Button size="icon" className="absolute right-1 top-1 h-8 w-8 rounded-lg bg-[#FF6B00] hover:bg-[#e66000] text-white">
+                <Button type="submit" disabled={isSubmitting} size="icon" className="absolute right-1 top-1 h-8 w-8 rounded-lg bg-[#FF6B00] hover:bg-[#e66000] text-white">
                   <Send className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -91,7 +163,6 @@ export function Footer() {
               <ShieldCheck className="h-3.5 w-3.5 text-[#009E49]" /> 100% Secure
             </div>
             
-            {/* THE FIX: Span wrappers applied securely to Lucide icons */}
             <div className="flex items-center gap-2 text-zinc-500">
               <span title="Mobile Money (MTN, Airtel)">
                 <Smartphone className="h-4 w-4 md:h-5 md:w-5 hover:text-white transition-colors" />

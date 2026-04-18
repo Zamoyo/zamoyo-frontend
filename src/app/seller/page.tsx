@@ -1,0 +1,360 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import {
+  AlertCircle, ArrowUpRight, Box,  Clock3,
+  Package, Plus, ShoppingCart, TrendingUp, Wallet, Bell, Eye,
+} from "lucide-react";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+} from "recharts";
+import { Button } from "@/components/ui/button";
+
+// --- TYPES & DATA ---
+type RangeKey = "7d" | "30d" | "12m";
+type RevenuePoint = { label: string; revenue: number };
+type OrderStatusPoint = { name: string; value: number; color: string };
+type LowStockItem = { id: number; name: string; stock: number; threshold: number };
+type RecentOrder = { id: string; customer: string; total: number; status: "new" | "processing" | "shipped" | "delivered" };
+type ActivityItem = { id: number; text: string; time: string; tone: "info" | "warning" | "success" };
+
+const REVENUE_BY_RANGE: Record<RangeKey, RevenuePoint[]> = {
+  "7d": [
+    { label: "Mon", revenue: 4500 }, { label: "Tue", revenue: 5200 }, { label: "Wed", revenue: 3800 },
+    { label: "Thu", revenue: 6500 }, { label: "Fri", revenue: 8900 }, { label: "Sat", revenue: 12400 }, { label: "Sun", revenue: 10200 },
+  ],
+  "30d": [
+    { label: "W1", revenue: 28500 }, { label: "W2", revenue: 33200 }, { label: "W3", revenue: 30100 }, { label: "W4", revenue: 38900 },
+  ],
+  "12m": [
+    { label: "Jan", revenue: 92000 }, { label: "Feb", revenue: 104000 }, { label: "Mar", revenue: 98000 },
+    { label: "Apr", revenue: 112000 }, { label: "May", revenue: 125000 }, { label: "Jun", revenue: 119000 },
+  ],
+};
+
+const ORDER_STATUS_DATA: OrderStatusPoint[] = [
+  { name: "Processing", value: 12, color: "#F59E0B" },
+  { name: "Shipped", value: 24, color: "#3B82F6" },
+  { name: "Delivered", value: 45, color: "#009E49" },
+  { name: "Cancelled", value: 3, color: "#EF4444" },
+];
+
+const LOW_STOCK_ITEMS: LowStockItem[] = [
+  { id: 1, name: "Apple AirPods Pro (2nd Gen)", stock: 2, threshold: 5 },
+  { id: 2, name: "Samsung 45W Fast Charger", stock: 0, threshold: 10 },
+  { id: 3, name: "JBL Flip 6 Portable", stock: 4, threshold: 5 },
+];
+
+const RECENT_ORDERS: RecentOrder[] = [
+  { id: "ORD-9921", customer: "Chanda M.", total: 18500, status: "new" },
+  { id: "ORD-9920", customer: "Bupe K.", total: 450, status: "processing" },
+  { id: "ORD-9918", customer: "Emmanuel B.", total: 4200, status: "shipped" },
+  { id: "ORD-9910", customer: "David L.", total: 1450, status: "delivered" },
+];
+
+const RECENT_ACTIVITY: ActivityItem[] = [
+  { id: 1, text: "New order received from Chanda M.", time: "10 mins ago", tone: "info" },
+  { id: 2, text: "Samsung 45W Fast Charger is out of stock", time: "35 mins ago", tone: "warning" },
+  { id: 3, text: "Product listing approved by admin", time: "2 hours ago", tone: "success" },
+];
+
+// --- LOGIC HELPERS ---
+function formatCurrency(value: number) {
+  return `K${value.toLocaleString()}`;
+}
+
+function getTodayLabel() {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date());
+}
+
+function getStatusPillClass(status: RecentOrder["status"]) {
+  if (status === "new") return "bg-blue-50 text-blue-600 border-blue-200";
+  if (status === "processing") return "bg-amber-50 text-amber-700 border-amber-200";
+  if (status === "shipped") return "bg-purple-50 text-purple-700 border-purple-200";
+  return "bg-[#009E49]/10 text-[#009E49] border-[#009E49]/20";
+}
+
+function getActivityDotClass(tone: ActivityItem["tone"]) {
+  if (tone === "warning") return "bg-[#FF6B00]";
+  if (tone === "success") return "bg-[#009E49]";
+  return "bg-blue-500";
+}
+
+// --- EXTRACTED COMPONENTS ---
+function QuickActionCard({ href, icon: Icon, title, description }: { href: string; icon: any; title: string; description: string }) {
+  return (
+    <Link href={href} className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#009E49]/10 text-[#009E49]">
+        <Icon className="h-4 w-4" />
+      </div>
+      <p className="text-sm font-black text-zinc-900">{title}</p>
+      <p className="mt-1 text-xs font-medium text-zinc-500">{description}</p>
+    </Link>
+  );
+}
+
+// --- MAIN PAGE ---
+export default function SellerDashboard() {
+  const [range, setRange] = useState<RangeKey>("7d");
+  const revenueData = REVENUE_BY_RANGE[range];
+
+  const totalRevenue = useMemo(() => revenueData.reduce((sum, item) => sum + item.revenue, 0), [revenueData]);
+  const totalOrders = useMemo(() => ORDER_STATUS_DATA.reduce((sum, item) => sum + item.value, 0), []);
+  const rangeGrowthLabel = useMemo(() => {
+    if (range === "7d") return "+14.5% vs previous 7 days";
+    if (range === "30d") return "+9.2% vs previous 30 days";
+    return "+18.1% vs previous period";
+  }, [range]);
+
+  return (
+    <div className="mx-auto max-w-[1400px] animate-in space-y-4 fade-in slide-in-from-bottom-4 duration-500 min-w-0">
+      
+      {/* HEADER */}
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-zinc-900">Overview</h1>
+          <p className="mt-1 text-sm font-medium text-zinc-500">Track sales, orders, stock, and seller activity from one place.</p>
+        </div>
+        <div className="rounded-xl bg-zinc-100 px-3 py-1.5 text-xs font-bold text-zinc-600 self-start md:self-auto">
+          Today: {getTodayLabel()}
+        </div>
+      </div>
+
+      {/* KPI HERO CARDS */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        
+        {/* Total Revenue (Zamoyo Gradient v4) */}
+        <div className="relative overflow-hidden rounded-3xl border border-[#008f42] bg-linear-to-br from-[#009E49] to-[#007a38] p-4 text-white shadow-[0_8px_20px_rgba(0,158,73,0.2)] md:p-5">
+          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+              <TrendingUp className="h-4 w-4 text-white" />
+            </div>
+            <span className="flex items-center rounded-md bg-white/20 px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
+              <ArrowUpRight className="mr-0.5 h-3 w-3" /> +14.5%
+            </span>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-wider text-[#99e6bc]">Total Revenue</p>
+          <h3 className="mt-0.5 text-xl font-black md:text-2xl">{formatCurrency(totalRevenue)}</h3>
+          <p className="mt-1 text-[10px] md:text-[11px] font-semibold text-white/80">{rangeGrowthLabel}</p>
+        </div>
+
+        <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <ShoppingCart className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">Pending Orders</p>
+          <h3 className="mt-0.5 text-xl font-black text-zinc-900 md:text-2xl">12</h3>
+        </div>
+
+        <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600">
+              <Package className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">Active Products</p>
+          <h3 className="mt-0.5 text-xl font-black text-zinc-900 md:text-2xl">84</h3>
+        </div>
+
+        <div className="rounded-3xl border border-red-100 bg-red-50/50 p-4 shadow-sm md:p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-100 text-red-600">
+              <AlertCircle className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-wider text-red-500">Low Stock</p>
+          <h3 className="mt-0.5 text-xl font-black text-red-700 md:text-2xl">3 Items</h3>
+        </div>
+      </div>
+
+      {/* QUICK ACTIONS */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <QuickActionCard href="/seller/products/new" icon={Plus} title="Add Product" description="Create a new listing fast." />
+        <QuickActionCard href="/seller/orders" icon={ShoppingCart} title="View Orders" description="Manage pending and active orders." />
+        <QuickActionCard href="/seller/inventory" icon={Box} title="Manage Inventory" description="Update stock and alerts." />
+      </div>
+
+      {/* CHARTS ROW */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
+        
+        {/* Revenue Graph (Mobile Safe via min-w-0) */}
+        <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5 flex flex-col min-w-0">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-black text-zinc-900">Revenue Overview</h2>
+              <p className="mt-1 text-xs font-medium text-zinc-500">{formatCurrency(totalRevenue)} in the selected period</p>
+            </div>
+            
+            {/* Mobile Native Dropdown equivalent for DateRange */}
+            <select
+              value={range}
+              onChange={(e) => setRange(e.target.value as RangeKey)}
+              className="h-10 rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-xs font-bold text-zinc-700 outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] w-full sm:w-auto appearance-none cursor-pointer"
+            >
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+              <option value="12m">Last 12 Months</option>
+            </select>
+          </div>
+
+          <div className="flex-1 min-h-55 w-full min-w-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#009E49" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#009E49" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#e4e4e7" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#a1a1aa", fontWeight: 600 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#a1a1aa", fontWeight: 600 }} tickFormatter={(value) => `${value / 1000}k`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid #e4e4e7", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", fontWeight: "bold" }}
+                  itemStyle={{ color: "#009E49" }}
+                  formatter={(value) => [formatCurrency(Number(value)), "Revenue"]}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#009E49" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Order Status & Restock */}
+        <div className="grid grid-cols-1 gap-4">
+          <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-black text-zinc-900">Order Status</h2>
+                <p className="mt-1 text-xs font-medium text-zinc-500">{totalOrders} total orders</p>
+              </div>
+              <Link href="/seller/orders" className="text-[11px] font-bold text-[#009E49] hover:underline">View Orders</Link>
+            </div>
+
+            <div className="relative h-[150px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={ORDER_STATUS_DATA} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={3} dataKey="value" stroke="none">
+                    {ORDER_STATUS_DATA.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} itemStyle={{ fontWeight: "bold", fontSize: "12px" }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-black text-zinc-900">{totalOrders}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Orders</span>
+              </div>
+            </div>
+
+            <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
+              {ORDER_STATUS_DATA.map((status) => (
+                <div key={status.name} className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: status.color }} />
+                  <span className="text-[10px] font-bold text-zinc-500">{status.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-1.5 text-base font-black text-zinc-900"><Box className="h-4 w-4 text-red-500" /> Needs Restock</h2>
+              <Link href="/seller/inventory" className="text-[11px] font-bold text-[#009E49] hover:underline">Inventory</Link>
+            </div>
+            <div className="space-y-2">
+              {LOW_STOCK_ITEMS.map((item) => (
+                <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 p-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-zinc-900">{item.name}</p>
+                    <p className="mt-1 text-[10px] font-medium text-zinc-500">Threshold: {item.threshold}</p>
+                  </div>
+                  <div className={`flex h-7 items-center justify-center rounded-lg px-2.5 text-[10px] font-black ${item.stock === 0 ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
+                    {item.stock} Left
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM ROW */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr]">
+        
+        {/* Recent Orders */}
+        <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5 min-w-0">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-base font-black text-zinc-900">Recent Orders</h2>
+            <Link href="/seller/orders" className="text-[11px] font-bold text-[#009E49] hover:underline">View All</Link>
+          </div>
+          <div className="space-y-2">
+            {RECENT_ORDERS.map((order) => (
+              <div key={order.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-zinc-900">{order.id}</p>
+                  <p className="truncate text-xs font-medium text-zinc-500">{order.customer}</p>
+                </div>
+                <span className={`rounded-lg border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${getStatusPillClass(order.status)}`}>
+                  {order.status}
+                </span>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-black text-zinc-900">{formatCurrency(order.total)}</p>
+                  <Link href={`/seller/orders/${order.id}`}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Activity & Payouts */}
+        <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-1.5 text-base font-black text-zinc-900"><Bell className="h-4 w-4 text-[#009E49]" /> Recent Activity</h2>
+            <Link href="/seller/notifications" className="text-[11px] font-bold text-[#009E49] hover:underline">See All</Link>
+          </div>
+          
+          <div className="space-y-3">
+            {RECENT_ACTIVITY.map((item) => (
+              <div key={item.id} className="flex items-start gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
+                <div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getActivityDotClass(item.tone)}`} />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-zinc-800">{item.text}</p>
+                  <div className="mt-1 flex items-center text-[10px] font-medium text-zinc-500">
+                    <Clock3 className="mr-1 h-3 w-3" /> {item.time}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-[#009E49]/20 bg-[#009E49]/5 p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-[#009E49]" />
+              <p className="text-xs font-black text-zinc-900">Payout Snapshot</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-white p-3 border border-zinc-100 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Available</p>
+                <p className="mt-1 text-sm font-black text-zinc-900">K8,450</p>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-zinc-100 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pending</p>
+                <p className="mt-1 text-sm font-black text-zinc-900">K2,300</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

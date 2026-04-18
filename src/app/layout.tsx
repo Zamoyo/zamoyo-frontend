@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { QueryProvider } from "@/components/query-provider";
-import { Navbar } from "@/components/navbar";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -33,7 +33,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <QueryProvider>
-          <Navbar />
+          {/* THE TOASTER IS NOW GLOBAL */}
+          <Toaster position="top-center" richColors />
           {children}
         </QueryProvider>
       </body>

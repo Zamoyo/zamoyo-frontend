@@ -20,7 +20,6 @@ import { Badge } from "@/components/ui/badge";
 import { FlashSales } from "@/components/home/FlashSales";
 import { TrendingProducts } from "@/components/home/TrendingProducts";
 import { TrustBanner } from "@/components/home/TrustBanner";
-import { Footer } from "@/components/home/Footer";
 
 // --- MOCK DATA ---
 const CATEGORIES = [
@@ -189,9 +188,6 @@ export default function HomePage() {
 
       {/* --- TRUST & SECURITY BANNER --- */}
       <TrustBanner />
-
-      {/* --- ENTERPRISE FOOTER --- */}
-      <Footer />
 
     </main>
   );
