@@ -1,72 +1,91 @@
 "use client";
 
-import { Truck, ShieldCheck, Headphones, CreditCard } from "lucide-react";
+import {
+  CreditCard,
+  Headphones,
+  ShieldCheck,
+  Truck,
+} from "lucide-react";
 
-// --- DATA ---
-const TRUST_ITEMS = [
+type TrustItem = {
+  id: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle: string;
+  colorClass: string;
+  bgClass: string;
+};
+
+const TRUST_ITEMS: TrustItem[] = [
   {
+    id: "fast-delivery",
     icon: Truck,
     title: "Fast Delivery",
     subtitle: "Across Lusaka within 24 hours",
-    color: "text-[#FF6B00]",
-    bg: "bg-[#FF6B00]/10",
+    colorClass: "text-[#FF6B00]",
+    bgClass: "bg-[#FF6B00]/10",
   },
   {
+    id: "secure-payments",
     icon: ShieldCheck,
     title: "Secure Payments",
     subtitle: "100% protected transactions",
-    color: "text-[#009E49]",
-    bg: "bg-[#009E49]/10",
+    colorClass: "text-[#009E49]",
+    bgClass: "bg-[#009E49]/10",
   },
   {
+    id: "flexible-options",
     icon: CreditCard,
     title: "Flexible Options",
     subtitle: "Mobile Money & Cards accepted",
-    color: "text-blue-600",
-    bg: "bg-blue-500/10",
+    colorClass: "text-blue-600",
+    bgClass: "bg-blue-500/10",
   },
   {
+    id: "local-support",
     icon: Headphones,
     title: "24/7 Local Support",
     subtitle: "Dedicated customer service",
-    color: "text-purple-600",
-    bg: "bg-purple-500/10",
+    colorClass: "text-purple-600",
+    bgClass: "bg-purple-500/10",
   },
 ];
 
+function TrustBannerCard({ item }: { item: TrustItem }) {
+  const Icon = item.icon;
+
+  return (
+    <div className="group flex cursor-default flex-col items-start gap-3 p-2 md:flex-row md:items-center md:gap-4 transition-all duration-300 hover:bg-white/60">
+      <div
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:-translate-y-1 group-hover:scale-110 group-hover:shadow-md md:h-12 md:w-12 ${item.bgClass} ${item.colorClass}`}
+      >
+        <Icon className="h-5 w-5 md:h-6 md:w-6" />
+      </div>
+
+      <div>
+        <h4 className="text-sm font-bold leading-tight text-zinc-900 md:text-base">
+          {item.title}
+        </h4>
+        <p className="mt-0.5 text-[10px] font-medium text-zinc-500 md:text-xs">
+          {item.subtitle}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function TrustBanner() {
   return (
-    <section className="container mx-auto max-w-7xl px-4 md:px-6 pt-6 md:pt-10 pb-4">
-      {/* Optimized Glass Container */}
-      <div className="relative w-full rounded-2xl md:rounded-3xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_30px_rgba(15,23,42,0.04)] backdrop-blur-2xl overflow-hidden p-5 md:p-8">
-        
-        {/* Decorative background blurs to match the Navbar aesthetic */}
+    <section className="container mx-auto max-w-7xl px-4 pb-4 pt-6 md:px-6 md:pt-10">
+      <div className="relative w-full overflow-hidden rounded-2xl border border-white/60 bg-white/55 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_30px_rgba(15,23,42,0.04)] backdrop-blur-2xl md:rounded-3xl md:p-8">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-10 top-0 h-full w-40 bg-emerald-200/20 blur-3xl"></div>
-          <div className="absolute right-0 bottom-0 h-full w-40 bg-orange-200/20 blur-3xl"></div>
+          <div className="absolute -left-10 top-0 h-full w-40 bg-emerald-200/20 blur-3xl" />
+          <div className="absolute bottom-0 right-0 h-full w-40 bg-orange-200/20 blur-3xl" />
         </div>
 
-        {/* Responsive Grid: 2x2 on mobile, 1x4 on desktop */}
-        <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-          {TRUST_ITEMS.map((item, index) => (
-            <div key={index} className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 p-2 group cursor-default">
-              
-              {/* Icon Box */}
-              <div className={`flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl ${item.bg} ${item.color} transition-transform duration-300 group-hover:scale-110`}>
-                <item.icon className="h-5 w-5 md:h-6 md:w-6" />
-              </div>
-              
-              {/* Text Content */}
-              <div>
-                <h4 className="text-sm md:text-base font-bold text-zinc-900 leading-tight">
-                  {item.title}
-                </h4>
-                <p className="text-[10px] md:text-xs font-medium text-zinc-500 mt-0.5">
-                  {item.subtitle}
-                </p>
-              </div>
-
-            </div>
+        <div className="relative z-10 grid grid-cols-2 gap-4 md:gap-8 lg:grid-cols-4">
+          {TRUST_ITEMS.map((item) => (
+            <TrustBannerCard key={item.id} item={item} />
           ))}
         </div>
       </div>

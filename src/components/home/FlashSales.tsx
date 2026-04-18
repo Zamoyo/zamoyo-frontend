@@ -1,165 +1,254 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Clock, Star, ShoppingCart, ArrowRight } from "lucide-react";
+import { ArrowRight, Clock, ShoppingCart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-// --- MOCK DATA ---
-const FLASH_PRODUCTS = [
+type FlashSaleProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  categoryId: string;
+  image: string;
+  price: number;
+  originalPrice: number;
+  rating: number;
+  reviewCount: number;
+  discountPercent: number;
+};
+
+type TimeLeft = {
+  hours: number;
+  minutes: number;
+  seconds: number;
+};
+
+const FLASH_PRODUCTS: FlashSaleProduct[] = [
   {
-    id: 1,
+    id: "iphone-15-pro-max-256",
+    slug: "apple-iphone-15-pro-max-256gb",
     name: "Apple iPhone 15 Pro Max - 256GB",
-    image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80",
+    categoryId: "phones-and-tablets",
+    image:
+      "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80",
     price: 24500,
     originalPrice: 28000,
     rating: 4.9,
-    reviews: 124,
-    discount: 12,
+    reviewCount: 124,
+    discountPercent: 12,
   },
   {
-    id: 2,
+    id: "sony-wh1000xm5",
+    slug: "sony-wh-1000xm5-wireless-headphones",
     name: "Sony WH-1000XM5 Wireless Headphones",
-    image: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&w=800&q=80",
+    categoryId: "electronics",
+    image:
+      "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&w=800&q=80",
     price: 6800,
     originalPrice: 8500,
     rating: 4.8,
-    reviews: 89,
-    discount: 20,
+    reviewCount: 89,
+    discountPercent: 20,
   },
   {
-    id: 3,
-    name: "Samsung 55\" Smart 4K UHD TV",
-    image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80",
+    id: "samsung-55-4k-tv",
+    slug: "samsung-55-smart-4k-uhd-tv",
+    name: 'Samsung 55" Smart 4K UHD TV',
+    categoryId: "electronics",
+    image:
+      "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80",
     price: 11200,
     originalPrice: 14000,
     rating: 4.7,
-    reviews: 56,
-    discount: 20,
+    reviewCount: 56,
+    discountPercent: 20,
   },
   {
-    id: 4,
+    id: "nike-air-force-1",
+    slug: "nike-air-force-1-07",
     name: "Nike Air Force 1 '07",
-    image: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=800&q=80",
+    categoryId: "fashion",
+    image:
+      "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=800&q=80",
     price: 2100,
     originalPrice: 3000,
     rating: 4.9,
-    reviews: 210,
-    discount: 30,
+    reviewCount: 210,
+    discountPercent: 30,
   },
   {
-    id: 5,
+    id: "dell-xps-13",
+    slug: "dell-xps-13-laptop-16gb-ram",
     name: "Dell XPS 13 Laptop - 16GB RAM",
-    image: "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=800&q=80",
+    categoryId: "computing",
+    image:
+      "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=800&q=80",
     price: 22000,
     originalPrice: 26000,
     rating: 4.6,
-    reviews: 42,
-    discount: 15,
+    reviewCount: 42,
+    discountPercent: 15,
   },
   {
-    id: 6,
+    id: "playstation-5-console",
+    slug: "playstation-5-console",
     name: "PlayStation 5 Console",
-    image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=800&q=80",
+    categoryId: "electronics",
+    image:
+      "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=800&q=80",
     price: 12500,
     originalPrice: 14000,
     rating: 4.9,
-    reviews: 312,
-    discount: 10,
-  }
+    reviewCount: 312,
+    discountPercent: 10,
+  },
 ];
 
-export function FlashSales() {
-  // Simple countdown logic for the UI
-  const [timeLeft, setTimeLeft] = useState({ hours: 12, minutes: 45, seconds: 30 });
+function formatCurrency(value: number) {
+  return `K${value.toLocaleString()}`;
+}
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+function getInitialTimeLeft(): TimeLeft {
+  return { hours: 12, minutes: 45, seconds: 30 };
+}
+
+function tickCountdown(prev: TimeLeft): TimeLeft {
+  if (prev.hours === 0 && prev.minutes === 0 && prev.seconds === 0) return prev;
+  if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+  if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+  if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+  return prev;
+}
+
+function FlashCountdown({ timeLeft }: { timeLeft: TimeLeft }) {
+  const parts = [
+    String(timeLeft.hours).padStart(2, "0"),
+    String(timeLeft.minutes).padStart(2, "0"),
+    String(timeLeft.seconds).padStart(2, "0"),
+  ];
 
   return (
-    <section className="container mx-auto max-w-7xl px-4 md:px-6 pt-6">
-      
-      {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3 md:mb-4">
+    <div className="flex items-center gap-1.5 text-xs font-bold md:text-sm">
+      <Clock className="h-3.5 w-3.5 text-zinc-400 md:h-4 md:w-4" />
+      <span className="hidden text-zinc-500 sm:inline">Ends in:</span>
+      <div className="flex items-center gap-1">
+        {parts.map((part, index) => (
+          <div key={index} className="flex items-center gap-1">
+            <span className="rounded-md bg-red-500 px-1.5 py-0.5 text-white shadow-sm md:px-2">
+              {part}
+            </span>
+            {index < parts.length - 1 ? <span className="text-red-500">:</span> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FlashSaleCard({ product }: { product: FlashSaleProduct }) {
+  const productHref = `/product/${product.id}`;
+
+  return (
+    <div className="group relative flex min-w-40 snap-start flex-col overflow-hidden rounded-2xl border border-zinc-200/60 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] md:min-w-50">
+      <div className="relative aspect-square w-full overflow-hidden bg-zinc-50 p-3">
+        <Badge className="absolute left-2 top-2 z-10 border-none bg-red-500 px-1.5 py-0 text-[10px] font-bold text-white shadow-sm">
+          -{product.discountPercent}%
+        </Badge>
+
+        <Link href={productHref} className="absolute inset-3 block">
+          <div
+            className="h-full w-full bg-contain bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-105 mix-blend-multiply"
+            style={{ backgroundImage: `url('${product.image}')` }}
+          />
+        </Link>
+
+        <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <Button
+            size="sm"
+            className="h-8 rounded-lg bg-[#009E49] px-4 text-xs font-bold text-white shadow-lg transition-all duration-300 group-hover:translate-y-0 hover:bg-[#00853d]"
+          >
+            <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+            Add
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col p-3">
+        <Link
+          href={productHref}
+          className="line-clamp-2 text-xs font-bold leading-snug text-zinc-800 transition-colors hover:text-[#009E49] md:text-sm"
+        >
+          {product.name}
+        </Link>
+
+        <div className="mt-1.5 flex items-center gap-1">
+          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+          <span className="text-[11px] font-bold text-zinc-700 md:text-xs">{product.rating}</span>
+          <span className="text-[9px] font-medium text-zinc-400 md:text-[10px]">
+            ({product.reviewCount})
+          </span>
+        </div>
+
+        <div className="mt-auto flex items-end gap-1.5 pt-2">
+          <span className="text-sm font-black tracking-tight text-zinc-900 md:text-base">
+            {formatCurrency(product.price)}
+          </span>
+          <span className="mb-0.5 text-[10px] font-semibold text-zinc-400 line-through md:text-xs">
+            {formatCurrency(product.originalPrice)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function FlashSales() {
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>(getInitialTimeLeft());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setTimeLeft((prev) => tickCountdown(prev));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const dealCount = useMemo(() => FLASH_PRODUCTS.length, []);
+
+  return (
+    <section className="container mx-auto max-w-7xl px-4 pt-6 md:px-6">
+      <div className="mb-3 flex flex-col justify-between gap-4 md:mb-4 md:flex-row md:items-center">
         <div className="flex items-center gap-4">
-          <h3 className="text-xl md:text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-2">
-            <span className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-lg bg-[#FF6B00] text-white text-sm md:text-base">
+          <h3 className="flex items-center gap-2 text-xl font-black tracking-tight text-zinc-900 md:text-2xl">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FF6B00] text-sm text-white md:h-8 md:w-8 md:text-base">
               ⚡
             </span>
             Flash Sales
           </h3>
-          
-          {/* Countdown Timer */}
-          <div className="flex items-center gap-1.5 text-xs md:text-sm font-bold">
-            <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-zinc-400" />
-            <span className="text-zinc-500 hidden sm:inline">Ends in:</span>
-            <div className="flex items-center gap-1">
-              <span className="bg-red-500 text-white px-1.5 md:px-2 py-0.5 rounded-md shadow-sm">{String(timeLeft.hours).padStart(2, '0')}</span>
-              <span className="text-red-500">:</span>
-              <span className="bg-red-500 text-white px-1.5 md:px-2 py-0.5 rounded-md shadow-sm">{String(timeLeft.minutes).padStart(2, '0')}</span>
-              <span className="text-red-500">:</span>
-              <span className="bg-red-500 text-white px-1.5 md:px-2 py-0.5 rounded-md shadow-sm">{String(timeLeft.seconds).padStart(2, '0')}</span>
-            </div>
-          </div>
+
+          <FlashCountdown timeLeft={timeLeft} />
         </div>
 
-        <Link href="/flash-sales" className="hidden md:flex items-center text-sm font-bold text-[#009E49] hover:underline group">
-          See all deals <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </Link>
+        <div className="hidden items-center gap-3 md:flex">
+          <span className="rounded-lg bg-zinc-100 px-3 py-1.5 text-xs font-bold text-zinc-500">
+            {dealCount} deals live
+          </span>
+
+          <Link
+            href="/flash-sales"
+            className="group flex items-center text-sm font-bold text-[#009E49] hover:underline"
+          >
+            See all deals
+            <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
+        </div>
       </div>
 
-      {/* Products Horizontal Scroll - Tightened Gap */}
-      <div className="flex overflow-x-auto pb-6 -mx-4 px-4 md:mx-0 md:px-0 gap-3 md:gap-4 hide-scrollbar snap-x snap-mandatory">
+      <div className="hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-6 md:mx-0 md:px-0 md:gap-4">
         {FLASH_PRODUCTS.map((product) => (
-          /* COMPACT SIZING: min-w-[160px] mobile, min-w-[200px] desktop */
-          <div key={product.id} className="min-w-40 md:min-w-50 snap-start group relative bg-white rounded-2xl border border-zinc-200/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden flex flex-col">
-            
-            {/* Image Container - Tighter Padding */}
-            <div className="relative aspect-square w-full bg-zinc-50 p-3 overflow-hidden">
-              <Badge className="absolute top-2 left-2 z-10 bg-red-500 text-white border-none shadow-sm font-bold text-[10px] px-1.5 py-0">
-                -{product.discount}%
-              </Badge>
-              <div 
-                className="absolute inset-3 bg-contain bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-110 mix-blend-multiply"
-                style={{ backgroundImage: `url('${product.image}')` }}
-              ></div>
-              
-              {/* Quick Add Overlay - Smaller Button */}
-              <div className="absolute inset-0 bg-black/5 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                <Button size="sm" className="bg-[#009E49] hover:bg-[#00853d] text-white shadow-lg rounded-lg font-bold px-4 h-8 text-xs translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                  <ShoppingCart className="mr-1.5 h-3.5 w-3.5" /> Add
-                </Button>
-              </div>
-            </div>
-
-            {/* Content Container - Tighter Text & Padding */}
-            <div className="p-3 flex flex-col flex-1">
-              <Link href={`/product/${product.id}`} className="text-xs md:text-sm font-bold text-zinc-800 line-clamp-2 hover:text-[#009E49] transition-colors leading-snug">
-                {product.name}
-              </Link>
-              
-              <div className="flex items-center gap-1 mt-1.5">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="text-[11px] md:text-xs font-bold text-zinc-700">{product.rating}</span>
-                <span className="text-[9px] md:text-[10px] text-zinc-400 font-medium">({product.reviews})</span>
-              </div>
-
-              <div className="mt-auto pt-2 flex items-end gap-1.5">
-                <span className="text-sm md:text-base font-black text-zinc-900 tracking-tight">K{product.price.toLocaleString()}</span>
-                <span className="text-[10px] md:text-xs font-semibold text-zinc-400 line-through mb-0.5">K{product.originalPrice.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
+          <FlashSaleCard key={product.id} product={product} />
         ))}
       </div>
     </section>
