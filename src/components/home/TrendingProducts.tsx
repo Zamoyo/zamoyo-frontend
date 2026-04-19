@@ -117,7 +117,7 @@ function BadgeTone({ badge }: { badge: Exclude<TrendingBadge, null> }) {
 }
 
 function TrendingProductCard({ product }: { product: TrendingProduct }) {
-  const productHref = `/product/${product.id}`;
+  const productHref = `/product/${product.slug}`;
   const categoryHref = `/category/${product.categoryId}`;
 
   return (

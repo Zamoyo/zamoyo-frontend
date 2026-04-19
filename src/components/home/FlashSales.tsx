@@ -148,7 +148,7 @@ function FlashCountdown({ timeLeft }: { timeLeft: TimeLeft }) {
 }
 
 function FlashSaleCard({ product }: { product: FlashSaleProduct }) {
-  const productHref = `/product/${product.id}`;
+  const productHref = `/product/${product.slug}`;
 
   return (
     <div className="group relative flex min-w-40 snap-start flex-col overflow-hidden rounded-2xl border border-zinc-200/60 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] md:min-w-50">

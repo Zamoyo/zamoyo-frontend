@@ -1,6 +1,15 @@
 "use client";
 
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  Trash2,
+  ArrowRight,
+  ShieldCheck,
+  PackageOpen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,125 +22,212 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useCart, type CartItem } from "@/hooks/use-cart";
 
-// --- MOCK DATA ---
-const MOCK_CART_ITEMS = [
-  {
-    id: 1,
-    name: "Sony WH-1000XM5 Wireless Headphones",
-    price: 6800,
-    image: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&w=800&q=80",
-    quantity: 1,
-    variant: "Black",
-  },
-  {
-    id: 2,
-    name: "Classic Leather Crossbody Bag",
-    price: 850,
-    image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=800&q=80",
-    quantity: 2,
-    variant: "Brown",
-  }
-];
+type CartDrawerProps = {
+  children: React.ReactNode;
+};
 
-export function CartDrawer({ children }: { children: React.ReactNode }) {
-  const subtotal = MOCK_CART_ITEMS.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const deliveryFee = 50; // Flat mock fee
-  const total = subtotal + deliveryFee;
+type CartIdentity = {
+  id: string | number;
+  variant?: string | null;
+};
+
+function formatCurrency(value: number) {
+  return `K${value.toLocaleString()}`;
+}
+
+function CartItemRow({
+  item,
+  onIncrease,
+  onDecrease,
+  onRemove,
+}: {
+  item: CartItem;
+  onIncrease: (identity: CartIdentity) => void;
+  onDecrease: (identity: CartIdentity) => void;
+  onRemove: (identity: CartIdentity) => void;
+}) {
+  const identity: CartIdentity = { id: item.id, variant: item.variant };
+
+  return (
+    <div className="flex gap-4">
+      <Link
+        href={`/product/${item.slug}`}
+        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-zinc-200/50 bg-zinc-50 p-1"
+      >
+        <div
+          className="absolute inset-1 bg-contain bg-center bg-no-repeat mix-blend-multiply"
+          style={{ backgroundImage: `url('${item.image}')` }}
+        />
+      </Link>
+
+      <div className="flex flex-1 flex-col justify-between">
+        <div>
+          <Link
+            href={`/product/${item.slug}`}
+            className="mb-0.5 line-clamp-1 text-sm font-bold leading-tight text-zinc-800 transition-colors hover:text-[#009E49]"
+          >
+            {item.name}
+          </Link>
+
+          {item.variant ? (
+            <p className="text-[11px] font-medium text-zinc-500">
+              Variant: {item.variant}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="mt-2 flex items-end justify-between">
+          <span className="text-sm font-black text-zinc-900">
+            {formatCurrency(item.price)}
+          </span>
+
+          <div className="flex items-center gap-3 rounded-lg border border-zinc-200/50 bg-zinc-100 p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => {
+                if (item.quantity <= 1) onRemove(identity);
+                else onDecrease(identity);
+              }}
+              className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-zinc-600 transition-all hover:text-zinc-900 hover:shadow-sm"
+            >
+              {item.quantity <= 1 ? (
+                <Trash2 className="h-3 w-3 text-red-500" />
+              ) : (
+                <Minus className="h-3 w-3" />
+              )}
+            </button>
+
+            <span className="w-4 text-center text-xs font-bold text-zinc-900">
+              {item.quantity}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => onIncrease(identity)}
+              className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-zinc-600 transition-all hover:text-[#009E49] hover:shadow-sm"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyCartState() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400">
+        <PackageOpen className="h-7 w-7" />
+      </div>
+
+      <h3 className="text-lg font-black text-zinc-900">Your cart is empty</h3>
+      <p className="mt-2 max-w-xs text-sm font-medium text-zinc-500">
+        Add something you like and it’ll show up here.
+      </p>
+
+      <Link href="/categories" className="mt-5">
+        <Button className="rounded-xl bg-[#009E49] font-bold text-white hover:bg-[#00853d]">
+          Continue Shopping
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+export function CartDrawer({ children }: CartDrawerProps) {
+  const {
+    items,
+    itemCount,
+    totalAmount,
+    increaseQuantity,
+    decreaseQuantity,
+    removeItem,
+  } = useCart();
+
+  const deliveryFee = itemCount > 0 ? 50 : 0;
+  const total = totalAmount + deliveryFee;
 
   return (
     <Sheet>
-      {/* The trigger is whatever we wrap this component around (e.g., the Cart button in Navbar) */}
-      <SheetTrigger asChild>
-        {children}
-      </SheetTrigger>
+      <SheetTrigger asChild>{children}</SheetTrigger>
 
-      {/* The actual sliding drawer - using optimized glass UI */}
-      <SheetContent className="w-full sm:max-w-md bg-white/85 backdrop-blur-2xl border-l border-white/50 shadow-[0_0_60px_rgba(0,0,0,0.1)] flex flex-col p-0">
-        
-        <SheetHeader className="px-6 py-5 border-b border-zinc-200/50 bg-white/40">
+      <SheetContent className="flex h-full w-full flex-col border-l border-white/50 bg-white/85 p-0 shadow-[0_0_60px_rgba(0,0,0,0.1)] backdrop-blur-2xl sm:max-w-md">
+        <SheetHeader className="border-b border-zinc-200/50 bg-white/40 px-6 py-5">
           <SheetTitle className="flex items-center gap-2 text-xl font-black text-zinc-900">
             <ShoppingCart className="h-5 w-5 text-[#009E49]" />
             Your Cart
             <Badge className="ml-1 bg-zinc-900 text-white hover:bg-zinc-800">
-              {MOCK_CART_ITEMS.length}
+              {itemCount}
             </Badge>
           </SheetTitle>
         </SheetHeader>
 
-        {/* Scrollable list of items */}
-        <ScrollArea className="flex-1 px-6 py-4">
-          <div className="flex flex-col gap-5">
-            {MOCK_CART_ITEMS.map((item) => (
-              <div key={item.id} className="flex gap-4">
-                
-                {/* Item Image */}
-                <div className="h-20 w-20 shrink-0 rounded-xl bg-zinc-50 border border-zinc-200/50 p-1 overflow-hidden relative">
-                  <div 
-                    className="absolute inset-1 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-                    style={{ backgroundImage: `url('${item.image}')` }}
-                  ></div>
-                </div>
-
-                {/* Item Details */}
-                <div className="flex flex-1 flex-col justify-between">
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-800 line-clamp-1 leading-tight mb-0.5">
-                      {item.name}
-                    </h4>
-                    <p className="text-[11px] font-medium text-zinc-500">Variant: {item.variant}</p>
-                  </div>
-                  
-                  <div className="flex items-end justify-between mt-2">
-                    <span className="text-sm font-black text-zinc-900">
-                      K{item.price.toLocaleString()}
-                    </span>
-                    
-                    {/* Quantity Controller */}
-                    <div className="flex items-center gap-3 bg-zinc-100 rounded-lg p-1 border border-zinc-200/50 shadow-sm">
-                      <button className="h-6 w-6 flex items-center justify-center rounded-md bg-white text-zinc-600 hover:text-zinc-900 hover:shadow-sm transition-all">
-                        {item.quantity === 1 ? <Trash2 className="h-3 w-3 text-red-500" /> : <Minus className="h-3 w-3" />}
-                      </button>
-                      <span className="text-xs font-bold text-zinc-900 w-4 text-center">{item.quantity}</span>
-                      <button className="h-6 w-6 flex items-center justify-center rounded-md bg-white text-zinc-600 hover:text-[#009E49] hover:shadow-sm transition-all">
-                        <Plus className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
+        {items.length > 0 ? (
+          <>
+            <ScrollArea className="flex-1 px-6 py-4">
+              <div className="flex flex-col gap-5">
+                {items.map((item) => (
+                  <CartItemRow
+                    key={`${item.id}-${item.variant ?? "default"}`}
+                    item={item}
+                    onIncrease={increaseQuantity}
+                    onDecrease={decreaseQuantity}
+                    onRemove={removeItem}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+            </ScrollArea>
 
-        {/* Footer / Checkout Section */}
-        <SheetFooter className="flex flex-col px-6 py-5 border-t border-zinc-200/50 bg-white/60 backdrop-blur-md">
-          <div className="space-y-3 mb-5">
-            <div className="flex items-center justify-between text-sm text-zinc-500 font-medium">
-              <span>Subtotal</span>
-              <span className="text-zinc-900 font-bold">K{subtotal.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm text-zinc-500 font-medium">
-              <span>Delivery (Lusaka Area)</span>
-              <span className="text-zinc-900 font-bold">K{deliveryFee.toLocaleString()}</span>
-            </div>
-            <Separator className="bg-zinc-200" />
-            <div className="flex items-center justify-between">
-              <span className="text-base font-bold text-zinc-900">Total</span>
-              <span className="text-xl font-black text-[#FF6B00]">K{total.toLocaleString()}</span>
-            </div>
-          </div>
-          
-          <Button className="w-full h-12 rounded-xl bg-[#009E49] hover:bg-[#00853d] text-white font-bold text-base shadow-lg shadow-[#009E49]/20 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
-            Proceed to Checkout <ArrowRight className="h-4 w-4" />
-          </Button>
+            <SheetFooter className="flex flex-col border-t border-zinc-200/50 bg-white/60 px-6 py-5 backdrop-blur-md">
+              <div className="mb-5 space-y-3">
+                <div className="flex items-center justify-between text-sm font-medium text-zinc-500">
+                  <span>
+                    Subtotal ({itemCount} item{itemCount > 1 ? "s" : ""})
+                  </span>
+                  <span className="font-bold text-zinc-900">
+                    {formatCurrency(totalAmount)}
+                  </span>
+                </div>
 
-          <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-            <ShieldCheck className="h-3.5 w-3.5 text-[#009E49]" /> 100% Secure Checkout
-          </div>
-        </SheetFooter>
+                <div className="flex items-center justify-between text-sm font-medium text-zinc-500">
+                  <span>Delivery (Lusaka Area)</span>
+                  <span className="font-bold text-zinc-900">
+                    {formatCurrency(deliveryFee)}
+                  </span>
+                </div>
 
+                <Separator className="bg-zinc-200" />
+
+                <div className="flex items-center justify-between">
+                  <span className="text-base font-bold text-zinc-900">Total</span>
+                  <span className="text-xl font-black text-[#FF6B00]">
+                    {formatCurrency(total)}
+                  </span>
+                </div>
+              </div>
+
+              <Link href="/checkout" className="w-full">
+                <Button className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#009E49] text-base font-bold text-white shadow-lg shadow-[#009E49]/20 transition-all hover:-translate-y-0.5 hover:bg-[#00853d]">
+                  Proceed to Checkout
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+
+              <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#009E49]" />
+                100% Secure Checkout
+              </div>
+            </SheetFooter>
+          </>
+        ) : (
+          <div className="flex-1">
+            <EmptyCartState />
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
