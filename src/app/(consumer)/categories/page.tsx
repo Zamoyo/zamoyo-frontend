@@ -3,133 +3,57 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Search, Smartphone, Laptop, Shirt, ShoppingBasket,
-  Tv, HeartPulse, Dumbbell, Sofa, ChevronRight
+  ChevronRight,
+  Dumbbell,
+  HeartPulse,
+  Laptop,
+  Search,
+  Shirt,
+  ShoppingBasket,
+  Smartphone,
+  Sofa,
+  Tv,
 } from "lucide-react";
+import { buildCategorySubcategoryHref, getCategoryDirectory } from "@/services/categories";
+import type { CategorySummary } from "@/types/category";
 
-// ============================================================================
-// 1. DATA CONTRACTS
-// ============================================================================
-type Subcategory = {
-  name: string;
-  slug: string;
-};
+const CATEGORY_ICONS = {
+  smartphone: Smartphone,
+  laptop: Laptop,
+  shirt: Shirt,
+  "shopping-basket": ShoppingBasket,
+  tv: Tv,
+  "heart-pulse": HeartPulse,
+  dumbbell: Dumbbell,
+  sofa: Sofa,
+} as const;
 
-type CategoryDirectoryItem = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  colorClass: string;
-  children: Subcategory[];
-};
-
-// ============================================================================
-// 2. MOCK API DIRECTORY DATA
-// ============================================================================
-const CATEGORY_DIRECTORY: CategoryDirectoryItem[] = [
-  {
-    id: "phones-and-tablets", name: "Phones & Tablets", slug: "phones-and-tablets",
-    description: "Smartphones, iPads, and premium mobile accessories.",
-    icon: Smartphone, colorClass: "text-blue-600 bg-blue-500/10",
-    children: [
-      { name: "Smartphones", slug: "smartphones" },
-      { name: "Tablets", slug: "tablets" },
-      { name: "Accessories", slug: "accessories" },
-    ],
-  },
-  {
-    id: "computing", name: "Computing", slug: "computing",
-    description: "High-performance laptops, desktops, and workspace gear.",
-    icon: Laptop, colorClass: "text-zinc-600 bg-zinc-500/10",
-    children: [
-      { name: "Laptops", slug: "laptops" },
-      { name: "Desktops", slug: "desktops" },
-      { name: "PC Accessories", slug: "accessories" },
-    ],
-  },
-  {
-    id: "fashion", name: "Fashion", slug: "fashion",
-    description: "Trending apparel, footwear, and designer accessories.",
-    icon: Shirt, colorClass: "text-pink-600 bg-pink-500/10",
-    children: [
-      { name: "Men's Fashion", slug: "mens-fashion" },
-      { name: "Women's Fashion", slug: "womens-fashion" },
-      { name: "Footwear", slug: "footwear" },
-    ],
-  },
-  {
-    id: "supermarket", name: "Supermarket", slug: "supermarket",
-    description: "Daily groceries, beverages, and household staples.",
-    icon: ShoppingBasket, colorClass: "text-[#009E49] bg-[#009E49]/10",
-    children: [
-      { name: "Beverages", slug: "beverages" },
-      { name: "Snacks", slug: "snacks" },
-      { name: "Pantry Staples", slug: "staples" },
-    ],
-  },
-  {
-    id: "electronics", name: "Electronics", slug: "electronics",
-    description: "TVs, audio systems, and home entertainment setups.",
-    icon: Tv, colorClass: "text-purple-600 bg-purple-500/10",
-    children: [
-      { name: "Audio & Headphones", slug: "audio-and-headphones" },
-      { name: "TVs & Entertainment", slug: "tvs-and-entertainment" },
-      { name: "Cameras", slug: "cameras" },
-    ],
-  },
-  {
-    id: "health-and-beauty", name: "Health & Beauty", slug: "health-and-beauty",
-    description: "Skincare, makeup, and personal wellness products.",
-    icon: HeartPulse, colorClass: "text-red-600 bg-red-500/10",
-    children: [
-      { name: "Beauty", slug: "beauty" },
-      { name: "Personal Care", slug: "personal-care" },
-      { name: "Vitamins", slug: "vitamins" },
-    ],
-  },
-  {
-    id: "sports-and-outdoors", name: "Sports & Outdoors", slug: "sports-and-outdoors",
-    description: "Gym equipment, activewear, and outdoor exploration gear.",
-    icon: Dumbbell, colorClass: "text-[#FF6B00] bg-[#FF6B00]/10",
-    children: [
-      { name: "Fitness", slug: "fitness" },
-      { name: "Outdoor Gear", slug: "outdoor-gear" },
-      { name: "Team Sports", slug: "team-sports" },
-    ],
-  },
-  {
-    id: "home-and-living", name: "Home & Living", slug: "home-and-living",
-    description: "Furniture, decor, and smart home automation.",
-    icon: Sofa, colorClass: "text-amber-600 bg-amber-500/10",
-    children: [
-      { name: "Furniture", slug: "furniture" },
-      { name: "Home Decor", slug: "home-decor" },
-      { name: "Kitchenware", slug: "kitchenware" },
-    ],
-  },
-];
-
-// ============================================================================
-// 3. MAIN PAGE EXPORT
-// ============================================================================
 export default function CategoriesDirectoryPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [categories, setCategories] = React.useState<CategorySummary[]>([]);
 
-  // Live filter logic: Checks category name OR subcategory names
-  const filteredCategories = CATEGORY_DIRECTORY.filter((cat) => {
+  React.useEffect(() => {
+    let active = true;
+    getCategoryDirectory().then((data) => {
+      if (active) setCategories(data);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filteredCategories = categories.filter((category) => {
     const query = searchQuery.toLowerCase();
-    const matchesCategory = cat.name.toLowerCase().includes(query);
-    const matchesSubcategory = cat.children.some((sub) => sub.name.toLowerCase().includes(query));
+    const matchesCategory = category.name.toLowerCase().includes(query);
+    const matchesSubcategory = category.children.some((subcategory) =>
+      subcategory.name.toLowerCase().includes(query),
+    );
     return matchesCategory || matchesSubcategory;
   });
 
   return (
     <main className="min-h-screen bg-[#f4fbf6] pb-24 pt-8 md:pt-12">
       <div className="container mx-auto max-w-7xl px-4 md:px-6">
-        
-        {/* PAGE INTRO & SEARCH ROW */}
         <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
             <h1 className="text-3xl font-black tracking-tight text-zinc-900 md:text-5xl">
@@ -148,22 +72,21 @@ export default function CategoriesDirectoryPage() {
               type="text"
               placeholder="Search categories..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm font-medium text-zinc-900 shadow-sm transition-all outline-none placeholder:text-zinc-400 focus:border-[#009E49] focus:ring-4 focus:ring-[#009E49]/10"
             />
           </div>
         </div>
 
-        {/* CATEGORY GRID */}
         {filteredCategories.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6">
             {filteredCategories.map((category) => {
-              const Icon = category.icon;
+              const Icon = CATEGORY_ICONS[category.iconKey];
               const categoryUrl = `/category/${category.slug}`;
 
               return (
-                <div 
-                  key={category.id} 
+                <div
+                  key={category.id}
                   className="group flex flex-col rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm transition-all hover:border-[#009E49]/40 hover:shadow-md"
                 >
                   <div className="mb-4 flex items-center gap-4">
@@ -181,13 +104,13 @@ export default function CategoriesDirectoryPage() {
                   </div>
 
                   <div className="flex flex-1 flex-col justify-start gap-2 border-t border-zinc-100 pt-4">
-                    {category.children.map((sub) => (
+                    {category.children.map((subcategory) => (
                       <Link
-                        key={sub.slug}
-                        href={`${categoryUrl}?subcategory=${sub.slug}`}
+                        key={subcategory.slug}
+                        href={buildCategorySubcategoryHref(category.slug, subcategory.slug)}
                         className="flex items-center justify-between text-sm font-medium text-zinc-600 transition-colors hover:text-[#009E49]"
                       >
-                        {sub.name}
+                        {subcategory.name}
                         <ChevronRight className="h-3 w-3 opacity-0 transition-all group-hover:opacity-100" />
                       </Link>
                     ))}
@@ -211,7 +134,7 @@ export default function CategoriesDirectoryPage() {
             <p className="mt-2 max-w-sm text-sm font-medium text-zinc-500">
               We couldn&apos;t find any category matching &quot;{searchQuery}&quot;. Try a different search term.
             </p>
-            <button 
+            <button
               onClick={() => setSearchQuery("")}
               className="mt-6 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-zinc-800"
             >
@@ -219,7 +142,6 @@ export default function CategoriesDirectoryPage() {
             </button>
           </div>
         )}
-
       </div>
     </main>
   );

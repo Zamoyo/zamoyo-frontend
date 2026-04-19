@@ -12,13 +12,19 @@ const CarouselContext = React.createContext<{ api: EmblaCarouselType | undefined
 interface CarouselProps extends React.HTMLAttributes<HTMLDivElement> {
   plugins?: EmblaPluginType[];
   options?: Record<string, unknown>;
+  setApi?: (api: EmblaCarouselType) => void;
 }
 
 const Carousel = React.forwardRef<
   HTMLDivElement,
   CarouselProps
->(({ className, plugins, options, ...props }, ref) => {
+>(({ className, plugins, options, setApi, ...props }, ref) => {
   const [emblaRef, emblaApi] = useEmblaCarousel(options, plugins)
+
+  React.useEffect(() => {
+    if (!emblaApi || !setApi) return
+    setApi(emblaApi)
+  }, [emblaApi, setApi])
 
   return (
     <CarouselContext.Provider value={{ api: emblaApi }}>

@@ -1,27 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, ShoppingBag, Star } from "lucide-react";
+import { Star } from "lucide-react";
+import { AddToCartButton } from "@/components/AddToCartButton";
 import { Badge } from "@/components/ui/badge";
-import { useWishlist } from "@/hooks/use-wishlist";
+import { WishlistButton } from "@/components/WishlistButton";
+import type { Product } from "@/types/product";
+import { getProductCategoryLabel, getProductOldPrice, getProductTitle } from "@/lib/normalizers/product";
 
-export interface Product {
-  id: number | string;
-  slug: string;
-  title?: string;
-  name?: string;
-  categoryName?: string;
-  subcategoryName?: string;
-  price: number;
-  oldPrice?: number | null;
-  originalPrice?: number | null;
-  discount?: number | null;
-  badge?: string | null;
-  isNew?: boolean;
-  rating: number;
-  reviews: number;
-  image: string;
-}
+export type { Product } from "@/types/product";
 
 function formatCurrency(value: number) {
   return `K${value.toLocaleString()}`;
@@ -36,16 +23,11 @@ function getBadgeColor(text: string) {
 }
 
 export function ProductCard({ product }: { product: Product }) {
-  const displayTitle = product.title ?? product.name ?? "Product Name";
-  const displayCategory = product.subcategoryName ?? product.categoryName;
-  const displayOldPrice = product.oldPrice ?? product.originalPrice ?? null;
+  const displayTitle = getProductTitle(product);
+  const displayCategory = getProductCategoryLabel(product);
+  const displayOldPrice = getProductOldPrice(product);
   const displayBadge = product.badge ?? (product.isNew ? "New" : null);
   const productHref = `/product/${product.slug}`;
-
-  const { toggleItem, hasItem, hasHydrated } = useWishlist();
-
-  const isSaved = hasHydrated ? hasItem(product.id) : false;
-  const heartAriaLabel = hasHydrated && isSaved ? "Remove from wishlist" : "Add to wishlist";
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_2px_15px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
@@ -57,14 +39,11 @@ export function ProductCard({ product }: { product: Product }) {
             </Badge>
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => toggleItem(product)}
+          <WishlistButton
+            product={product}
             className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-400 shadow-sm transition-colors hover:border-red-200 hover:text-red-500"
-            aria-label={heartAriaLabel}
-          >
-            <Heart className={`h-3.5 w-3.5 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
-          </button>
+            iconClassName="h-3.5 w-3.5"
+          />
 
           <Link href={productHref} className="absolute inset-2 block">
             <div
@@ -107,12 +86,12 @@ export function ProductCard({ product }: { product: Product }) {
             ) : null}
           </div>
 
-          <Link
-            href={productHref}
+          <AddToCartButton
+            product={product}
+            iconOnly
+            size="icon"
             className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 transition-colors hover:bg-[#009E49] hover:text-white md:h-9 md:w-9"
-          >
-            <ShoppingBag className="h-3.5 w-3.5 md:h-4 md:w-4" />
-          </Link>
+          />
         </div>
       </div>
     </div>

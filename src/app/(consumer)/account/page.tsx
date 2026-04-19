@@ -3,101 +3,46 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Package,
-  Heart,
-  ShoppingBag,
-  MapPin,
+  AlertCircle,
   Bell,
-  User,
+  CheckCircle2,
   ChevronRight,
   Clock,
+  Heart,
+  MapPin,
+  Package,
+  ShoppingBag,
   Truck,
-  CheckCircle2,
-  AlertCircle,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ProductCard, type Product } from "@/components/productCard";
+import { ProductCard } from "@/components/productCard";
+import { FeedbackState } from "@/components/states/FeedbackState";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { useCart } from "@/hooks/use-cart";
+import { useHydratedValue } from "@/hooks/use-hydrated-value";
+import { getAccountOverview } from "@/services/account";
+import type { AccountOverview } from "@/types/account";
 
-type AccountData = {
-  userFirstName: string;
-  activeOrdersCount: number;
-  recentOrders: Array<{
-    id: string;
-    date: string;
-    total: number;
-    items: number;
-    status: string;
-    estDelivery: string;
-  }>;
-  notifications: Array<{
-    id: number;
-    title: string;
-    desc: string;
-    time: string;
-    unread: boolean;
-  }>;
-  defaultAddress: {
-    name: string;
-    street: string;
-    area: string;
-    city: string;
-    phone: string;
-  };
-  recentlyViewed: Product[];
-};
-
-const MOCK_ACCOUNT_DATA: AccountData = {
-  userFirstName: "John",
-  activeOrdersCount: 1,
-  recentOrders: [
-    { id: "ZM-10928", date: "April 08, 2026", total: 18500, items: 1, status: "processing", estDelivery: "April 11, 2026" },
-    { id: "ZM-10844", date: "March 22, 2026", total: 450, items: 2, status: "delivered", estDelivery: "Delivered on Mar 24" },
-  ],
-  notifications: [
-    { id: 1, title: "Order Shipped", desc: "Your order ZM-10844 is out for delivery.", time: "2 hours ago", unread: true },
-    { id: 2, title: "Flash Sale Alert", desc: "Laptops are up to 20% off tomorrow only!", time: "1 day ago", unread: false },
-  ],
-  defaultAddress: {
-    name: "John Banda",
-    street: "123 Independence Ave",
-    area: "Woodlands Area",
-    city: "Lusaka, Zambia",
-    phone: "+260 97 1234567",
-  },
-  recentlyViewed: [
-    { id: 201, slug: "ps5", title: "Sony PlayStation 5 Console", price: 12500, oldPrice: 13500, discount: 7, badge: "Hot", rating: 4.9, reviews: 842, image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=800&q=80" },
-    { id: 202, slug: "nike-af1", title: "Nike Air Force 1 '07", price: 2100, oldPrice: null, discount: null, badge: null, rating: 4.8, reviews: 315, image: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=800&q=80" },
-    { id: 203, slug: "samsung-tv", title: 'Samsung 4K Smart TV 55"', price: 8900, oldPrice: 10500, discount: 15, badge: "Sale", rating: 4.7, reviews: 128, image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80" },
-    { id: 204, slug: "jbl-flip", title: "JBL Flip 6 Portable Speaker", price: 2400, oldPrice: 2800, discount: 14, badge: null, rating: 4.6, reviews: 95, image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=800&q=80" },
-  ],
-};
-
-async function fetchAccountOverview(): Promise<AccountData> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (Math.random() < 0.05) reject(new Error("Failed to load account data."));
-      else resolve(MOCK_ACCOUNT_DATA);
-    }, 600);
-  });
-}
-
-export default function AccountOverview() {
-  const [data, setData] = React.useState<AccountData | null>(null);
+export default function AccountOverviewPage() {
+  const [data, setData] = React.useState<AccountOverview | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const { itemCount: savedItemsCount } = useWishlist();
-  const { itemCount: cartItemsCount, totalAmount: cartTotal } = useCart();
+  const { itemCount: savedItemsCount, hasHydrated: wishlistHydrated } = useWishlist();
+  const { itemCount: cartItemsCount, totalAmount: cartTotal, hasHydrated: cartHydrated } = useCart();
+
+  const safeSavedItemsCount = useHydratedValue(savedItemsCount, 0);
+  const safeCartItemsCount = useHydratedValue(cartItemsCount, 0);
+  const safeCartTotal = useHydratedValue(cartTotal, 0);
 
   const loadData = React.useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await fetchAccountOverview();
+      const result = await getAccountOverview();
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error occurred");
@@ -116,25 +61,28 @@ export default function AccountOverview() {
 
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-3xl border border-red-100 bg-red-50 p-8 text-center">
-        <AlertCircle className="mb-3 h-8 w-8 text-red-500" />
-        <h3 className="text-base font-bold text-red-900">Failed to load dashboard</h3>
-        <p className="mt-1 text-sm text-red-700">{error}</p>
-        <Button onClick={loadData} variant="outline" className="mt-4 border-red-200 text-red-700 hover:bg-red-100">
-          Try Again
-        </Button>
-      </div>
+      <FeedbackState
+        icon={AlertCircle}
+        tone="danger"
+        title="Failed to load dashboard"
+        description={error ?? "We couldn't load your account overview right now."}
+        action={
+          <Button onClick={loadData} variant="outline" className="border-red-200 text-red-700 hover:bg-red-100">
+            Try Again
+          </Button>
+        }
+      />
     );
   }
 
-  const unreadNotifs = data.notifications.filter((n) => n.unread).length;
+  const unreadNotifs = data.notifications.filter((notification) => notification.unread).length;
 
   return (
     <div className="space-y-8 pb-8">
       <div className="flex flex-col justify-between gap-4 rounded-3xl border border-zinc-200/60 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] animate-in fade-in slide-in-from-bottom-4 duration-500 md:flex-row md:items-center md:p-8">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-zinc-900 md:text-3xl">
-            Welcome back, {data.userFirstName}! 👋
+            Welcome back, {data.user.firstName}!
           </h1>
           <p className="mt-1 text-sm font-medium text-zinc-500">
             Manage your orders, track deliveries, and secure your account.
@@ -176,7 +124,9 @@ export default function AccountOverview() {
                 <Heart className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-xl font-black leading-none text-zinc-900 md:text-2xl md:leading-normal">{savedItemsCount}</h3>
+                <h3 className="text-xl font-black leading-none text-zinc-900 md:text-2xl md:leading-normal">
+                  {wishlistHydrated ? safeSavedItemsCount : "—"}
+                </h3>
                 <p className="mt-1 text-xs font-bold text-zinc-500 md:mt-0.5 md:text-sm">Saved Items</p>
               </div>
             </div>
@@ -195,14 +145,14 @@ export default function AccountOverview() {
               </div>
               <div>
                 <h3 className="text-xl font-black leading-none text-white md:text-2xl md:leading-normal">
-                  K{cartTotal.toLocaleString()}
+                  {cartHydrated ? `K${safeCartTotal.toLocaleString()}` : "—"}
                 </h3>
                 <p className="mt-1 text-xs font-bold text-white/80 md:mt-0.5 md:text-sm">
-                  Cart Subtotal ({cartItemsCount} item{cartItemsCount === 1 ? "" : "s"})
+                  Cart Subtotal ({cartHydrated ? safeCartItemsCount : 0} item{safeCartItemsCount === 1 ? "" : "s"})
                 </p>
               </div>
             </div>
-            <Link href="/cart" className="flex items-center gap-1 rounded-lg bg-black/10 px-3 py-2 text-[10px] font-bold text-white hover:underline backdrop-blur-sm md:mt-3 md:rounded-none md:bg-transparent md:px-0 md:py-0 md:text-xs md:backdrop-blur-none">
+            <Link href="/checkout" className="flex items-center gap-1 rounded-lg bg-black/10 px-3 py-2 text-[10px] font-bold text-white hover:underline backdrop-blur-sm md:mt-3 md:rounded-none md:bg-transparent md:px-0 md:py-0 md:text-xs md:backdrop-blur-none">
               Checkout <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
@@ -228,7 +178,7 @@ export default function AccountOverview() {
                     <div>
                       <h3 className="font-bold text-zinc-900">{order.id}</h3>
                       <p className="mt-0.5 text-xs font-medium text-zinc-500">
-                        {order.date} • {order.items} {order.items === 1 ? "Item" : "Items"}
+                        {order.date} • {order.items.reduce((sum, item) => sum + item.qty, 0)} Item{order.items.length === 1 ? "" : "s"}
                       </p>
                     </div>
                     <div className="flex flex-col md:items-end">
@@ -277,16 +227,16 @@ export default function AccountOverview() {
             </div>
 
             <div className="space-y-4">
-              {data.notifications.map((notif) => (
-                <div key={notif.id} className="relative border-l-2 border-zinc-100 pl-4">
-                  {notif.unread ? (
+              {data.notifications.map((notification) => (
+                <div key={notification.id} className="relative border-l-2 border-zinc-100 pl-4">
+                  {notification.unread ? (
                     <span className="absolute -left-1.25 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-4 ring-white" />
                   ) : null}
-                  <h4 className={`text-sm font-bold ${notif.unread ? "text-zinc-900" : "text-zinc-600"}`}>
-                    {notif.title}
+                  <h4 className={`text-sm font-bold ${notification.unread ? "text-zinc-900" : "text-zinc-600"}`}>
+                    {notification.title}
                   </h4>
-                  <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{notif.desc}</p>
-                  <span className="mt-1 block text-[10px] font-bold text-zinc-400">{notif.time}</span>
+                  <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{notification.desc}</p>
+                  <span className="mt-1 block text-[10px] font-bold text-zinc-400">{notification.time}</span>
                 </div>
               ))}
             </div>

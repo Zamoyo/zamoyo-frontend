@@ -1,25 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { CartItem, CartItemIdentity } from "@/types/cart";
 
-export type CartItem = {
-  id: string | number;
-  slug: string;
-  name: string;
-  price: number;
-  image: string;
-  quantity: number;
-  variant?: string | null;
-};
-
-type CartItemIdentity = {
-  id: string | number;
-  variant?: string | null;
-};
+export type { CartItem, CartItemIdentity } from "@/types/cart";
 
 interface CartStore {
   items: CartItem[];
   itemCount: number;
   totalAmount: number;
+  hasHydrated: boolean;
+  setHasHydrated: (value: boolean) => void;
   addItem: (item: CartItem) => void;
   removeItem: (identity: CartItemIdentity) => void;
   increaseQuantity: (identity: CartItemIdentity) => void;
@@ -56,6 +46,9 @@ export const useCart = create<CartStore>()(
       items: [],
       itemCount: 0,
       totalAmount: 0,
+      hasHydrated: false,
+
+      setHasHydrated: (value) => set({ hasHydrated: value }),
 
       addItem: (newItem) => {
         const currentItems = get().items;
@@ -141,6 +134,10 @@ export const useCart = create<CartStore>()(
     }),
     {
       name: "zamoyo-cart-storage",
+      partialize: (state) => ({ items: state.items }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     },
   ),
 );

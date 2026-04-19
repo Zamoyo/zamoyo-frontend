@@ -3,37 +3,20 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Package,
-  Truck,
+  AlertCircle,
   CheckCircle2,
   Clock,
-  XCircle,
+  Package,
   Search,
-  AlertCircle,
+  Truck,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-
-// ============================================================================
-// 1. DATA CONTRACTS
-// ============================================================================
-type OrderStatus = "processing" | "shipped" | "delivered" | "cancelled";
-
-type OrderItem = {
-  name: string;
-  image: string;
-  qty: number;
-};
-
-type Order = {
-  id: string;
-  date: string;
-  total: number;
-  status: OrderStatus;
-  estDelivery: string;
-  items: OrderItem[];
-};
+import { FeedbackState } from "@/components/states/FeedbackState";
+import { getMyOrders } from "@/services/orders";
+import type { OrderStatus, OrderSummary } from "@/types/order";
 
 const STATUS_CONFIG = {
   processing: {
@@ -58,61 +41,6 @@ const STATUS_CONFIG = {
   },
 } as const;
 
-// ============================================================================
-// 2. MOCK API SERVICE (Mirrors apiClient behavior)
-// ============================================================================
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "ZM-10928",
-    date: "April 08, 2026",
-    total: 18500,
-    status: "processing",
-    estDelivery: "April 11, 2026",
-    items: [
-      {
-        name: "MacBook Air M2 - 8GB RAM 256GB SSD (Midnight)",
-        image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80",
-        qty: 1,
-      },
-    ],
-  },
-  {
-    id: "ZM-10844",
-    date: "March 22, 2026",
-    total: 450,
-    status: "delivered",
-    estDelivery: "Delivered on Mar 24",
-    items: [
-      {
-        name: "USB-C to Hub Adapter (7-in-1)",
-        image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=200&q=80",
-        qty: 1,
-      },
-    ],
-  },
-];
-
-// This simulates our apiClient. Later, just swap this for: await apiClient<Order[]>('/orders')
-async function fetchMyOrders(): Promise<Order[]> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Simulate a 5% chance of a network error to test our error UI
-      if (Math.random() < 0.05) {
-        reject(new Error("Failed to connect to the server."));
-      } else {
-        resolve(MOCK_ORDERS);
-      }
-    }, 800);
-  });
-}
-
-function formatCurrency(value: number) {
-  return `K${value.toLocaleString()}`;
-}
-
-// ============================================================================
-// 3. MAIN PAGE EXPORT
-// ============================================================================
 const TABS: { label: string; value: OrderStatus | "all" }[] = [
   { label: "All Orders", value: "all" },
   { label: "Processing", value: "processing" },
@@ -121,45 +49,45 @@ const TABS: { label: string; value: OrderStatus | "all" }[] = [
   { label: "Cancelled", value: "cancelled" },
 ];
 
+function formatCurrency(value: number) {
+  return `K${value.toLocaleString()}`;
+}
+
 export default function OrdersPage() {
-  const [orders, setOrders] = React.useState<Order[]>([]);
+  const [orders, setOrders] = React.useState<OrderSummary[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  
-  const [activeTab, setActiveTab] = React.useState("all");
+  const [activeTab, setActiveTab] = React.useState<OrderStatus | "all">("all");
   const [search, setSearch] = React.useState("");
 
-  const loadOrders = async () => {
+  const loadOrders = React.useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchMyOrders();
+      const data = await getMyOrders();
       setOrders(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   React.useEffect(() => {
     loadOrders();
-  }, []);
+  }, [loadOrders]);
 
   const filteredOrders = orders.filter((order) => {
     const matchTab = activeTab === "all" ? true : order.status === activeTab;
+    const query = search.toLowerCase();
     const matchSearch =
-      order.id.toLowerCase().includes(search.toLowerCase()) ||
-      order.items.some((item) =>
-        item.name.toLowerCase().includes(search.toLowerCase())
-      );
+      order.id.toLowerCase().includes(query) ||
+      order.items.some((item) => item.name.toLowerCase().includes(query));
     return matchTab && matchSearch;
   });
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* HEADER & SEARCH */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-zinc-900 md:text-3xl">
@@ -176,15 +104,14 @@ export default function OrdersPage() {
           </div>
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(event) => setSearch(event.target.value)}
             placeholder="Search Order ID or Item..."
             className="h-11 rounded-xl border-zinc-200 bg-white pl-9 shadow-sm focus-visible:ring-[#009E49]"
           />
         </div>
       </div>
 
-      {/* TABS */}
-      <div className="hide-scrollbar flex overflow-x-auto gap-2 pb-2">
+      <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
         {TABS.map((tab) => (
           <button
             key={tab.value}
@@ -200,45 +127,40 @@ export default function OrdersPage() {
         ))}
       </div>
 
-      {/* SYSTEM STATES (Loading / Error / Empty) */}
-      {loading && (
+      {loading ? (
         <div className="py-16 text-center text-sm font-medium text-zinc-500">
           Loading your order history...
         </div>
-      )}
-
-      {error && !loading && (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-red-100 bg-red-50 p-8 text-center">
-          <AlertCircle className="mb-3 h-8 w-8 text-red-500" />
-          <h3 className="text-base font-bold text-red-900">Failed to load orders</h3>
-          <p className="mt-1 text-sm text-red-700">{error}</p>
-          <Button 
-            onClick={loadOrders} 
-            variant="outline" 
-            className="mt-4 border-red-200 text-red-700 hover:bg-red-100"
-          >
-            Try Again
-          </Button>
-        </div>
-      )}
-
-      {!loading && !error && filteredOrders.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-zinc-200 border-dashed bg-white py-16 text-center shadow-sm">
-          <Package className="mb-4 h-10 w-10 text-zinc-300" />
-          <h3 className="text-lg font-bold text-zinc-900">No orders found</h3>
-          <p className="mt-1 text-sm font-medium text-zinc-500">
-            {search ? "We couldn't find anything matching your search." : "You haven't placed any orders yet."}
-          </p>
-          {search && (
-            <Button onClick={() => setSearch("")} variant="outline" className="mt-4 rounded-xl">
-              Clear Search
+      ) : error ? (
+        <FeedbackState
+          icon={AlertCircle}
+          tone="danger"
+          title="Failed to load orders"
+          description={error}
+          action={
+            <Button onClick={loadOrders} variant="outline" className="border-red-200 text-red-700 hover:bg-red-100">
+              Try Again
             </Button>
-          )}
-        </div>
-      )}
-
-      {/* ORDER LIST */}
-      {!loading && !error && filteredOrders.length > 0 && (
+          }
+        />
+      ) : filteredOrders.length === 0 ? (
+        <FeedbackState
+          icon={Package}
+          title="No orders found"
+          description={
+            search
+              ? "We couldn't find anything matching your search."
+              : "You haven't placed any orders yet."
+          }
+          action={
+            search ? (
+              <Button onClick={() => setSearch("")} variant="outline" className="rounded-xl">
+                Clear Search
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
         <div className="space-y-4 md:space-y-6">
           {filteredOrders.map((order) => {
             const config = STATUS_CONFIG[order.status];
@@ -246,8 +168,6 @@ export default function OrdersPage() {
 
             return (
               <div key={order.id} className="overflow-hidden rounded-3xl border border-zinc-200/60 bg-white shadow-[0_2px_15px_rgba(0,0,0,0.02)] transition-shadow hover:shadow-md">
-                
-                {/* Order Header */}
                 <div className="flex flex-col gap-4 border-b border-zinc-100 bg-zinc-50/50 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
                     <div>
@@ -270,11 +190,10 @@ export default function OrdersPage() {
                   </Badge>
                 </div>
 
-                {/* Order Items */}
                 <div className="p-5">
                   <div className="space-y-4">
-                    {order.items.map((item, i) => (
-                      <div key={i} className="flex gap-4">
+                    {order.items.map((item, index) => (
+                      <div key={`${order.id}-${index}`} className="flex gap-4">
                         <div
                           className="h-16 w-16 shrink-0 rounded-xl border border-zinc-100 bg-zinc-50 bg-contain bg-center bg-no-repeat mix-blend-multiply md:h-20 md:w-20"
                           style={{ backgroundImage: `url(${item.image})` }}
@@ -287,13 +206,12 @@ export default function OrdersPage() {
                     ))}
                   </div>
 
-                  {/* Actions */}
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm font-medium text-zinc-600">
                       {order.status === "delivered" ? "Delivered on:" : "Est. Delivery:"}{" "}
                       <span className="font-bold text-zinc-900">{order.estDelivery}</span>
                     </p>
-                    
+
                     <Link href={`/account/orders/${order.id}`} className="w-full sm:w-auto">
                       <Button className="w-full rounded-xl bg-zinc-100 text-sm font-bold text-zinc-900 hover:bg-[#009E49] hover:text-white sm:w-auto">
                         View Order Details

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Product } from "@/components/productCard";
+import type { Product } from "@/types/product";
 
 export type WishlistItem = Product;
 
@@ -59,6 +59,7 @@ export const useWishlist = create<WishlistStore>()(
     }),
     {
       name: "zamoyo-wishlist-storage",
+      partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

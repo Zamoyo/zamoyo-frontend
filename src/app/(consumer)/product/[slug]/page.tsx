@@ -4,8 +4,15 @@ import * as React from "react";
 import Link from "next/link";
 import { use } from "react";
 import {
-  ArrowLeft, CheckCircle2, Heart, Minus, Plus,
-  Share2, ShieldCheck, Star, Store, Truck,
+  ArrowLeft,
+  CheckCircle2,
+  Minus,
+  Plus,
+  Share2,
+  ShieldCheck,
+  Star,
+  Store,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,111 +20,22 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
-  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Carousel, CarouselContent, CarouselItem,
-} from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { ProductCard } from "@/components/productCard";
+import { WishlistButton } from "@/components/WishlistButton";
+import { AddToCartButton } from "@/components/AddToCartButton";
+import { toProductFromDetail } from "@/lib/normalizers/product";
+import { getProductDetailBySlug, getRelatedProducts, getSellerProducts } from "@/services/products";
+import type { Product, ProductDetail } from "@/types/product";
 
-import { ProductCard, type Product } from "@/components/productCard";
-
-// ============================================================================
-// 1. DATA CONTRACTS
-// ============================================================================
-type ProductVariant = { id: string; label: string; value: string; swatchClass: string; };
-type ProductSpec = { label: string; value: string; };
-
-type ProductDetail = {
-  id: number;
-  slug: string;
-  title: string;
-  brand: string;
-  category: { name: string; href: string };
-  subcategory: { name: string; href: string };
-  sku: string;
-  price: number;
-  originalPrice: number;
-  rating: number;
-  reviewCount: number;
-  badge: string | null;
-  seller: {
-    name: string; href: string; avatar: string; verified: boolean; positiveRate: string; followers: string;
-  };
-  stock: number;
-  shippingText: string;
-  images: string[];
-  variants: ProductVariant[];
-  description: string;
-  specs: ProductSpec[];
-  boxItems: string[];
-};
-
-// ============================================================================
-// 2. MOCK API SERVICE 
-// ============================================================================
-function getProductBySlug(slug: string): ProductDetail {
-  return {
-    id: 1,
-    slug: slug, 
-    title: "MacBook Air M2 - 8GB RAM 256GB SSD (Midnight)",
-    brand: "Apple",
-    category: { name: "Electronics", href: "/category/electronics" },
-    subcategory: { name: "Laptops", href: "/category/computing" },
-    sku: "MAC-M2-256",
-    price: 18500,
-    originalPrice: 21000,
-    rating: 4.9,
-    reviewCount: 128,
-    badge: "Top Seller",
-    seller: {
-      name: "iStore Lusaka", href: "/store/istore-lusaka", avatar: "https://github.com/shadcn.png",
-      verified: true, positiveRate: "98% Positive", followers: "1.2k Followers",
-    },
-    stock: 6,
-    shippingText: "Ready for delivery between Tomorrow and Thursday.",
-    images: [
-      "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1531297172867-4d4ce2e226d9?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1537498425277-c283d32ef9db?auto=format&fit=crop&w=1200&q=80",
-    ],
-    variants: [
-      { id: "midnight", label: "Color", value: "Midnight", swatchClass: "bg-zinc-800 border-[#FF6B00]" },
-      { id: "silver", label: "Color", value: "Silver", swatchClass: "bg-zinc-200 border-zinc-200" },
-      { id: "starlight", label: "Color", value: "Starlight", swatchClass: "bg-[#e3e1d9] border-zinc-200" },
-    ],
-    description: "The radically redesigned MacBook Air features the next-generation M2 chip, an incredibly thin aluminum enclosure, and exceptional power efficiency. Built for high-performance productivity on the go, it includes a 13.6-inch Liquid Retina display, a 1080p FaceTime HD camera, and MagSafe 3 charging.",
-    specs: [
-      { label: "Processor", value: "Apple M2 chip" },
-      { label: "Memory", value: "8GB Unified RAM" },
-      { label: "Storage", value: "256GB SSD" },
-      { label: "Display", value: '13.6" Liquid Retina' },
-    ],
-    boxItems: [
-      "MacBook Air M2 Laptop", "30W USB-C Power Adapter", "USB-C to MagSafe 3 Cable (2m)", "Apple Documentation & Stickers",
-    ],
-  };
+function formatCurrency(value: number) {
+  return `K${value.toLocaleString()}`;
 }
-
-// FIX 1: ADDED 'slug' TO EVERY MOCK PRODUCT
-const SELLER_PRODUCTS: Product[] = [
-  { id: 101, slug: "airpods-pro", title: "AirPods Pro", price: 4200, oldPrice: 4800, discount: 12, badge: "Hot", rating: 4.9, reviews: 320, image: "https://images.unsplash.com/photo-1606220588913-b3aecb492b45?auto=format&fit=crop&w=800&q=80" },
-  { id: 102, slug: "35w-adapter", title: "35W Adapter", price: 950, oldPrice: null, discount: null, badge: null, rating: 4.7, reviews: 85, image: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=800&q=80" },
-  { id: 103, slug: "magic-keyboard", title: "Magic Keyboard", price: 2800, oldPrice: 3200, discount: 12, badge: null, rating: 4.8, reviews: 142, image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=800&q=80" },
-  { id: 104, slug: "screen-protector", title: "Screen Protector", price: 350, oldPrice: 500, discount: 30, badge: "Sale", rating: 4.5, reviews: 67, image: "https://images.unsplash.com/photo-1531297172867-4d4ce2e226d9?auto=format&fit=crop&w=800&q=80" },
-];
-
-const RELATED_PRODUCTS: Product[] = [
-  { id: 2, slug: "magic-mouse", title: "Magic Mouse", price: 1800, oldPrice: 2200, discount: 18, badge: "Popular", rating: 4.6, reviews: 45, image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=800&q=80" },
-  { id: 3, slug: "usb-c-hub", title: "USB-C Hub", price: 450, oldPrice: null, discount: null, badge: null, rating: 4.8, reviews: 112, image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=800&q=80" },
-  { id: 4, slug: "laptop-sleeve", title: "Laptop Sleeve", price: 250, oldPrice: 350, discount: 28, badge: "New", rating: 4.3, reviews: 24, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80" },
-  { id: 5, slug: "desk-stand", title: "Desk Stand", price: 600, oldPrice: 800, discount: 25, badge: "Sale", rating: 4.9, reviews: 210, image: "https://images.unsplash.com/photo-1516542076529-1ea3854896f2?auto=format&fit=crop&w=800&q=80" },
-];
-
-// ============================================================================
-// 3. UI COMPONENTS
-// ============================================================================
-function formatCurrency(value: number) { return `K${value.toLocaleString()}`; }
 
 function getStockMeta(stock: number) {
   if (stock <= 0) return { label: "Out of Stock", className: "text-red-600 bg-red-50 border-red-200" };
@@ -125,7 +43,15 @@ function getStockMeta(stock: number) {
   return { label: "In Stock", className: "text-[#009E49] bg-[#009E49]/10 border-[#009E49]/20" };
 }
 
-function QuantitySelector({ value, onDecrease, onIncrease }: { value: number; onDecrease: () => void; onIncrease: () => void; }) {
+function QuantitySelector({
+  value,
+  onDecrease,
+  onIncrease,
+}: {
+  value: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}) {
   return (
     <div className="flex h-12 items-center rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <button type="button" onClick={onDecrease} className="flex h-full w-12 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-900">
@@ -139,14 +65,21 @@ function QuantitySelector({ value, onDecrease, onIncrease }: { value: number; on
   );
 }
 
-// FIX 2: REWROTE GALLERY TO BYPASS THE SETAPI TYPE ERROR
-function ProductImageGallery({ images, title, badge }: { images: string[]; title: string; badge: string | null; }) {
+function ProductImageGallery({
+  images,
+  title,
+  badge,
+  wishlistProduct,
+}: {
+  images: string[];
+  title: string;
+  badge: string | null;
+  wishlistProduct: Product;
+}) {
   const [activeImage, setActiveImage] = React.useState(images[0]);
 
   return (
     <div className="space-y-4 md:sticky md:top-25 group">
-      
-      {/* MOBILE ONLY: Standard swipeable carousel (No setApi needed) */}
       <div className="md:hidden">
         <Carousel options={{ loop: true }} className="w-full">
           <div className="pointer-events-none absolute left-4 top-4 z-30 flex items-center gap-2">
@@ -155,11 +88,16 @@ function ProductImageGallery({ images, title, badge }: { images: string[]; title
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            {badge && (
+            <WishlistButton
+              product={wishlistProduct}
+              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-red-500"
+              iconClassName="h-4 w-4"
+            />
+            {badge ? (
               <Badge className="pointer-events-auto border-none bg-[#FF6B00] px-3 py-1 text-[10px] uppercase tracking-widest shadow-md">
                 {badge}
               </Badge>
-            )}
+            ) : null}
           </div>
           <CarouselContent>
             {images.map((src, index) => (
@@ -173,19 +111,20 @@ function ProductImageGallery({ images, title, badge }: { images: string[]; title
         </Carousel>
       </div>
 
-      {/* DESKTOP ONLY: High performance state-driven gallery (Bypasses Carousel entirely) */}
       <div className="hidden md:block relative aspect-auto h-120 w-full overflow-hidden rounded-3xl border border-zinc-200/50 bg-zinc-50 shadow-sm">
         <div className="pointer-events-none absolute left-4 top-4 z-30 flex items-center gap-2">
-          {badge && (
+          {badge ? (
             <Badge className="pointer-events-auto border-none bg-[#FF6B00] px-3 py-1 text-[10px] uppercase tracking-widest shadow-md">
               {badge}
             </Badge>
-          )}
+          ) : null}
         </div>
         <div className="pointer-events-none absolute right-4 top-4 z-30 flex flex-col gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-          <Button size="icon" className="pointer-events-auto rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md hover:bg-white hover:text-red-500">
-            <Heart className="h-4 w-4" />
-          </Button>
+          <WishlistButton
+            product={wishlistProduct}
+            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-red-500"
+            iconClassName="h-4 w-4"
+          />
           <Button size="icon" className="pointer-events-auto rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md hover:bg-white hover:text-zinc-900">
             <Share2 className="h-4 w-4" />
           </Button>
@@ -193,36 +132,43 @@ function ProductImageGallery({ images, title, badge }: { images: string[]; title
         <div className="absolute inset-0 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-[1.03] mix-blend-multiply" style={{ backgroundImage: `url('${activeImage}')` }} />
       </div>
 
-      {/* DESKTOP THUMBNAILS: Updates the state directly */}
       <div className="hidden grid-cols-4 gap-4 md:grid">
         {images.map((src) => (
-          <button 
-            key={src} 
-            type="button" 
-            onClick={() => setActiveImage(src)} 
+          <button
+            key={src}
+            type="button"
+            onClick={() => setActiveImage(src)}
             className={`aspect-square overflow-hidden rounded-xl border-2 transition-all ${activeImage === src ? "scale-[1.03] border-[#009E49] shadow-md" : "border-transparent bg-zinc-50 opacity-70 hover:border-zinc-300 hover:opacity-100"}`}
           >
             <div className="h-full w-full bg-cover bg-center mix-blend-multiply" style={{ backgroundImage: `url('${src}')` }} />
           </button>
         ))}
       </div>
-
     </div>
   );
 }
 
-function RelatedSection({ title, href, linkLabel, products }: { title: string; href?: string; linkLabel?: string; products: Product[]; }) {
+function RelatedSection({
+  title,
+  href,
+  linkLabel,
+  products,
+}: {
+  title: string;
+  href?: string;
+  linkLabel?: string;
+  products: Product[];
+}) {
   return (
     <section>
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-bold text-zinc-900">{title}</h2>
-        {href && linkLabel && (
+        {href && linkLabel ? (
           <Link href={href} className="text-sm font-bold text-[#009E49] hover:underline">
             {linkLabel}
           </Link>
-        )}
+        ) : null}
       </div>
-      {/* FIX: Replaced the rigid grid with our standardized, fluid auto-fill grid */}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] md:gap-4">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
@@ -232,21 +178,54 @@ function RelatedSection({ title, href, linkLabel, products }: { title: string; h
   );
 }
 
-// ============================================================================
-// 4. MAIN PAGE EXPORT
-// ============================================================================
 export default function ProductDetails({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const productData = getProductBySlug(slug);
 
-  const [selectedVariantId, setSelectedVariantId] = React.useState(productData.variants[0]?.id ?? "");
+  const [productData, setProductData] = React.useState<ProductDetail | null>(null);
+  const [sellerProducts, setSellerProducts] = React.useState<Product[]>([]);
+  const [relatedProducts, setRelatedProducts] = React.useState<Product[]>([]);
+
+  React.useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      getProductDetailBySlug(slug),
+      getSellerProducts(),
+      getRelatedProducts(),
+    ]).then(([detail, seller, related]) => {
+      if (!active) return;
+      setProductData(detail);
+      setSellerProducts(seller);
+      setRelatedProducts(related);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [slug]);
+
+  const [selectedVariantId, setSelectedVariantId] = React.useState("");
   const [quantity, setQuantity] = React.useState(1);
 
-  const selectedVariant = productData.variants.find((v) => v.id === selectedVariantId) ?? productData.variants[0];
+  React.useEffect(() => {
+    if (!productData) return;
+    setSelectedVariantId(productData.variants[0]?.id ?? "");
+    setQuantity(1);
+  }, [productData]);
+
+  if (!productData) {
+    return <main className="min-h-screen bg-[#f4fbf6] py-20 text-center text-sm font-medium text-zinc-500">Loading product details...</main>;
+  }
+
+  const wishlistProduct = toProductFromDetail(productData);
+  const selectedVariant =
+    productData.variants.find((variant) => variant.id === selectedVariantId) ??
+    productData.variants[0];
   const stockMeta = getStockMeta(productData.stock);
 
   const decrementQuantity = () => setQuantity((prev) => Math.max(1, prev - 1));
-  const incrementQuantity = () => setQuantity((prev) => (productData.stock > 0 ? Math.min(productData.stock, prev + 1) : prev));
+  const incrementQuantity = () =>
+    setQuantity((prev) => (productData.stock > 0 ? Math.min(productData.stock, prev + 1) : prev));
 
   return (
     <main className="min-h-screen bg-[#f4fbf6] pb-28 md:pb-12">
@@ -263,7 +242,12 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
 
         <div className="grid grid-cols-1 gap-0 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
           <div className="relative w-full animate-in fade-in slide-in-from-left-8 duration-700">
-            <ProductImageGallery images={productData.images} title={productData.title} badge={productData.badge} />
+            <ProductImageGallery
+              images={productData.images}
+              title={productData.title}
+              badge={productData.badge}
+              wishlistProduct={wishlistProduct}
+            />
           </div>
 
           <div className="flex flex-col space-y-6 px-4 pb-8 pt-5 md:px-0 md:pt-0">
@@ -317,9 +301,12 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
 
             <div className="grid grid-cols-[120px_1fr] gap-3 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500" style={{ animationDelay: "350ms" }}>
               <QuantitySelector value={quantity} onDecrease={decrementQuantity} onIncrease={incrementQuantity} />
-              <Button className="h-12 rounded-2xl bg-[#FF6B00] text-base font-bold text-white shadow-lg shadow-[#FF6B00]/25 transition-all hover:-translate-y-0.5 hover:bg-[#e66000]" disabled={productData.stock <= 0}>
-                Add to Cart
-              </Button>
+              <AddToCartButton
+                product={wishlistProduct}
+                quantity={quantity}
+                variant={selectedVariant.value}
+                className="h-12 rounded-2xl bg-[#FF6B00] text-base font-bold text-white shadow-lg shadow-[#FF6B00]/25 transition-all hover:-translate-y-0.5 hover:bg-[#e66000]"
+              />
             </div>
 
             <div className="hidden flex-col gap-2 pt-1 md:flex">
@@ -348,7 +335,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
                   <div>
                     <div className="flex items-center gap-1.5">
                       <h4 className="text-sm font-bold text-zinc-900 transition-colors group-hover:text-[#009E49]">{productData.seller.name}</h4>
-                      {productData.seller.verified && <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />}
+                      {productData.seller.verified ? <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" /> : null}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
                       <span>{productData.seller.positiveRate}</span>
@@ -422,8 +409,8 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
             </div>
           </section>
 
-          <RelatedSection title={`More from ${productData.seller.name}`} href={productData.seller.href} linkLabel="View Store" products={SELLER_PRODUCTS} />
-          <RelatedSection title="You might also like" products={RELATED_PRODUCTS} />
+          <RelatedSection title={`More from ${productData.seller.name}`} href={productData.seller.href} linkLabel="View Store" products={sellerProducts} />
+          <RelatedSection title="You might also like" products={relatedProducts} />
         </div>
       </div>
 
@@ -436,9 +423,12 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
           </Link>
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <QuantitySelector value={quantity} onDecrease={decrementQuantity} onIncrease={incrementQuantity} />
-            <Button className="h-12 flex-1 rounded-2xl bg-[#FF6B00] text-base font-bold text-white shadow-xl shadow-[#FF6B00]/30 transition-all hover:bg-[#e66000] active:scale-95" disabled={productData.stock <= 0}>
-              Add to Cart
-            </Button>
+            <AddToCartButton
+              product={wishlistProduct}
+              quantity={quantity}
+              variant={selectedVariant.value}
+              className="h-12 flex-1 rounded-2xl bg-[#FF6B00] text-base font-bold text-white shadow-xl shadow-[#FF6B00]/30 transition-all hover:bg-[#e66000] active:scale-95"
+            />
           </div>
         </div>
       </div>
