@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
-  AlertCircle, ArrowUpRight, Box,  Clock3,
+  AlertCircle, ArrowUpRight, Box, Clock3,
   Package, Plus, ShoppingCart, TrendingUp, Wallet, Bell, Eye,
 } from "lucide-react";
 import {
@@ -12,7 +12,9 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 
-// --- TYPES & DATA ---
+// ============================================================================
+// 1. DATA CONTRACTS
+// ============================================================================
 type RangeKey = "7d" | "30d" | "12m";
 type RevenuePoint = { label: string; revenue: number };
 type OrderStatusPoint = { name: string; value: number; color: string };
@@ -20,47 +22,79 @@ type LowStockItem = { id: number; name: string; stock: number; threshold: number
 type RecentOrder = { id: string; customer: string; total: number; status: "new" | "processing" | "shipped" | "delivered" };
 type ActivityItem = { id: number; text: string; time: string; tone: "info" | "warning" | "success" };
 
-const REVENUE_BY_RANGE: Record<RangeKey, RevenuePoint[]> = {
-  "7d": [
-    { label: "Mon", revenue: 4500 }, { label: "Tue", revenue: 5200 }, { label: "Wed", revenue: 3800 },
-    { label: "Thu", revenue: 6500 }, { label: "Fri", revenue: 8900 }, { label: "Sat", revenue: 12400 }, { label: "Sun", revenue: 10200 },
+interface DashboardData {
+  revenueByRange: Record<RangeKey, RevenuePoint[]>;
+  orderStatusData: OrderStatusPoint[];
+  lowStockItems: LowStockItem[];
+  recentOrders: RecentOrder[];
+  recentActivity: ActivityItem[];
+  kpis: {
+    pendingOrders: number;
+    activeProducts: number;
+    payoutAvailable: number;
+    payoutPending: number;
+  };
+}
+
+// ============================================================================
+// 2. MOCK API SERVICE (The Engine)
+// ============================================================================
+const MOCK_DASHBOARD_DATA: DashboardData = {
+  revenueByRange: {
+    "7d": [
+      { label: "Mon", revenue: 4500 }, { label: "Tue", revenue: 5200 }, { label: "Wed", revenue: 3800 },
+      { label: "Thu", revenue: 6500 }, { label: "Fri", revenue: 8900 }, { label: "Sat", revenue: 12400 }, { label: "Sun", revenue: 10200 },
+    ],
+    "30d": [
+      { label: "W1", revenue: 28500 }, { label: "W2", revenue: 33200 }, { label: "W3", revenue: 30100 }, { label: "W4", revenue: 38900 },
+    ],
+    "12m": [
+      { label: "Jan", revenue: 92000 }, { label: "Feb", revenue: 104000 }, { label: "Mar", revenue: 98000 },
+      { label: "Apr", revenue: 112000 }, { label: "May", revenue: 125000 }, { label: "Jun", revenue: 119000 },
+    ],
+  },
+  orderStatusData: [
+    { name: "Processing", value: 12, color: "#F59E0B" },
+    { name: "Shipped", value: 24, color: "#3B82F6" },
+    { name: "Delivered", value: 45, color: "#009E49" },
+    { name: "Cancelled", value: 3, color: "#EF4444" },
   ],
-  "30d": [
-    { label: "W1", revenue: 28500 }, { label: "W2", revenue: 33200 }, { label: "W3", revenue: 30100 }, { label: "W4", revenue: 38900 },
+  lowStockItems: [
+    { id: 1, name: "Apple AirPods Pro (2nd Gen)", stock: 2, threshold: 5 },
+    { id: 2, name: "Samsung 45W Fast Charger", stock: 0, threshold: 10 },
+    { id: 3, name: "JBL Flip 6 Portable", stock: 4, threshold: 5 },
   ],
-  "12m": [
-    { label: "Jan", revenue: 92000 }, { label: "Feb", revenue: 104000 }, { label: "Mar", revenue: 98000 },
-    { label: "Apr", revenue: 112000 }, { label: "May", revenue: 125000 }, { label: "Jun", revenue: 119000 },
+  recentOrders: [
+    { id: "ORD-9921", customer: "Chanda M.", total: 18500, status: "new" },
+    { id: "ORD-9920", customer: "Bupe K.", total: 450, status: "processing" },
+    { id: "ORD-9918", customer: "Emmanuel B.", total: 4200, status: "shipped" },
+    { id: "ORD-9910", customer: "David L.", total: 1450, status: "delivered" },
   ],
+  recentActivity: [
+    { id: 1, text: "New order received from Chanda M.", time: "10 mins ago", tone: "info" },
+    { id: 2, text: "Samsung 45W Fast Charger is out of stock", time: "35 mins ago", tone: "warning" },
+    { id: 3, text: "Product listing approved by admin", time: "2 hours ago", tone: "success" },
+  ],
+  kpis: {
+    pendingOrders: 12,
+    activeProducts: 84,
+    payoutAvailable: 8450,
+    payoutPending: 2300,
+  }
 };
 
-const ORDER_STATUS_DATA: OrderStatusPoint[] = [
-  { name: "Processing", value: 12, color: "#F59E0B" },
-  { name: "Shipped", value: 24, color: "#3B82F6" },
-  { name: "Delivered", value: 45, color: "#009E49" },
-  { name: "Cancelled", value: 3, color: "#EF4444" },
-];
+async function fetchDashboardData(): Promise<DashboardData> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      if (Math.random() < 0.05) reject(new Error("Failed to load dashboard metrics."));
+      else resolve(MOCK_DASHBOARD_DATA);
+    }, 600);
+  });
+}
 
-const LOW_STOCK_ITEMS: LowStockItem[] = [
-  { id: 1, name: "Apple AirPods Pro (2nd Gen)", stock: 2, threshold: 5 },
-  { id: 2, name: "Samsung 45W Fast Charger", stock: 0, threshold: 10 },
-  { id: 3, name: "JBL Flip 6 Portable", stock: 4, threshold: 5 },
-];
-
-const RECENT_ORDERS: RecentOrder[] = [
-  { id: "ORD-9921", customer: "Chanda M.", total: 18500, status: "new" },
-  { id: "ORD-9920", customer: "Bupe K.", total: 450, status: "processing" },
-  { id: "ORD-9918", customer: "Emmanuel B.", total: 4200, status: "shipped" },
-  { id: "ORD-9910", customer: "David L.", total: 1450, status: "delivered" },
-];
-
-const RECENT_ACTIVITY: ActivityItem[] = [
-  { id: 1, text: "New order received from Chanda M.", time: "10 mins ago", tone: "info" },
-  { id: 2, text: "Samsung 45W Fast Charger is out of stock", time: "35 mins ago", tone: "warning" },
-  { id: 3, text: "Product listing approved by admin", time: "2 hours ago", tone: "success" },
-];
-
-// --- LOGIC HELPERS ---
+// ============================================================================
+// 3. LOGIC HELPERS
+// ============================================================================
 function formatCurrency(value: number) {
   return `K${value.toLocaleString()}`;
 }
@@ -82,8 +116,10 @@ function getActivityDotClass(tone: ActivityItem["tone"]) {
   return "bg-blue-500";
 }
 
-// --- EXTRACTED COMPONENTS ---
-function QuickActionCard({ href, icon: Icon, title, description }: { href: string; icon: any; title: string; description: string }) {
+// ============================================================================
+// 4. SUBCOMPONENTS
+// ============================================================================
+function QuickActionCard({ href, icon: Icon, title, description }: { href: string; icon: React.ComponentType<{ className?: string }>; title: string; description: string }) {
   return (
     <Link href={href} className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#009E49]/10 text-[#009E49]">
@@ -95,21 +131,77 @@ function QuickActionCard({ href, icon: Icon, title, description }: { href: strin
   );
 }
 
-// --- MAIN PAGE ---
+// ============================================================================
+// 5. MAIN PAGE EXPORT
+// ============================================================================
 export default function SellerDashboard() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [range, setRange] = useState<RangeKey>("7d");
-  const revenueData = REVENUE_BY_RANGE[range];
 
-  const totalRevenue = useMemo(() => revenueData.reduce((sum, item) => sum + item.revenue, 0), [revenueData]);
-  const totalOrders = useMemo(() => ORDER_STATUS_DATA.reduce((sum, item) => sum + item.value, 0), []);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await fetchDashboardData();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // FIX: Wrapped revenueData in useMemo so the fallback [] doesn't break referential equality
+  const revenueData = useMemo(() => {
+    return data?.revenueByRange[range] || [];
+  }, [data, range]);
+
+  const totalRevenue = useMemo(() => {
+    return revenueData.reduce((sum, item) => sum + item.revenue, 0);
+  }, [revenueData]);
+  
+  const totalOrders = useMemo(() => {
+    return data?.orderStatusData.reduce((sum, item) => sum + item.value, 0) || 0;
+  }, [data]);
+  
   const rangeGrowthLabel = useMemo(() => {
     if (range === "7d") return "+14.5% vs previous 7 days";
     if (range === "30d") return "+9.2% vs previous 30 days";
     return "+18.1% vs previous period";
   }, [range]);
 
+  // --- SYSTEM STATES ---
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm font-medium text-zinc-500">Loading dashboard metrics...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-3xl border border-red-100 bg-red-50 p-8 text-center">
+        <AlertCircle className="mb-3 h-8 w-8 text-red-500" />
+        <h3 className="text-base font-bold text-red-900">Failed to load dashboard</h3>
+        <p className="mt-1 text-sm text-red-700">{error}</p>
+        <Button onClick={loadData} variant="outline" className="mt-4 border-red-200 text-red-700 hover:bg-red-100">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // --- MAIN UI ---
   return (
-    <div className="mx-auto max-w-[1400px] animate-in space-y-4 fade-in slide-in-from-bottom-4 duration-500 min-w-0">
+    <div className="mx-auto max-w-350 animate-in space-y-4 fade-in slide-in-from-bottom-4 duration-500 min-w-0">
       
       {/* HEADER */}
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
@@ -148,7 +240,7 @@ export default function SellerDashboard() {
             </div>
           </div>
           <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">Pending Orders</p>
-          <h3 className="mt-0.5 text-xl font-black text-zinc-900 md:text-2xl">12</h3>
+          <h3 className="mt-0.5 text-xl font-black text-zinc-900 md:text-2xl">{data.kpis.pendingOrders}</h3>
         </div>
 
         <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5">
@@ -158,7 +250,7 @@ export default function SellerDashboard() {
             </div>
           </div>
           <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">Active Products</p>
-          <h3 className="mt-0.5 text-xl font-black text-zinc-900 md:text-2xl">84</h3>
+          <h3 className="mt-0.5 text-xl font-black text-zinc-900 md:text-2xl">{data.kpis.activeProducts}</h3>
         </div>
 
         <div className="rounded-3xl border border-red-100 bg-red-50/50 p-4 shadow-sm md:p-5">
@@ -168,7 +260,7 @@ export default function SellerDashboard() {
             </div>
           </div>
           <p className="text-xs font-bold uppercase tracking-wider text-red-500">Low Stock</p>
-          <h3 className="mt-0.5 text-xl font-black text-red-700 md:text-2xl">3 Items</h3>
+          <h3 className="mt-0.5 text-xl font-black text-red-700 md:text-2xl">{data.lowStockItems.length} Items</h3>
         </div>
       </div>
 
@@ -182,7 +274,7 @@ export default function SellerDashboard() {
       {/* CHARTS ROW */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
         
-        {/* Revenue Graph (Mobile Safe via min-w-0) */}
+        {/* Revenue Graph */}
         <div className="rounded-3xl border border-zinc-200/80 bg-white p-4 shadow-sm md:p-5 flex flex-col min-w-0">
           <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -190,7 +282,6 @@ export default function SellerDashboard() {
               <p className="mt-1 text-xs font-medium text-zinc-500">{formatCurrency(totalRevenue)} in the selected period</p>
             </div>
             
-            {/* Mobile Native Dropdown equivalent for DateRange */}
             <select
               value={range}
               onChange={(e) => setRange(e.target.value as RangeKey)}
@@ -236,11 +327,11 @@ export default function SellerDashboard() {
               <Link href="/seller/orders" className="text-[11px] font-bold text-[#009E49] hover:underline">View Orders</Link>
             </div>
 
-            <div className="relative h-[150px] w-full">
+            <div className="relative h-37.5 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={ORDER_STATUS_DATA} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={3} dataKey="value" stroke="none">
-                    {ORDER_STATUS_DATA.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                  <Pie data={data.orderStatusData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={3} dataKey="value" stroke="none">
+                    {data.orderStatusData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                   </Pie>
                   <Tooltip contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} itemStyle={{ fontWeight: "bold", fontSize: "12px" }} />
                 </PieChart>
@@ -252,7 +343,7 @@ export default function SellerDashboard() {
             </div>
 
             <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
-              {ORDER_STATUS_DATA.map((status) => (
+              {data.orderStatusData.map((status) => (
                 <div key={status.name} className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full" style={{ backgroundColor: status.color }} />
                   <span className="text-[10px] font-bold text-zinc-500">{status.name}</span>
@@ -267,7 +358,7 @@ export default function SellerDashboard() {
               <Link href="/seller/inventory" className="text-[11px] font-bold text-[#009E49] hover:underline">Inventory</Link>
             </div>
             <div className="space-y-2">
-              {LOW_STOCK_ITEMS.map((item) => (
+              {data.lowStockItems.map((item) => (
                 <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 p-2.5">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-bold text-zinc-900">{item.name}</p>
@@ -293,7 +384,7 @@ export default function SellerDashboard() {
             <Link href="/seller/orders" className="text-[11px] font-bold text-[#009E49] hover:underline">View All</Link>
           </div>
           <div className="space-y-2">
-            {RECENT_ORDERS.map((order) => (
+            {data.recentOrders.map((order) => (
               <div key={order.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
                 <div className="min-w-0">
                   <p className="text-xs font-black text-zinc-900">{order.id}</p>
@@ -323,7 +414,7 @@ export default function SellerDashboard() {
           </div>
           
           <div className="space-y-3">
-            {RECENT_ACTIVITY.map((item) => (
+            {data.recentActivity.map((item) => (
               <div key={item.id} className="flex items-start gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
                 <div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getActivityDotClass(item.tone)}`} />
                 <div className="min-w-0">
@@ -344,11 +435,11 @@ export default function SellerDashboard() {
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-white p-3 border border-zinc-100 shadow-sm">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Available</p>
-                <p className="mt-1 text-sm font-black text-zinc-900">K8,450</p>
+                <p className="mt-1 text-sm font-black text-zinc-900">{formatCurrency(data.kpis.payoutAvailable)}</p>
               </div>
               <div className="rounded-xl bg-white p-3 border border-zinc-100 shadow-sm">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pending</p>
-                <p className="mt-1 text-sm font-black text-zinc-900">K2,300</p>
+                <p className="mt-1 text-sm font-black text-zinc-900">{formatCurrency(data.kpis.payoutPending)}</p>
               </div>
             </div>
           </div>

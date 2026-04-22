@@ -1,21 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import {
   ArrowLeft, Package, Truck, CheckCircle2, Clock3, MapPin, Phone,
-  Printer, User, Calendar, Circle, XCircle, RotateCcw, ReceiptText
+  Printer, User, Calendar, Circle, XCircle, RotateCcw, ReceiptText, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// --- TYPES ---
+// ============================================================================
+// 1. DATA CONTRACTS
+// ============================================================================
 type OrderStatus = "new" | "processing" | "shipped" | "delivered" | "cancelled" | "refund";
 type PaymentStatus = "paid" | "cod" | "refunded" | "failed";
 
-type OrderItem = { id: string; name: string; brand: string; price: number; quantity: number; image: string | null; };
+type OrderItem = { 
+  id: string; 
+  name: string; 
+  brand: string; 
+  price: number; 
+  quantity: number; 
+  image: string | null; 
+};
 
 type SellerOrder = {
   id: string;
@@ -29,11 +37,13 @@ type SellerOrder = {
   totals: { subtotal: number; shipping: number; discount: number; total: number };
 };
 
-// --- MOCK DATA (Static Date to prevent Hydration errors) ---
+// ============================================================================
+// 2. MOCK API SERVICE (The Engine)
+// ============================================================================
 const MOCK_ORDER: SellerOrder = {
   id: "ORD-9921",
   status: "new",
-  createdAt: "2026-04-12T10:30:00Z", // STATIC DATE
+  createdAt: "2026-04-12T10:30:00Z",
   paymentStatus: "paid",
   paymentMethod: "Mobile Money (MTN)",
   customer: { name: "Chanda Mwila", phone: "+260971111111", email: "chanda.m@example.com" },
@@ -45,9 +55,26 @@ const MOCK_ORDER: SellerOrder = {
   totals: { subtotal: 19400, shipping: 150, discount: 0, total: 19550 },
 };
 
-// --- CONFIGURATIONS ---
+async function fetchSellerOrderById(id: string): Promise<SellerOrder> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      // 5% network error simulation
+      if (Math.random() < 0.05) {
+        reject(new Error("Failed to connect to the server."));
+      } else if (id === MOCK_ORDER.id) {
+        resolve(MOCK_ORDER);
+      } else {
+        reject(new Error("Order not found."));
+      }
+    }, 800);
+  });
+}
+
+// ============================================================================
+// 3. UI CONFIGURATIONS & HELPERS
+// ============================================================================
 const STATUS_META: Record<OrderStatus, {
-  title: string; color: string; bg: string; border: string; icon: any; primaryAction?: { label: string; next: OrderStatus };
+  title: string; color: string; bg: string; border: string; icon: React.ComponentType<{ className?: string }>; primaryAction?: { label: string; next: OrderStatus };
 }> = {
   new: { title: "New Order", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", icon: Clock3, primaryAction: { label: "Accept Order", next: "processing" } },
   processing: { title: "Processing", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", icon: Package, primaryAction: { label: "Mark as Shipped", next: "shipped" } },
@@ -64,7 +91,6 @@ const PROGRESS_STEPS: Array<{ id: "new" | "processing" | "shipped" | "delivered"
   { id: "delivered", label: "Delivered" },
 ];
 
-// --- LOGIC HELPERS ---
 function formatCurrency(value: number) { return `K${value.toLocaleString()}`; }
 
 function formatDate(dateString: string) {
@@ -81,7 +107,9 @@ function getStepState(current: OrderStatus, step: "new" | "processing" | "shippe
   return "pending";
 }
 
-// --- COMPONENTS ---
+// ============================================================================
+// 4. SUBCOMPONENTS
+// ============================================================================
 function ProgressStepper({ status }: { status: OrderStatus }) {
   return (
     <div className="rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm">
@@ -94,7 +122,7 @@ function ProgressStepper({ status }: { status: OrderStatus }) {
           return (
             <div key={step.id} className="relative min-w-0">
               {index < PROGRESS_STEPS.length - 1 && (
-                <div className="absolute left-[calc(50%+16px)] right-[-50%] top-4 h-[2px] bg-zinc-200">
+                <div className="absolute left-[calc(50%+16px)] right-[-50%] top-4 h-0.5 bg-zinc-200">
                   <div className={cn("h-full rounded-full transition-all duration-500", isDone ? "w-full bg-[#009E49]" : "w-0 bg-[#009E49]")} />
                 </div>
               )}
@@ -122,20 +150,46 @@ function ProgressStepper({ status }: { status: OrderStatus }) {
   );
 }
 
-// --- MAIN PAGE ---
-export default function OrderDetailsPage() {
-  const params = useParams<{ id: string }>();
-  const orderId = params?.id;
+// ============================================================================
+// 5. MAIN PAGE EXPORT
+// ============================================================================
+export default function OrderDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  // FIX: Unwrap params properly for Next.js 15
+  const { id: orderId } = use(params);
   
-  const [orderStatus, setOrderStatus] = useState<OrderStatus>(MOCK_ORDER.status);
+  const [order, setOrder] = useState<SellerOrder | null>(null);
+  const [orderStatus, setOrderStatus] = useState<OrderStatus>("new");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const order = orderId === MOCK_ORDER.id ? MOCK_ORDER : null;
-  
+  const loadOrder = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchSellerOrderById(orderId);
+      setOrder(data);
+      setOrderStatus(data.status); // Sync initial status
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
+
   const itemCount = useMemo(() => (order ? order.items.reduce((sum, item) => sum + item.quantity, 0) : 0), [order]);
 
   const handleStatusUpdate = (nextStatus: OrderStatus) => {
     setIsProcessing(true);
+    // Simulate an API call to update the status in the backend
     setTimeout(() => {
       setOrderStatus(nextStatus);
       setIsProcessing(false);
@@ -150,31 +204,42 @@ export default function OrderDetailsPage() {
 
   const handleContestRefund = () => toast.success("Refund contest submitted for admin review.");
 
-  if (!order) {
+  // --- SYSTEM STATES ---
+  if (loading) {
     return (
-      <div className="mx-auto max-w-[1000px] animate-in space-y-6 fade-in pb-24 duration-500 md:pb-12">
-        <div className="rounded-3xl border border-zinc-200/80 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400">
-            <ReceiptText className="h-6 w-6" />
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm font-medium text-zinc-500">Loading order details...</p>
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <div className="mx-auto max-w-250 animate-in space-y-6 fade-in pb-24 duration-500 md:pb-12">
+        <div className="flex flex-col items-center justify-center rounded-3xl border border-red-100 bg-red-50 p-8 text-center shadow-sm">
+          <AlertCircle className="mb-3 h-8 w-8 text-red-500" />
+          <h1 className="text-xl font-black text-red-900">Failed to load order</h1>
+          <p className="mt-2 text-sm font-medium text-red-700">{error || "Order not found"}</p>
+          <div className="mt-6 flex gap-3">
+            <Link href="/seller/orders">
+              <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-100">Back to Orders</Button>
+            </Link>
+            <Button onClick={loadOrder} className="bg-red-600 text-white hover:bg-red-700">Try Again</Button>
           </div>
-          <h1 className="text-xl font-black text-zinc-900">Order not found</h1>
-          <p className="mt-2 text-sm font-medium text-zinc-500">We couldn&apos;t find that order ID.</p>
-          <Link href="/seller/orders" className="mt-5 inline-flex">
-            <Button className="rounded-xl bg-zinc-900 text-white hover:bg-zinc-800">Back to Orders</Button>
-          </Link>
         </div>
       </div>
     );
   }
 
+  // --- MAIN UI ---
   const currentConfig = STATUS_META[orderStatus];
   const StatusIcon = currentConfig.icon;
 
   return (
-    <div className="mx-auto max-w-[1000px] animate-in space-y-6 fade-in pb-24 duration-500 md:pb-12">
+    <div className="mx-auto max-w-250 animate-in space-y-6 fade-in pb-24 duration-500 md:pb-12">
       
       {/* 1. HEADER */}
-      <div className="sticky top-[72px] z-20 -mx-4 mb-6 border-b border-zinc-200/50 bg-[#f4fbf6]/80 px-4 py-4 backdrop-blur-md md:top-0 md:mx-0 md:border-none md:px-0">
+      <div className="sticky top-18 z-20 -mx-4 mb-6 border-b border-zinc-200/50 bg-[#f4fbf6]/80 px-4 py-4 backdrop-blur-md md:top-0 md:mx-0 md:border-none md:px-0">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
@@ -184,7 +249,7 @@ export default function OrderDetailsPage() {
                 </Button>
               </Link>
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-black leading-none tracking-tight text-zinc-900 md:text-2xl">{orderId}</h1>
+                <h1 className="truncate text-xl font-black leading-none tracking-tight text-zinc-900 md:text-2xl">{order.id}</h1>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider", currentConfig.bg, currentConfig.color, currentConfig.border)}>
                     <StatusIcon className="h-3 w-3" /> {currentConfig.title}

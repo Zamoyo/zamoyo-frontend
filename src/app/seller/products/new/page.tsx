@@ -12,7 +12,57 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toaster, toast } from "sonner";
 
-// --- DATA & HELPERS ---
+// ============================================================================
+// 1. DATA CONTRACTS
+// ============================================================================
+type ProductStatus = "draft" | "review";
+type ValidationErrors = Record<string, string>;
+
+export interface CreateProductPayload {
+  title: string;
+  brand: string;
+  condition: string;
+  description: string;
+  category: string;
+  subcategory: string;
+  status: ProductStatus;
+  price: number;
+  salePrice: number | null;
+  globalStock: number;
+  lowStockThreshold: number;
+  deliveryType: string;
+  logistics: {
+    weightKG: number;
+    dimensions: string;
+  };
+  variants: Array<{ title: string; sku?: string; stock?: number }> | { colors: string; sizes: string };
+  specifications: Array<{ name: string; value: string }>;
+  seo: {
+    metaTitle: string;
+    metaDescription: string;
+  };
+}
+
+// ============================================================================
+// 2. MOCK API SERVICE (The Engine)
+// ============================================================================
+async function submitNewProduct(payload: CreateProductPayload): Promise<{ success: boolean; id: string }> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      // Simulate 5% chance of network error
+      if (Math.random() < 0.05) {
+        reject(new Error("Network error: Failed to reach Zamoyo servers. Please try again."));
+      } else {
+        console.log("🚀 Payload successfully transmitted to backend:", payload);
+        resolve({ success: true, id: `ZM-P-${Math.floor(Math.random() * 1000)}` });
+      }
+    }, 1200); // 1.2s simulated latency
+  });
+}
+
+// ============================================================================
+// 3. UI CONFIGURATIONS & HELPERS
+// ============================================================================
 const CATEGORY_TREE: Record<string, string[]> = {
   Electronics: ["Smartphones", "Laptops", "Tablets", "Audio & Headphones", "Wearables", "Gaming Consoles", "Cameras", "Accessories", "Home Appliances", "TVs & Entertainment"],
   Fashion: ["Men's Clothing", "Women's Clothing", "Footwear", "Bags", "Watches", "Jewelry", "Beauty & Personal Care"],
@@ -35,15 +85,18 @@ const getDefaultWeight = (subcategory: string) => {
   return weights[subcategory] || 1.0;
 };
 
+// ============================================================================
+// 4. SUBCOMPONENTS
+// ============================================================================
 const ToggleSwitch = ({ active, onClick }: { active: boolean; onClick: () => void }) => (
   <div onClick={onClick} className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors ${active ? "border-[#009E49] bg-[#009E49]" : "border-zinc-200 bg-zinc-100"}`}>
     <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${active ? "translate-x-5" : "translate-x-0.5"}`} />
   </div>
 );
 
-type ProductStatus = "draft" | "review";
-type ValidationErrors = Record<string, string>;
-
+// ============================================================================
+// 5. MAIN PAGE EXPORT
+// ============================================================================
 export default function AddProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -72,7 +125,6 @@ export default function AddProductPage() {
   const [hasVariants, setHasVariants] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Missing State wired up
   const [specs, setSpecs] = useState([{ name: "", value: "" }]);
   const [variantOptions, setVariantOptions] = useState({ colors: "", sizes: "" });
   const [seo, setSeo] = useState({ title: "", description: "" });
@@ -107,7 +159,7 @@ export default function AddProductPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSave = (e: React.FormEvent | React.MouseEvent, status: ProductStatus) => {
+  const handleSave = async (e: React.FormEvent | React.MouseEvent, status: ProductStatus) => {
     e.preventDefault();
     if (!validateForm()) {
       toast.error("Please fix the highlighted fields.");
@@ -119,7 +171,7 @@ export default function AddProductPage() {
     const finalSKU = sku.trim() || `ZM-${selectedSubcategory.substring(0, 3).toUpperCase()}-${Math.floor(Math.random() * 10000)}`;
     const finalWeight = packageWeight ? Number(packageWeight) : getDefaultWeight(selectedSubcategory);
 
-    const payload = {
+    const payload: CreateProductPayload = {
       title: productName.trim(),
       brand: brand.trim(),
       condition,
@@ -144,16 +196,24 @@ export default function AddProductPage() {
       },
     };
 
-    console.log("🚀 Payload compiled:", payload);
-
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Send data to our mock API
+      await submitNewProduct(payload);
+      
       toast.success(status === "draft" ? "Draft saved successfully!" : "Product submitted for review!", {
         description: status === "draft" ? "Your draft is ready for editing later." : "Your product is waiting for admin approval.",
         icon: <CheckCircle2 className="h-4 w-4 text-[#009E49]" />,
         style: { borderRadius: "14px", border: "1px solid #e4e7ec" },
       });
-    }, 1200);
+      
+      // Note: In a real app, you might want to redirect to /seller/products here
+      // using router.push('/seller/products')
+      
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save product");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const fieldError = (msg?: string) => msg ? <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-red-500"><AlertCircle className="h-3.5 w-3.5" />{msg}</p> : null;

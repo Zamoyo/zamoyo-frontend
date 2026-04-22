@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
-  Box, Filter, Image as ImageIcon, MoreVertical, Package, Plus, Search,
+  Box, Filter, Image as ImageIcon, MoreVertical, Package, Plus, Search, AlertCircle,
+  Layers, CheckCircle2, FileEdit, AlertTriangle, XCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-// --- TYPES & DATA ---
+// ============================================================================
+// 1. DATA CONTRACTS
+// ============================================================================
 type ProductStatus = "active" | "draft" | "review" | "rejected";
 type ProductTab = "all" | "active" | "draft" | "review" | "rejected" | "low-stock" | "out-of-stock";
 
@@ -25,6 +28,9 @@ type SellerProduct = {
   image?: string | null;
 };
 
+// ============================================================================
+// 2. MOCK API SERVICE (The Engine)
+// ============================================================================
 const MOCK_PRODUCTS: SellerProduct[] = [
   { id: "ZM-P-101", name: "MacBook Air M2 - 256GB Midnight", brand: "Apple", category: "Electronics", subcategory: "Laptops", price: 18500, stock: 12, lowStockThreshold: 5, status: "active", image: null },
   { id: "ZM-P-102", name: "Samsung 45W Fast Charger Type-C", brand: "Samsung", category: "Electronics", subcategory: "Accessories", price: 450, stock: 0, lowStockThreshold: 10, status: "active", image: null },
@@ -44,7 +50,18 @@ const PRODUCT_TABS: Array<{ id: ProductTab; label: string }> = [
   { id: "out-of-stock", label: "Out of Stock" },
 ];
 
-// --- LOGIC HELPERS ---
+async function fetchSellerProducts(): Promise<SellerProduct[]> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      if (Math.random() < 0.05) reject(new Error("Failed to load products."));
+      else resolve(MOCK_PRODUCTS);
+    }, 800);
+  });
+}
+
+// ============================================================================
+// 3. LOGIC HELPERS
+// ============================================================================
 function formatCurrency(value: number) {
   return `K${value.toLocaleString()}`;
 }
@@ -55,7 +72,9 @@ function getStockState(product: SellerProduct) {
   return "in-stock";
 }
 
-// --- EXTRACTED COMPONENTS ---
+// ============================================================================
+// 4. SUBCOMPONENTS
+// ============================================================================
 function ListingStatusBadge({ status }: { status: ProductStatus }) {
   const styles: Record<ProductStatus, string> = {
     active: "bg-[#009E49]/10 text-[#009E49] border-[#009E49]/20",
@@ -104,7 +123,6 @@ function StockBadge({ product }: { product: SellerProduct }) {
   );
 }
 
-// --- CUSTOM CATEGORY DROPDOWN ---
 function CategoryDropdown({ value, onChange, categories }: { value: string; onChange: (v: string) => void; categories: string[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const displayValue = value === "all" ? "All Categories" : value;
@@ -123,12 +141,9 @@ function CategoryDropdown({ value, onChange, categories }: { value: string; onCh
 
       {isOpen && (
         <>
-          {/* Invisible overlay to close dropdown when clicking outside */}
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          
-          {/* Dropdown Menu */}
-          <div className="absolute right-0 top-full z-50 mt-2 w-full origin-top-right overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-top-2 md:w-[240px]">
-            <div className="max-h-[300px] overflow-y-auto hide-scrollbar space-y-0.5">
+          <div className="absolute right-0 top-full z-50 mt-2 w-full origin-top-right overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-top-2 md:w-60">
+            <div className="max-h-75 overflow-y-auto hide-scrollbar space-y-0.5">
               <button
                 type="button"
                 onClick={() => { onChange("all"); setIsOpen(false); }}
@@ -154,27 +169,50 @@ function CategoryDropdown({ value, onChange, categories }: { value: string; onCh
   );
 }
 
-// --- MAIN PAGE ---
+// ============================================================================
+// 5. MAIN PAGE EXPORT
+// ============================================================================
 export default function SellerProductsPage() {
+  const [products, setProducts] = useState<SellerProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<ProductTab>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  const categories = useMemo(() => Array.from(new Set(MOCK_PRODUCTS.map((p) => p.category))).sort(), []);
+  const loadProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchSellerProducts();
+      setProducts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))).sort(), [products]);
 
   const summary = useMemo(() => {
     return {
-      total: MOCK_PRODUCTS.length,
-      active: MOCK_PRODUCTS.filter((p) => p.status === "active").length,
-      draft: MOCK_PRODUCTS.filter((p) => p.status === "draft").length,
-      lowStock: MOCK_PRODUCTS.filter((p) => getStockState(p) === "low-stock").length,
-      outOfStock: MOCK_PRODUCTS.filter((p) => getStockState(p) === "out-of-stock").length,
+      total: products.length,
+      active: products.filter((p) => p.status === "active").length,
+      draft: products.filter((p) => p.status === "draft").length,
+      lowStock: products.filter((p) => getStockState(p) === "low-stock").length,
+      outOfStock: products.filter((p) => getStockState(p) === "out-of-stock").length,
     };
-  }, []);
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return MOCK_PRODUCTS.filter((product) => {
+    return products.filter((product) => {
       const matchesSearch = !query || product.name.toLowerCase().includes(query) || product.id.toLowerCase().includes(query) || product.brand.toLowerCase().includes(query);
       const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
       const stockState = getStockState(product);
@@ -182,11 +220,11 @@ export default function SellerProductsPage() {
       
       return matchesSearch && matchesCategory && matchesTab;
     });
-  }, [activeTab, categoryFilter, searchQuery]);
+  }, [products, activeTab, categoryFilter, searchQuery]);
 
   const tabCounts = useMemo(() => {
     return PRODUCT_TABS.reduce<Record<ProductTab, number>>((acc, tab) => {
-      acc[tab.id] = MOCK_PRODUCTS.filter((product) => {
+      acc[tab.id] = products.filter((product) => {
         const stockState = getStockState(product);
         if (tab.id === "all") return true;
         if (tab.id === "low-stock") return stockState === "low-stock";
@@ -195,10 +233,32 @@ export default function SellerProductsPage() {
       }).length;
       return acc;
     }, {} as Record<ProductTab, number>);
-  }, []);
+  }, [products]);
+
+  // --- SYSTEM STATES ---
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm font-medium text-zinc-500">Loading products...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-3xl border border-red-100 bg-red-50 p-8 text-center mt-6">
+        <AlertCircle className="mb-3 h-8 w-8 text-red-500" />
+        <h3 className="text-base font-bold text-red-900">Failed to load products</h3>
+        <p className="mt-1 text-sm text-red-700">{error}</p>
+        <Button onClick={loadProducts} variant="outline" className="mt-4 border-red-200 text-red-700 hover:bg-red-100">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-[1400px] animate-in space-y-5 fade-in slide-in-from-bottom-4 duration-500 min-w-0">
+    <div className="mx-auto max-w-350 animate-in space-y-5 fade-in slide-in-from-bottom-4 duration-500 min-w-0">
       
       {/* 1. HEADER */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -213,27 +273,56 @@ export default function SellerProductsPage() {
         </Link>
       </div>
 
-      {/* 2. KPI SUMMARY */}
+      {/* 2. KPI SUMMARY (Upgraded UI) */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total</p>
-          <p className="mt-1 text-xl font-black text-zinc-900">{summary.total}</p>
+        <div className="relative overflow-hidden rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Total</p>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-100 text-blue-600">
+              <Layers className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-blue-950">{summary.total}</p>
         </div>
-        <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Active</p>
-          <p className="mt-1 text-xl font-black text-zinc-900">{summary.active}</p>
+        
+        <div className="relative overflow-hidden rounded-2xl border border-[#009E49]/20 bg-[#009E49]/5 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#009E49]">Active</p>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#009E49]/10 text-[#009E49]">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-zinc-900">{summary.active}</p>
         </div>
-        <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Draft</p>
-          <p className="mt-1 text-xl font-black text-zinc-900">{summary.draft}</p>
+        
+        <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Draft</p>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200/50 text-zinc-600">
+              <FileEdit className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-zinc-900">{summary.draft}</p>
         </div>
-        <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Low Stock</p>
-          <p className="mt-1 text-xl font-black text-amber-700">{summary.lowStock}</p>
+        
+        <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/80 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Low Stock</p>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-200/50 text-amber-700">
+              <AlertTriangle className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-amber-950">{summary.lowStock}</p>
         </div>
-        <div className="rounded-2xl border border-red-100 bg-red-50/50 p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-red-500">Out of Stock</p>
-          <p className="mt-1 text-xl font-black text-red-700">{summary.outOfStock}</p>
+        
+        <div className="relative overflow-hidden rounded-2xl border border-red-200 bg-red-50/80 p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-red-700">Out of Stock</p>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-red-200/50 text-red-700">
+              <XCircle className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-red-950">{summary.outOfStock}</p>
         </div>
       </div>
 
@@ -271,7 +360,6 @@ export default function SellerProductsPage() {
             />
           </div>
 
-          {/* Premium Custom Dropdown */}
           <CategoryDropdown 
             value={categoryFilter} 
             onChange={setCategoryFilter} 

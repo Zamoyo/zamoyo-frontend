@@ -1,16 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { 
   Search, Clock3, Package, Truck, CheckCircle2, Download, MoreHorizontal, 
-  MapPin, XCircle, RotateCcw, CreditCard, Phone, Copy 
+  MapPin, XCircle, RotateCcw, CreditCard, Phone, Copy, AlertCircle 
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-// --- TYPES & DATA ---
+// ============================================================================
+// 1. DATA CONTRACTS
+// ============================================================================
 type OrderStatus = "new" | "processing" | "shipped" | "delivered" | "cancelled" | "refund";
 type PaymentStatus = "paid" | "cod" | "refunded" | "failed";
 type DateFilter = "today" | "7days" | "30days" | "all";
@@ -27,6 +29,9 @@ type SellerOrder = {
   createdAt: string;
 };
 
+// ============================================================================
+// 2. MOCK API SERVICE (The Engine)
+// ============================================================================
 const MOCK_ORDERS: SellerOrder[] = [
   { id: "ORD-9921", customer: "Chanda M.", phone: "+260971111111", items: 2, total: 18500, status: "new", paymentStatus: "paid", location: "Kabulonga", createdAt: "2026-04-11T14:50:00" },
   { id: "ORD-9920", customer: "Bupe K.", phone: "+260972222222", items: 1, total: 450, status: "new", paymentStatus: "cod", location: "Woodlands", createdAt: "2026-04-11T13:00:00" },
@@ -37,6 +42,19 @@ const MOCK_ORDERS: SellerOrder[] = [
   { id: "ORD-9905", customer: "Joseph N.", phone: "+260977777777", items: 1, total: 1200, status: "refund", paymentStatus: "refunded", location: "Roma", createdAt: "2026-04-06T11:40:00" },
 ];
 
+async function fetchSellerOrders(): Promise<SellerOrder[]> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      // 5% chance of network error to test our robust UI handling
+      if (Math.random() < 0.05) reject(new Error("Failed to load seller orders."));
+      else resolve(MOCK_ORDERS);
+    }, 800);
+  });
+}
+
+// ============================================================================
+// 3. UI CONFIG & LOGIC HELPERS
+// ============================================================================
 const STATUS_COLUMNS = [
   { id: "new", title: "New Orders", icon: Clock3, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" },
   { id: "processing", title: "Processing", icon: Package, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
@@ -53,7 +71,6 @@ const PAYMENT_STYLES: Record<PaymentStatus, string> = {
   failed: "bg-red-50 text-red-700 border-red-200",
 };
 
-// --- LOGIC HELPERS ---
 function formatRelativeTime(value: string): string {
   const diffMins = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
   if (diffMins < 60) return `${diffMins} mins ago`;
@@ -71,7 +88,9 @@ function isWithinDateFilter(value: string, filter: DateFilter): boolean {
   return diffDays <= 30;
 }
 
-// --- CUSTOM ORDER ACTION MENU ---
+// ============================================================================
+// 4. SUBCOMPONENTS
+// ============================================================================
 function OrderActionMenu({ order }: { order: SellerOrder }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -94,10 +113,7 @@ function OrderActionMenu({ order }: { order: SellerOrder }) {
 
       {isOpen && (
         <>
-          {/* Invisible click-away overlay */}
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          
-          {/* Dropdown Menu */}
           <div className="absolute right-0 top-full z-50 mt-1 w-44 origin-top-right overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-top-2">
             <div className="flex flex-col space-y-0.5">
               <button 
@@ -133,14 +149,11 @@ function OrderActionMenu({ order }: { order: SellerOrder }) {
   );
 }
 
-// --- EXTRACTED COMPONENTS (To prevent re-renders) ---
 function OrderCard({ order }: { order: SellerOrder }) {
   const statusMeta = STATUS_COLUMNS.find(c => c.id === order.status);
   
   return (
     <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm transition-shadow hover:shadow-md flex flex-col min-w-70">
-      
-      {/* Header */}
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -156,7 +169,6 @@ function OrderCard({ order }: { order: SellerOrder }) {
         <OrderActionMenu order={order} />
       </div>
 
-      {/* Details Grid */}
       <div className="mb-4 grid grid-cols-2 gap-y-2 gap-x-4 text-xs font-medium text-zinc-500">
         <div className="flex items-center"><Package className="mr-2 h-3.5 w-3.5 text-zinc-400 shrink-0" /> {order.items} Items</div>
         <div className="flex items-center truncate"><MapPin className="mr-2 h-3.5 w-3.5 text-zinc-400 shrink-0" /> <span className="truncate">{order.location}</span></div>
@@ -168,7 +180,6 @@ function OrderCard({ order }: { order: SellerOrder }) {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="flex items-end justify-between gap-3 border-t border-zinc-100 pt-3 mt-auto">
         <div className="min-w-0">
           <p suppressHydrationWarning className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
@@ -189,36 +200,57 @@ function OrderCard({ order }: { order: SellerOrder }) {
   );
 }
 
-// --- MAIN PAGE ---
+// ============================================================================
+// 5. MAIN PAGE EXPORT
+// ============================================================================
 export default function SellerOrdersPage() {
+  const [orders, setOrders] = useState<SellerOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<OrderStatus | "all">("all");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("30days");
   
-  // Combobox Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Memoized Filtering Engine
+  // --- API DATA FETCHING ---
+  const loadOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchSellerOrders();
+      setOrders(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  // --- FILTERING ENGINE ---
   const filteredOrders = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return MOCK_ORDERS.filter((order) => {
+    return orders.filter((order) => {
       const matchesStatus = statusFilter === "all" || order.status === statusFilter;
       const matchesDate = isWithinDateFilter(order.createdAt, dateFilter);
       const matchesQuery = !query || order.id.toLowerCase().includes(query) || order.customer.toLowerCase().includes(query) || order.phone.includes(query);
       return matchesStatus && matchesDate && matchesQuery;
     });
-  }, [dateFilter, searchQuery, statusFilter]);
+  }, [orders, dateFilter, searchQuery, statusFilter]);
 
   // --- CSV EXPORT ENGINE ---
   const handleExportCSV = () => {
-    // 1. Define the headers
     const headers = ["Order ID", "Customer", "Phone", "Location", "Items", "Total (Kwacha)", "Status", "Payment", "Date"];
     
-    // 2. Map the filtered data into rows
     const csvRows = filteredOrders.map(order => [
       order.id,
-      `"${order.customer}"`, // Wrap in quotes in case names have commas
+      `"${order.customer}"`,
       order.phone,
       `"${order.location}"`,
       order.items,
@@ -228,17 +260,14 @@ export default function SellerOrdersPage() {
       new Date(order.createdAt).toLocaleDateString()
     ]);
 
-    // 3. Combine headers and rows
     const csvContent = [
       headers.join(","),
       ...csvRows.map(row => row.join(","))
     ].join("\n");
 
-    // 4. Create a downloadable Blob
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     
-    // 5. Trigger the hidden download link
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute("download", `Zamoyo_Orders_${new Date().toISOString().split('T')[0]}.csv`);
@@ -249,10 +278,31 @@ export default function SellerOrdersPage() {
     toast.success("Orders exported successfully!");
   };  
 
+  // --- SYSTEM STATES ---
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm font-medium text-zinc-500">Loading orders...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-3xl border border-red-100 bg-red-50 p-8 text-center mt-6">
+        <AlertCircle className="mb-3 h-8 w-8 text-red-500" />
+        <h3 className="text-base font-bold text-red-900">Failed to load orders</h3>
+        <p className="mt-1 text-sm text-red-700">{error}</p>
+        <Button onClick={loadOrders} variant="outline" className="mt-4 border-red-200 text-red-700 hover:bg-red-100">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // --- MAIN UI ---
   return (
     <div className="mx-auto max-w-350 animate-in fade-in space-y-6 pb-20 duration-500 md:pb-0 h-full flex flex-col">
-      
-      {/* TOASTER */}
       <Toaster />
 
       {/* 1. HEADER & ACTIONS */}
@@ -272,8 +322,6 @@ export default function SellerOrdersPage() {
 
       {/* 2. FILTERS & SEARCH */}
       <div className="relative z-40 flex shrink-0 flex-col gap-3 rounded-2xl border border-zinc-200/60 bg-white p-4 shadow-[0_4px_20px_rgba(0,0,0,0.02)] md:flex-row">
-        
-        {/* Search Combobox */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input
@@ -284,8 +332,6 @@ export default function SellerOrdersPage() {
             placeholder="Search order ID, customer, phone..."
             className="h-11 rounded-xl border-zinc-200 bg-zinc-50 pl-9 text-sm font-medium shadow-inner focus-visible:ring-[#009E49]"
           />
-          
-          {/* Autocomplete Dropdown */}
           {isSearchOpen && (
             <div className="absolute left-0 top-full z-50 mt-2 w-full overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-top-2">
               <div className="max-h-75 space-y-1 overflow-y-auto p-2">
@@ -309,7 +355,6 @@ export default function SellerOrdersPage() {
           )}
         </div>
 
-        {/* Filters */}
         <div className="flex gap-3">
           <select 
             value={statusFilter} 
