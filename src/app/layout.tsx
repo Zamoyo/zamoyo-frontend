@@ -5,6 +5,8 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { QueryProvider } from "@/components/query-provider";
 
+import { SpeedInsights } from "@vercel/speed-insights/next"
+
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 const geistSans = Geist({
@@ -36,6 +38,7 @@ export default function RootLayout({
           {/* THE TOASTER IS NOW GLOBAL */}
           <Toaster position="top-center" richColors />
           {children}
+          <SpeedInsights />
         </QueryProvider>
       </body>
     </html>
