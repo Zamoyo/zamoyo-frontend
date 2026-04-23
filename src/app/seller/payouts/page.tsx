@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 // import { cn } from "@/lib/utils";
+import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 
 // ============================================================================
 // 1. DATA CONTRACTS (Strictly Typed)
@@ -56,6 +57,13 @@ type StatusUI = {
   icon: LucideIcon;
 };
 
+type PayoutMethodDraft = {
+  type: PayoutMethod["type"];
+  provider: string;
+  accountName: string;
+  accountNumber: string;
+};
+
 // ============================================================================
 // 2. MOCK API SERVICE (The Engine)
 // ============================================================================
@@ -89,7 +97,6 @@ const payoutsApi = {
     });
   },
   async requestPayout(amount: number, methodId: string): Promise<PayoutTransaction> {
-    console.log(`[API MOCK] Requesting payout: K${amount} via ${methodId}`);
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
@@ -99,7 +106,7 @@ const payoutsApi = {
           fee: amount * 0.01,
           netAmount: amount - amount * 0.01,
           status: "pending",
-          method: "MTN Mobile Money",
+          method: methodId === "pm-1" ? "MTN Mobile Money" : "Bank Transfer",
           requestedAt: new Date().toISOString(),
           paidAt: null,
         });
@@ -160,6 +167,14 @@ export default function SellerPayoutsPage() {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<PayoutTransaction | null>(null);
+  const [methodDraft, setMethodDraft] = useState<PayoutMethodDraft>({
+    type: "mobile_money",
+    provider: "",
+    accountName: "",
+    accountNumber: "",
+  });
 
   const MIN_WITHDRAWAL = 100;
 
@@ -207,6 +222,42 @@ export default function SellerPayoutsPage() {
     [methods]
   );
 
+  const openMethodEditor = useCallback(() => {
+    if (!defaultMethod) return;
+    setMethodDraft({
+      type: defaultMethod.type,
+      provider: defaultMethod.provider,
+      accountName: defaultMethod.accountName,
+      accountNumber: getTailDigits(defaultMethod.maskedAccount),
+    });
+    setIsMethodModalOpen(true);
+  }, [defaultMethod]);
+
+  const saveMethodDraft = useCallback(() => {
+    if (!defaultMethod) return;
+
+    if (!methodDraft.provider.trim() || !methodDraft.accountName.trim() || !methodDraft.accountNumber.trim()) {
+      toast.error("Provider, account name, and account number are required.");
+      return;
+    }
+
+    setMethods((prev) =>
+      prev.map((method) =>
+        method.id === defaultMethod.id
+          ? {
+              ...method,
+              type: methodDraft.type,
+              provider: methodDraft.provider.trim(),
+              accountName: methodDraft.accountName.trim(),
+              maskedAccount: maskAccount(methodDraft.accountNumber),
+            }
+          : method,
+      ),
+    );
+    setIsMethodModalOpen(false);
+    toast.success("Payout method updated.");
+  }, [defaultMethod, methodDraft]);
+
   const handleWithdrawSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stats || !defaultMethod) return;
@@ -238,13 +289,7 @@ export default function SellerPayoutsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-sm font-medium text-zinc-500">Loading financial data...</p>
-      </div>
-    );
-  }
+  if (loading) return <SellerPageLoading variant="table" />;
 
   if (error || !stats) {
     return (
@@ -339,7 +384,13 @@ export default function SellerPayoutsPage() {
           <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50 p-4 shadow-inner">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Active Payout Method</p>
-              <button className="text-[10px] font-bold text-[#009E49] hover:underline">Edit</button>
+              <button
+                type="button"
+                onClick={openMethodEditor}
+                className="cursor-pointer text-[10px] font-bold text-[#009E49] hover:underline"
+              >
+                Edit
+              </button>
             </div>
             {defaultMethod ? (
               <div className="flex items-center gap-3">
@@ -372,7 +423,8 @@ export default function SellerPayoutsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as PayoutStatus | "all")}
-            className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
+            aria-label="Filter by payout status"
+            className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
           >
             <option value="all">All Statuses</option>
             <option value="paid">Paid</option>
@@ -383,7 +435,8 @@ export default function SellerPayoutsPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortBy)}
-            className="col-span-2 h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
+            aria-label="Sort transactions by"
+            className="col-span-2 h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
@@ -442,7 +495,11 @@ export default function SellerPayoutsPage() {
                         ) : null}
                       </td>
                       <td className="p-4 pr-6 text-right">
-                        <Button variant="ghost" className="h-8 rounded-lg text-xs font-bold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900">
+                        <Button
+                          variant="ghost"
+                          onClick={() => setSelectedTransaction(tx)}
+                          className="h-8 rounded-lg text-xs font-bold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                        >
                           Details
                         </Button>
                       </td>
@@ -477,7 +534,12 @@ export default function SellerPayoutsPage() {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTransaction(tx)}
+                    className="flex w-full items-center justify-between rounded-xl border border-zinc-100 bg-zinc-50 p-3 text-left"
+                    title="View transaction details"
+                  >
                     <div className="min-w-0 flex items-center gap-2">
                       <CreditCard className="h-4 w-4 shrink-0 text-zinc-400" />
                       <div className="min-w-0">
@@ -486,7 +548,7 @@ export default function SellerPayoutsPage() {
                       </div>
                     </div>
                     <ArrowDownRight className="h-4 w-4 shrink-0 text-zinc-300" />
-                  </div>
+                  </button>
 
                   {tx.failureReason ? (
                     <p className="mt-2 rounded-lg border border-red-100 bg-red-50 p-2 text-[10px] font-semibold text-red-500">
@@ -581,6 +643,147 @@ export default function SellerPayoutsPage() {
           </div>
         </div>
       ) : null}
+
+      {isMethodModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close payout method editor"
+            className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            onClick={() => setIsMethodModalOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-black text-zinc-900">Edit Payout Method</h2>
+            <p className="mt-1 text-xs font-medium text-zinc-500">Update where your earnings are sent.</p>
+
+            <div className="mt-5 space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="method-type" className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Method Type</label>
+                <select
+                  id="method-type"
+                  value={methodDraft.type}
+                  onChange={(event) =>
+                    setMethodDraft((prev) => ({
+                      ...prev,
+                      type: event.target.value as PayoutMethod["type"],
+                    }))
+                  }
+                  className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]"
+                >
+                  <option value="mobile_money">Mobile Money</option>
+                  <option value="bank">Bank</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Provider</label>
+                <Input
+                  value={methodDraft.provider}
+                  onChange={(event) =>
+                    setMethodDraft((prev) => ({ ...prev, provider: event.target.value }))
+                  }
+                  className="h-11 rounded-xl bg-zinc-50 shadow-inner focus-visible:ring-[#009E49]"
+                  placeholder="e.g. MTN Mobile Money"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Account Name</label>
+                <Input
+                  value={methodDraft.accountName}
+                  onChange={(event) =>
+                    setMethodDraft((prev) => ({ ...prev, accountName: event.target.value }))
+                  }
+                  className="h-11 rounded-xl bg-zinc-50 shadow-inner focus-visible:ring-[#009E49]"
+                  placeholder="Name on payout account"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Account Number</label>
+                <Input
+                  value={methodDraft.accountNumber}
+                  onChange={(event) =>
+                    setMethodDraft((prev) => ({ ...prev, accountNumber: event.target.value }))
+                  }
+                  className="h-11 rounded-xl bg-zinc-50 shadow-inner focus-visible:ring-[#009E49]"
+                  placeholder="Enter account or mobile number"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsMethodModalOpen(false)} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button onClick={saveMethodDraft} className="rounded-xl bg-zinc-900 text-white hover:bg-zinc-800">
+                Save Method
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedTransaction ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close transaction details"
+            className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            onClick={() => setSelectedTransaction(null)}
+          />
+          <div className="relative z-10 w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-black text-zinc-900">Transaction Details</h2>
+            <p className="mt-1 text-xs font-medium text-zinc-500">{selectedTransaction.id}</p>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Requested</p>
+                <p className="mt-1 font-bold text-zinc-900">{formatDate(selectedTransaction.requestedAt)}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Status</p>
+                <p className="mt-1 font-bold text-zinc-900">{getStatusUI(selectedTransaction.status).label}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Gross Amount</p>
+                <p className="mt-1 font-bold text-zinc-900">{formatCurrency(selectedTransaction.amount)}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Net Amount</p>
+                <p className="mt-1 font-bold text-zinc-900">{formatCurrency(selectedTransaction.netAmount)}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 md:col-span-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Reference</p>
+                <p className="mt-1 font-bold text-zinc-900">{selectedTransaction.reference}</p>
+              </div>
+            </div>
+
+            {selectedTransaction.failureReason ? (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                {selectedTransaction.failureReason}
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex justify-end">
+              <Button variant="outline" onClick={() => setSelectedTransaction(null)} className="rounded-xl">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function getTailDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(-4);
+}
+
+function maskAccount(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "******0000";
+  const tail = digits.slice(-4).padStart(4, "0");
+  return `******${tail}`;
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { use } from "react";
 import {
   ArrowLeft,
@@ -54,11 +55,11 @@ function QuantitySelector({
 }) {
   return (
     <div className="flex h-12 items-center rounded-2xl border border-zinc-200 bg-white shadow-sm">
-      <button type="button" onClick={onDecrease} className="flex h-full w-12 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-900">
+      <button type="button" onClick={onDecrease} title="Decrease quantity" aria-label="Decrease quantity" className="flex h-full w-12 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-900">
         <Minus className="h-4 w-4" />
       </button>
       <div className="flex h-full min-w-12 items-center justify-center text-sm font-bold text-zinc-900">{value}</div>
-      <button type="button" onClick={onIncrease} className="flex h-full w-12 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-900">
+      <button type="button" onClick={onIncrease} title="Increase quantity" aria-label="Increase quantity" className="flex h-full w-12 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-900">
         <Plus className="h-4 w-4" />
       </button>
     </div>
@@ -84,7 +85,7 @@ function ProductImageGallery({
         <Carousel options={{ loop: true }} className="w-full">
           <div className="pointer-events-none absolute left-4 top-4 z-30 flex items-center gap-2">
             <Link href="/" className="pointer-events-auto">
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/80 text-zinc-900 shadow-sm backdrop-blur-md hover:bg-white">
+              <Button variant="ghost" size="icon" title="Go back" aria-label="Go back" className="h-8 w-8 rounded-full bg-white/80 text-zinc-900 shadow-sm backdrop-blur-md hover:bg-white">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
@@ -103,7 +104,14 @@ function ProductImageGallery({
             {images.map((src, index) => (
               <CarouselItem key={src}>
                 <div className="relative flex aspect-4/3 w-full items-center justify-center overflow-hidden bg-zinc-50">
-                  <div className="absolute inset-0 bg-contain bg-center bg-no-repeat mix-blend-multiply" style={{ backgroundImage: `url('${src}')` }} aria-label={`${title} image ${index + 1}`} />
+                  <Image
+                    src={src}
+                    alt={`${title} image ${index + 1}`}
+                    fill
+                    sizes="100vw"
+                    unoptimized
+                    className="object-contain mix-blend-multiply"
+                  />
                 </div>
               </CarouselItem>
             ))}
@@ -125,22 +133,38 @@ function ProductImageGallery({
             className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-red-500"
             iconClassName="h-4 w-4"
           />
-          <Button size="icon" className="pointer-events-auto rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md hover:bg-white hover:text-zinc-900">
+          <Button size="icon" title="Share product" aria-label="Share product" className="pointer-events-auto rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md hover:bg-white hover:text-zinc-900">
             <Share2 className="h-4 w-4" />
           </Button>
         </div>
-        <div className="absolute inset-0 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-[1.03] mix-blend-multiply" style={{ backgroundImage: `url('${activeImage}')` }} />
+        <Image
+          src={activeImage}
+          alt={title}
+          fill
+          sizes="(min-width: 768px) 700px, 100vw"
+          unoptimized
+          className="object-contain transition-transform duration-700 hover:scale-[1.03] mix-blend-multiply"
+        />
       </div>
 
       <div className="hidden grid-cols-4 gap-4 md:grid">
-        {images.map((src) => (
+        {images.map((src, index) => (
           <button
             key={src}
             type="button"
             onClick={() => setActiveImage(src)}
+            title={`Preview image ${index + 1}`}
+            aria-label={`Preview image ${index + 1}`}
             className={`aspect-square overflow-hidden rounded-xl border-2 transition-all ${activeImage === src ? "scale-[1.03] border-[#009E49] shadow-md" : "border-transparent bg-zinc-50 opacity-70 hover:border-zinc-300 hover:opacity-100"}`}
           >
-            <div className="h-full w-full bg-cover bg-center mix-blend-multiply" style={{ backgroundImage: `url('${src}')` }} />
+            <Image
+              src={src}
+              alt={`${title} thumbnail ${index + 1}`}
+              width={160}
+              height={160}
+              unoptimized
+              className="h-full w-full object-cover mix-blend-multiply"
+            />
           </button>
         ))}
       </div>
@@ -188,16 +212,23 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
   React.useEffect(() => {
     let active = true;
 
-    Promise.all([
-      getProductDetailBySlug(slug),
-      getSellerProducts(),
-      getRelatedProducts(),
-    ]).then(([detail, seller, related]) => {
+    setProductData(null);
+
+    const loadProductPage = async () => {
+      const detail = await getProductDetailBySlug(slug);
       if (!active) return;
       setProductData(detail);
+
+      const [seller, related] = await Promise.all([
+        getSellerProducts({ excludeSlug: detail.slug }),
+        getRelatedProducts({ excludeSlug: detail.slug, categoryName: detail.category.name }),
+      ]);
+      if (!active) return;
       setSellerProducts(seller);
       setRelatedProducts(related);
-    });
+    };
+
+    void loadProductPage();
 
     return () => {
       active = false;
@@ -251,7 +282,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
           </div>
 
           <div className="flex flex-col space-y-6 px-4 pb-8 pt-5 md:px-0 md:pt-0">
-            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500" style={{ animationDelay: "100ms" }}>
+            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 [animation-delay:100ms]">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="border-[#009E49]/30 bg-[#009E49]/5 text-[#009E49]">Official {productData.brand}</Badge>
                 <span className="text-xs font-medium text-zinc-400">SKU: {productData.sku}</span>
@@ -280,9 +311,9 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
               </div>
             </div>
 
-            <Separator className="bg-zinc-200/60 animate-in fade-in duration-500" style={{ animationDelay: "200ms" }} />
+            <Separator className="bg-zinc-200/60 animate-in fade-in duration-500 [animation-delay:200ms]" />
 
-            <div className="rounded-2xl border border-white/60 bg-white/60 p-4 shadow-sm backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500" style={{ animationDelay: "300ms" }}>
+            <div className="rounded-2xl border border-white/60 bg-white/60 p-4 shadow-sm backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 [animation-delay:300ms]">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-zinc-900">{selectedVariant.label}: <span className="font-normal text-zinc-600">{selectedVariant.value}</span></h3>
               </div>
@@ -299,7 +330,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
               </div>
             </div>
 
-            <div className="grid grid-cols-[120px_1fr] gap-3 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500" style={{ animationDelay: "350ms" }}>
+            <div className="grid grid-cols-[120px_1fr] gap-3 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 [animation-delay:350ms]">
               <QuantitySelector value={quantity} onDecrease={decrementQuantity} onIncrease={incrementQuantity} />
               <AddToCartButton
                 product={wishlistProduct}
@@ -315,7 +346,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500" style={{ animationDelay: "500ms" }}>
+            <div className="grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 [animation-delay:500ms]">
               <div className="flex items-start gap-3 rounded-2xl border border-zinc-100 bg-white/80 p-4 shadow-sm transition-shadow hover:shadow-md">
                 <div className="mt-0.5 rounded-full bg-[#f4fbf6] p-2">
                   <Truck className="h-5 w-5 text-[#009E49]" />
@@ -348,7 +379,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
               </Link>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500" style={{ animationDelay: "600ms" }}>
+            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 [animation-delay:600ms]">
               <Accordion type="single" collapsible className="w-full" defaultValue="description">
                 <AccordionItem value="description" className="border-b-zinc-100 px-4">
                   <AccordionTrigger className="py-4 text-sm font-bold text-zinc-900 hover:no-underline">Product Description</AccordionTrigger>
@@ -417,7 +448,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
       <div className="fixed bottom-0 left-0 z-50 w-full border-t border-zinc-200/50 bg-white/85 p-4 shadow-[0_-15px_40px_rgba(0,0,0,0.08)] backdrop-blur-2xl md:hidden">
         <div className="flex items-center gap-3">
           <Link href={productData.seller.href}>
-            <Button variant="outline" className="h-12 w-12 shrink-0 rounded-2xl border-zinc-300 bg-white/50 shadow-sm backdrop-blur-md">
+            <Button variant="outline" title="Visit store" aria-label="Visit store" className="h-12 w-12 shrink-0 rounded-2xl border-zinc-300 bg-white/50 shadow-sm backdrop-blur-md">
               <Store className="h-5 w-5 text-zinc-600" />
             </Button>
           </Link>

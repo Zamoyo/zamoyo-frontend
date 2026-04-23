@@ -4,11 +4,12 @@ import { useMemo, useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Package, Truck, CheckCircle2, Clock3, MapPin, Phone,
-  Printer, User, Calendar, Circle, XCircle, RotateCcw, ReceiptText, AlertCircle
+  Printer, User, Calendar, Circle, XCircle, RotateCcw, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 
 // ============================================================================
 // 1. DATA CONTRACTS
@@ -166,6 +167,9 @@ export default function OrderDetailsPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundDisputeNote, setRefundDisputeNote] = useState<string | null>(null);
 
   const loadOrder = useCallback(async () => {
     try {
@@ -202,16 +206,22 @@ export default function OrderDetailsPage({
     setTimeout(() => window.print(), 400);
   };
 
-  const handleContestRefund = () => toast.success("Refund contest submitted for admin review.");
+  // Local-first flow: keep seller action visible and auditable before backend integration.
+  const handleContestRefund = () => {
+    const normalizedReason = refundReason.trim();
+    if (!normalizedReason) {
+      toast.error("Please provide a reason before submitting.");
+      return;
+    }
+
+    setRefundDisputeNote(normalizedReason);
+    setIsRefundModalOpen(false);
+    setRefundReason("");
+    toast.success("Refund contest submitted for admin review.");
+  };
 
   // --- SYSTEM STATES ---
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-sm font-medium text-zinc-500">Loading order details...</p>
-      </div>
-    );
-  }
+  if (loading) return <SellerPageLoading variant="detail" className="max-w-250" />;
 
   if (error || !order) {
     return (
@@ -272,7 +282,7 @@ export default function OrderDetailsPage({
               </Button>
             )}
             {orderStatus === "refund" && (
-              <Button onClick={handleContestRefund} className="h-10 rounded-xl bg-zinc-900 px-5 font-bold text-white shadow-md transition-all hover:bg-zinc-800">
+              <Button onClick={() => setIsRefundModalOpen(true)} className="h-10 rounded-xl bg-zinc-900 px-5 font-bold text-white shadow-md transition-all hover:bg-zinc-800">
                 Contest Refund
               </Button>
             )}
@@ -282,6 +292,11 @@ export default function OrderDetailsPage({
 
       {/* 2. PROGRESS STEPPER */}
       <ProgressStepper status={orderStatus} />
+      {refundDisputeNote ? (
+        <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-bold text-orange-800">
+          Refund contest submitted: {refundDisputeNote}
+        </div>
+      ) : null}
 
       {/* 3. KPI STRIP */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -397,7 +412,7 @@ export default function OrderDetailsPage({
             {isProcessing ? "Updating..." : currentConfig.primaryAction.label}
           </Button>
         ) : orderStatus === "refund" ? (
-          <Button onClick={handleContestRefund} className="h-12 flex-1 rounded-xl bg-zinc-900 font-extrabold text-white shadow-md transition-all active:scale-95 hover:bg-zinc-800">
+          <Button onClick={() => setIsRefundModalOpen(true)} className="h-12 flex-1 rounded-xl bg-zinc-900 font-extrabold text-white shadow-md transition-all active:scale-95 hover:bg-zinc-800">
             Contest Refund
           </Button>
         ) : (
@@ -406,6 +421,36 @@ export default function OrderDetailsPage({
           </Button>
         )}
       </div>
+
+      {isRefundModalOpen ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-zinc-900/45 backdrop-blur-sm"
+            onClick={() => setIsRefundModalOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-lg rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl">
+            <h2 className="text-lg font-black text-zinc-900">Contest Refund Request</h2>
+            <p className="mt-1 text-sm font-medium text-zinc-500">
+              Explain why this refund should be reviewed again by an admin.
+            </p>
+            <textarea
+              value={refundReason}
+              onChange={(event) => setRefundReason(event.target.value)}
+              placeholder="Add order evidence, delivery notes, or buyer communication details."
+              className="mt-4 min-h-28 w-full resize-none rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm font-medium shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
+            />
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsRefundModalOpen(false)} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button onClick={handleContestRefund} className="rounded-xl bg-zinc-900 text-white hover:bg-zinc-800">
+                Submit Contest
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast, Toaster } from "sonner";
 import { cn } from "@/lib/utils";
+import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 
 // ============================================================================
 // 1. DATA CONTRACTS
@@ -190,13 +191,7 @@ export default function SellerNotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-sm font-medium text-zinc-500">Loading notifications...</p>
-      </div>
-    );
-  }
+  if (loading) return <SellerPageLoading variant="list" className="max-w-250" />;
 
   if (error) {
     return (
@@ -262,7 +257,7 @@ export default function SellerNotificationsPage() {
           value={filterType}
           onChange={(e) => setFilterType(e.target.value as NotificationType | "all")}
           aria-label="Filter by notification type"
-          className="h-9 appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 pr-8 text-xs font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]"
+          className="h-9 cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 pr-8 text-xs font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]"
         >
           <option value="all">All Types</option>
           <option value="order">Orders</option>

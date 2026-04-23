@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   Store, Briefcase, Truck, Settings2, ShieldCheck, Search, Image as ImageIcon,
@@ -42,6 +42,15 @@ export default function SellerSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("profile");
   const [isSeoOpen, setIsSeoOpen] = useState(false);
+  const [logoFileLabel, setLogoFileLabel] = useState<string | null>(null);
+  const [bannerFileLabel, setBannerFileLabel] = useState<string | null>(null);
+
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<{ logo: string | null; banner: string | null }>({
+    logo: null,
+    banner: null,
+  });
 
   // --- DATA FETCHING ---
   const loadSettings = useCallback(async () => {
@@ -60,8 +69,7 @@ export default function SellerSettingsPage() {
   useEffect(() => { loadSettings(); }, [loadSettings]);
 
   // --- MUTATION HANDLERS ---
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveSettings = useCallback(async () => {
     if (!settings) return;
 
     // Basic Validation
@@ -85,7 +93,48 @@ export default function SellerSettingsPage() {
     } finally {
       setIsSaving(false);
     }
+  }, [settings]);
+
+  const handleFormSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    void saveSettings();
   };
+
+  const handleAssetUpload = useCallback(
+    (field: "logo" | "banner", file: File | null) => {
+      if (!file) return;
+      // Local object URLs keep upload UX realistic until backend media upload is connected.
+      const nextUrl = URL.createObjectURL(file);
+      const previousUrl = objectUrlRef.current[field];
+      if (previousUrl) URL.revokeObjectURL(previousUrl);
+      objectUrlRef.current[field] = nextUrl;
+
+      setSettings((prev) =>
+        prev
+          ? {
+              ...prev,
+              profile: {
+                ...prev.profile,
+                [field]: nextUrl,
+              },
+            }
+          : null,
+      );
+
+      if (field === "logo") setLogoFileLabel(file.name);
+      else setBannerFileLabel(file.name);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const trackedObjectUrls = objectUrlRef;
+    return () => {
+      const urls = trackedObjectUrls.current;
+      if (urls.logo) URL.revokeObjectURL(urls.logo);
+      if (urls.banner) URL.revokeObjectURL(urls.banner);
+    };
+  }, []);
 
   // Helper to update deeply nested state
   const updateSetting = <K extends keyof StoreSettings, F extends keyof StoreSettings[K]>(
@@ -125,7 +174,7 @@ export default function SellerSettingsPage() {
           <h1 className="text-2xl font-black tracking-tight text-zinc-900 md:text-3xl">Store Settings</h1>
           <p className="mt-1 text-sm font-medium text-zinc-500">Configure your storefront, fulfillment, and business details.</p>
         </div>
-        <Button onClick={handleSave} disabled={isSaving} className="h-11 w-full rounded-xl bg-zinc-900 px-6 font-bold text-white shadow-md hover:bg-zinc-800 md:w-auto transition-all active:scale-95">
+        <Button onClick={() => void saveSettings()} disabled={isSaving} className="h-11 w-full rounded-xl bg-zinc-900 px-6 font-bold text-white shadow-md hover:bg-zinc-800 md:w-auto transition-all active:scale-95">
           {isSaving ? <RefreshCcw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
@@ -187,7 +236,7 @@ export default function SellerSettingsPage() {
         </div>
 
         {/* 3. SETTINGS FORMS */}
-        <form onSubmit={handleSave} className="flex-1 min-w-0 w-full space-y-6">
+        <form onSubmit={handleFormSubmit} className="flex-1 min-w-0 w-full space-y-6">
           
           {/* ================= PROFILE TAB ================= */}
           {activeTab === "profile" && (
@@ -225,15 +274,51 @@ export default function SellerSettingsPage() {
                   <div className="flex gap-4 pt-2 border-t border-zinc-100">
                     <div className="space-y-1.5 flex-1">
                       <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Store Logo</label>
-                      <div className="flex h-20 items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 transition-colors hover:bg-zinc-100 cursor-pointer">
-                         <div className="flex items-center gap-2 text-zinc-500"><ImageIcon className="h-4 w-4" /><span className="text-xs font-bold">Upload Logo</span></div>
+                      <div
+                        onClick={() => logoInputRef.current?.click()}
+                        className="flex h-20 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 transition-colors hover:bg-zinc-100"
+                      >
+                        {settings.profile.logo ? (
+                          <div className="flex h-full w-full items-center gap-3 rounded-xl bg-cover bg-center px-3" style={{ backgroundImage: `url('${settings.profile.logo}')` }}>
+                            <div className="rounded-md bg-white/85 px-2 py-1 text-[10px] font-bold text-zinc-700">
+                              {logoFileLabel ?? "Logo selected"}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-zinc-500"><ImageIcon className="h-4 w-4" /><span className="text-xs font-bold">Upload Logo</span></div>
+                        )}
                       </div>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => handleAssetUpload("logo", event.target.files?.[0] ?? null)}
+                      />
                     </div>
                     <div className="space-y-1.5 flex-1">
                       <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Cover Banner</label>
-                      <div className="flex h-20 items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 transition-colors hover:bg-zinc-100 cursor-pointer">
-                         <div className="flex items-center gap-2 text-zinc-500"><ImageIcon className="h-4 w-4" /><span className="text-xs font-bold">Upload Banner</span></div>
+                      <div
+                        onClick={() => bannerInputRef.current?.click()}
+                        className="flex h-20 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 transition-colors hover:bg-zinc-100"
+                      >
+                        {settings.profile.banner ? (
+                          <div className="flex h-full w-full items-center gap-3 rounded-xl bg-cover bg-center px-3" style={{ backgroundImage: `url('${settings.profile.banner}')` }}>
+                            <div className="rounded-md bg-white/85 px-2 py-1 text-[10px] font-bold text-zinc-700">
+                              {bannerFileLabel ?? "Banner selected"}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-zinc-500"><ImageIcon className="h-4 w-4" /><span className="text-xs font-bold">Upload Banner</span></div>
+                        )}
                       </div>
+                      <input
+                        ref={bannerInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => handleAssetUpload("banner", event.target.files?.[0] ?? null)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -263,10 +348,6 @@ export default function SellerSettingsPage() {
                         placeholder="Short summary for search engines..."
                         className="min-h-20 w-full resize-none rounded-xl border border-zinc-200 bg-white p-3 text-sm shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]"
                       />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Meta Description</label>
-                      <textarea title="Meta Description" value={settings.seo.metaDescription} onChange={(e) => updateSetting("seo", "metaDescription", e.target.value)} placeholder="Short summary for search engines..." className="min-h-20 w-full resize-none rounded-xl border border-zinc-200 bg-white p-3 text-sm shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]" />
                     </div>
                   </div>
                 )}
@@ -452,7 +533,7 @@ export default function SellerSettingsPage() {
       
       {/* Mobile Sticky Save */}
       <div className="fixed bottom-16 left-0 z-30 w-full border-t border-zinc-200 bg-white/95 p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] backdrop-blur-md md:hidden">
-        <Button onClick={handleSave} disabled={isSaving} className="h-12 w-full rounded-xl bg-zinc-900 font-extrabold text-white shadow-md active:scale-95 hover:bg-zinc-800">
+        <Button onClick={() => void saveSettings()} disabled={isSaving} className="h-12 w-full rounded-xl bg-zinc-900 font-extrabold text-white shadow-md active:scale-95 hover:bg-zinc-800">
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </div>

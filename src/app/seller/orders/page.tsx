@@ -9,6 +9,7 @@ import {
 import { Toaster, toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 
 // ============================================================================
 // 1. DATA CONTRACTS
@@ -91,13 +92,24 @@ function isWithinDateFilter(value: string, filter: DateFilter): boolean {
 // ============================================================================
 // 4. SUBCOMPONENTS
 // ============================================================================
-function OrderActionMenu({ order }: { order: SellerOrder }) {
+function OrderActionMenu({
+  order,
+  onCancelOrder,
+}: {
+  order: SellerOrder;
+  onCancelOrder: (orderId: string) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(order.id);
-    toast.success("Order ID copied to clipboard!");
-    setIsOpen(false);
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(order.id);
+      toast.success("Order ID copied to clipboard.");
+    } catch {
+      toast.error("Unable to copy order ID.");
+    } finally {
+      setIsOpen(false);
+    }
   };
 
   return (
@@ -134,7 +146,7 @@ function OrderActionMenu({ order }: { order: SellerOrder }) {
               
               <button 
                 onClick={() => {
-                  toast.error("Order marked for cancellation.");
+                  onCancelOrder(order.id);
                   setIsOpen(false);
                 }}
                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
@@ -149,7 +161,13 @@ function OrderActionMenu({ order }: { order: SellerOrder }) {
   );
 }
 
-function OrderCard({ order }: { order: SellerOrder }) {
+function OrderCard({
+  order,
+  onCancelOrder,
+}: {
+  order: SellerOrder;
+  onCancelOrder: (orderId: string) => void;
+}) {
   const statusMeta = STATUS_COLUMNS.find(c => c.id === order.status);
   
   return (
@@ -166,7 +184,7 @@ function OrderCard({ order }: { order: SellerOrder }) {
           </div>
           <h3 className="truncate text-sm font-bold text-zinc-900">{order.customer}</h3>
         </div>
-        <OrderActionMenu order={order} />
+        <OrderActionMenu order={order} onCancelOrder={onCancelOrder} />
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-y-2 gap-x-4 text-xs font-medium text-zinc-500">
@@ -214,6 +232,30 @@ export default function SellerOrdersPage() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const handleCancelOrder = useCallback((orderId: string) => {
+    setOrders((prev) =>
+      prev.map((order) => {
+        if (order.id !== orderId) return order;
+        if (order.status === "cancelled") return order;
+        if (order.status === "delivered") return order;
+        return { ...order, status: "cancelled", paymentStatus: "failed" };
+      }),
+    );
+
+    const target = orders.find((order) => order.id === orderId);
+    if (!target) return;
+
+    if (target.status === "cancelled") {
+      toast.message("Order is already cancelled.");
+      return;
+    }
+    if (target.status === "delivered") {
+      toast.error("Delivered orders cannot be cancelled.");
+      return;
+    }
+    toast.success(`Order ${orderId} cancelled.`);
+  }, [orders]);
 
   // --- API DATA FETCHING ---
   const loadOrders = useCallback(async () => {
@@ -279,13 +321,7 @@ export default function SellerOrdersPage() {
   };  
 
   // --- SYSTEM STATES ---
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-sm font-medium text-zinc-500">Loading orders...</p>
-      </div>
-    );
-  }
+  if (loading) return <SellerPageLoading variant="table" />;
 
   if (error) {
     return (
@@ -358,8 +394,9 @@ export default function SellerOrdersPage() {
         <div className="flex gap-3">
           <select 
             value={statusFilter} 
+            title="Filter by status"
             onChange={(e) => setStatusFilter(e.target.value as OrderStatus | "all")} 
-            className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] md:w-40"
+            className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] md:w-40"
           >
             <option value="all">All Statuses</option>
             {STATUS_COLUMNS.map(col => <option key={col.id} value={col.id}>{col.title}</option>)}
@@ -367,8 +404,9 @@ export default function SellerOrdersPage() {
 
           <select 
             value={dateFilter} 
+            title="Filter by date range"
             onChange={(e) => setDateFilter(e.target.value as DateFilter)} 
-            className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] md:w-32"
+            className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] md:w-32"
           >
             <option value="today">Today</option>
             <option value="7days">Last 7 Days</option>
@@ -398,7 +436,7 @@ export default function SellerOrdersPage() {
       {/* 4. MOBILE VIEW: Stacked List */}
       <div className="flex-1 space-y-4 overflow-y-auto pb-4 md:hidden">
         {filteredOrders.filter(o => activeTab === "all" || o.status === activeTab).map(order => (
-          <OrderCard key={order.id} order={order} />
+          <OrderCard key={order.id} order={order} onCancelOrder={handleCancelOrder} />
         ))}
         {filteredOrders.filter(o => activeTab === "all" || o.status === activeTab).length === 0 && (
           <div className="rounded-2xl border border-zinc-200/50 bg-white py-12 text-center">
@@ -426,7 +464,9 @@ export default function SellerOrdersPage() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {columnOrders.map(order => <OrderCard key={order.id} order={order} />)}
+                {columnOrders.map(order => (
+                  <OrderCard key={order.id} order={order} onCancelOrder={handleCancelOrder} />
+                ))}
                 {columnOrders.length === 0 && (
                   <div className="rounded-2xl border-2 border-dashed border-zinc-200 bg-white/50 p-6 text-center">
                     <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">Empty</p>

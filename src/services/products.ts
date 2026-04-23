@@ -527,22 +527,25 @@ export async function getCategoryPageData(
   };
 }
 
-export async function getProductDetailBySlug(slug: string): Promise<ProductDetail> {
-  return {
-    ...PRODUCT_DETAIL_MOCK,
-    slug,
-  };
+function normalizeToSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
 }
 
-export async function getSellerProducts(): Promise<Product[]> {
-  return SELLER_PRODUCTS;
+function stableNumber(seed: string, min: number, max: number): number {
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) % 100000;
+  }
+  return min + (hash % (max - min + 1));
 }
 
-export async function getRelatedProducts(): Promise<Product[]> {
-  return RELATED_PRODUCTS;
-}
-
-export async function getSearchableProducts(): Promise<Product[]> {
+function getCatalogProducts(): Product[] {
+  // This keeps product-card flows and detail-route lookups on one shared catalog contract.
   return dedupeProducts([
     ...TRENDING_PRODUCTS,
     ...FLASH_SALE_PRODUCTS,
@@ -550,4 +553,112 @@ export async function getSearchableProducts(): Promise<Product[]> {
     ...SELLER_PRODUCTS,
     ...RELATED_PRODUCTS,
   ]);
+}
+
+function buildProductDetailFromProduct(product: Product, requestedSlug: string): ProductDetail {
+  const title = product.title ?? product.name ?? titleFromSlug(requestedSlug);
+  const categoryName = product.categoryName ?? "General";
+  const subcategoryName = product.subcategoryName ?? categoryName;
+  const categorySlug = normalizeToSlug(categoryName);
+  const subcategorySlug = normalizeToSlug(subcategoryName);
+  const sellerSlug = `${normalizeToSlug(categoryName)}-market`;
+  const skuSeed = String(product.id).replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const sku = `ZM-${skuSeed.slice(-8) || "ITEM"}`;
+  const mainImage = product.image || PRODUCT_DETAIL_MOCK.images[0];
+  const originalPrice =
+    product.originalPrice ??
+    product.oldPrice ??
+    Math.round(product.price * 1.15);
+  const reviewCount = Math.max(1, product.reviews);
+  const rating = Number((product.rating || 4.6).toFixed(1));
+  const brand = title.split(" ")[0] || "Zamoyo";
+  const stock = stableNumber(requestedSlug, 3, 24);
+
+  return {
+    ...PRODUCT_DETAIL_MOCK,
+    id: product.id,
+    slug: requestedSlug,
+    title,
+    brand,
+    category: { name: categoryName, href: `/category/${categorySlug}` },
+    subcategory: {
+      name: subcategoryName,
+      href: `/category/${categorySlug}?subcategory=${subcategorySlug}`,
+    },
+    sku,
+    price: product.price,
+    originalPrice,
+    rating,
+    reviewCount,
+    badge: product.badge ?? (product.isNew ? "New" : null),
+    seller: {
+      ...PRODUCT_DETAIL_MOCK.seller,
+      name: `${brand} Marketplace`,
+      href: `/store/${sellerSlug}`,
+    },
+    stock,
+    shippingText:
+      stock <= 5
+        ? "Low stock in Lusaka. Order now for faster dispatch."
+        : "Ready for delivery between tomorrow and the next business day.",
+    images: [mainImage, ...PRODUCT_DETAIL_MOCK.images.filter((image) => image !== mainImage)].slice(0, 4),
+    description:
+      `${title} is part of Zamoyo's curated catalog for Zambia shoppers. ` +
+      "You get reliable local delivery, verified sellers, and marketplace support from checkout to arrival.",
+    specs: [
+      { label: "Category", value: categoryName },
+      { label: "Subcategory", value: subcategoryName },
+      { label: "SKU", value: sku },
+      { label: "Shipping", value: "Lusaka priority dispatch" },
+    ],
+    boxItems: [title, "Receipt & warranty notes", "Packaging and safety inserts"],
+  };
+}
+
+export async function getProductDetailBySlug(slug: string): Promise<ProductDetail> {
+  const normalizedSlug = decodeURIComponent(slug).trim().toLowerCase();
+  const product = getCatalogProducts().find((item) => item.slug.toLowerCase() === normalizedSlug);
+
+  if (!product) {
+    // Fallback keeps manual/legacy slugs renderable without breaking product detail navigation.
+    return buildProductDetailFromProduct(
+      normalizeProduct({
+        id: normalizedSlug,
+        slug: normalizedSlug,
+        title: titleFromSlug(normalizedSlug),
+        categoryName: "General",
+        price: PRODUCT_DETAIL_MOCK.price,
+        rating: 4.6,
+        reviews: 1,
+        image: PRODUCT_DETAIL_MOCK.images[0],
+      }),
+      normalizedSlug,
+    );
+  }
+
+  return buildProductDetailFromProduct(product, normalizedSlug);
+}
+
+export async function getSellerProducts(options: { excludeSlug?: string } = {}): Promise<Product[]> {
+  return SELLER_PRODUCTS.filter((product) => product.slug !== options.excludeSlug);
+}
+
+export async function getRelatedProducts(
+  options: { excludeSlug?: string; categoryName?: string } = {},
+): Promise<Product[]> {
+  const source = dedupeProducts([...RELATED_PRODUCTS, ...CATEGORY_PRODUCTS, ...TRENDING_PRODUCTS]);
+  const normalizedCategory = options.categoryName?.toLowerCase();
+  const sameCategory = normalizedCategory
+    ? source.filter((product) => product.categoryName?.toLowerCase() === normalizedCategory)
+    : source;
+
+  const list = (sameCategory.length ? sameCategory : source).filter(
+    (product) => product.slug !== options.excludeSlug,
+  );
+
+  return list.slice(0, 8);
+}
+
+export async function getSearchableProducts(): Promise<Product[]> {
+  return getCatalogProducts();
 }

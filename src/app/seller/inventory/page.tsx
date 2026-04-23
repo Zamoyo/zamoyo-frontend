@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { inventoryApi, type InventoryProduct } from "@/services/inventory";
+import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 
 type InventoryStatus = "in-stock" | "low-stock" | "out-of-stock";
 type SortOption = "recent" | "stock-low" | "stock-high";
@@ -77,6 +78,79 @@ function parseStockInput(value: string): number | null {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   return Math.floor(parsed);
+}
+
+function InventoryItemMenu({
+  item,
+  isSelected,
+  onToggleSelect,
+  onRestock,
+  onMarkOutOfStock,
+}: {
+  item: InventoryProduct;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  onRestock: (id: string, threshold: number) => void;
+  onMarkOutOfStock: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setOpen((prev) => !prev)}
+        className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </Button>
+
+      {open ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+            aria-label="Close item menu"
+          />
+          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
+            <button
+              type="button"
+              onClick={() => {
+                onToggleSelect(item.id);
+                setOpen(false);
+              }}
+              className="flex w-full cursor-pointer rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
+            >
+              {isSelected ? "Unselect Item" : "Select Item"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onRestock(item.id, item.threshold);
+                setOpen(false);
+              }}
+              className="flex w-full cursor-pointer rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
+            >
+              Restock to Threshold
+            </button>
+            <div className="my-1 h-px bg-zinc-100" />
+            <button
+              type="button"
+              onClick={() => {
+                onMarkOutOfStock(item.id);
+                setOpen(false);
+              }}
+              className="flex w-full cursor-pointer rounded-xl px-3 py-2 text-left text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
+            >
+              Mark Out of Stock
+            </button>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 export default function SellerInventoryPage() {
@@ -265,13 +339,7 @@ export default function SellerInventoryPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-sm font-medium text-zinc-500">Loading inventory system...</p>
-      </div>
-    );
-  }
+  if (loading) return <SellerPageLoading variant="table" />;
 
   if (error) {
     return (
@@ -364,7 +432,7 @@ export default function SellerInventoryPage() {
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as InventoryStatus | "all")}
-            className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
+            className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
           >
             <option value="all">All Status</option>
             <option value="in-stock">In Stock</option>
@@ -375,7 +443,7 @@ export default function SellerInventoryPage() {
           <select
             value={categoryFilter}
             onChange={(event) => setCategoryFilter(event.target.value)}
-            className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
+            className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
           >
             <option value="all">All Categories</option>
             {categories.map((category) => (
@@ -388,7 +456,7 @@ export default function SellerInventoryPage() {
           <select
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value as SortOption)}
-            className="col-span-2 h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-44"
+            className="col-span-2 h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-44"
           >
             <option value="recent">Recently Updated</option>
             <option value="stock-low">Stock: Low to High</option>
@@ -586,13 +654,17 @@ export default function SellerInventoryPage() {
                       </td>
 
                       <td className="p-4 pr-6 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        <InventoryItemMenu
+                          item={item}
+                          isSelected={selectedIds.has(item.id)}
+                          onToggleSelect={handleToggleSelect}
+                          onRestock={(id, threshold) => {
+                            void handleInlineStockSave(id, threshold);
+                          }}
+                          onMarkOutOfStock={(id) => {
+                            void handleInlineStockSave(id, 0);
+                          }}
+                        />
                       </td>
                     </tr>
                   );
@@ -633,13 +705,17 @@ export default function SellerInventoryPage() {
                           {item.name}
                         </h3>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="-mr-2 -mt-1 h-8 w-8 shrink-0 rounded-lg text-zinc-400"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        <InventoryItemMenu
+                          item={item}
+                          isSelected={selectedIds.has(item.id)}
+                          onToggleSelect={handleToggleSelect}
+                          onRestock={(id, threshold) => {
+                            void handleInlineStockSave(id, threshold);
+                          }}
+                          onMarkOutOfStock={(id) => {
+                            void handleInlineStockSave(id, 0);
+                          }}
+                        />
                       </div>
 
                       <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">

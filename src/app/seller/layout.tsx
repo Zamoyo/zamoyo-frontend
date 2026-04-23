@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Bell, CircleHelp, LayoutDashboard, LogOut, Package,
   Plus, Settings, ShoppingCart, Store, TrendingUp, Wallet, Boxes,
@@ -96,7 +96,12 @@ function MobileNavLink({ href, label, Icon, isActive }: NavLinkProps) {
 // --- MAIN LAYOUT COMPONENT ---
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
+  const router = useRouter();
   const pageTitle = getPageTitle(pathname);
+
+  const handleSignOut = () => {
+    router.push("/auth/login");
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-[#f4fbf6] md:flex-row">
@@ -121,10 +126,10 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
               <Plus className="h-4 w-4" />
             </Button>
           </Link>
-          <button className="relative flex h-8 w-8 items-center justify-center rounded-full text-[#80b898] transition-colors hover:bg-white/5 hover:text-white">
+          <Link href="/seller/notifications" className="relative flex h-8 w-8 items-center justify-center rounded-full text-[#80b898] transition-colors hover:bg-white/5 hover:text-white">
             <Bell className="h-5 w-5" />
             <span className="absolute right-1.5 top-1 h-2 w-2 rounded-full bg-[#FF6B00] border-2 border-[#0A1A10]" />
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -167,7 +172,11 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
           <Link href="/" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#112E1C] py-2.5 text-xs font-bold text-[#80b898] transition-colors hover:bg-[#183d26] hover:text-white">
             <Store className="h-4 w-4" /> View Public Store
           </Link>
-          <button className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-[#ff8a8a] transition-colors hover:bg-red-500/10 hover:text-red-400">
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-[#ff8a8a] transition-colors hover:bg-red-500/10 hover:text-red-400"
+          >
             <LogOut className="h-4 w-4" /> Sign Out
           </button>
         </div>
@@ -194,13 +203,13 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
 
             <div className="h-6 w-px bg-zinc-200"></div>
 
-            <button className="relative flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 shadow-sm">
+            <Link href="/seller/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 shadow-sm">
               <Bell className="h-4 w-4" />
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-[#FF6B00]" />
-            </button>
+            </Link>
 
             {/* Seller Identity Dropdown Trigger */}
-            <div className="flex items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-1.5 pr-4 shadow-sm cursor-pointer hover:bg-zinc-50 transition-colors">
+            <Link href="/seller/settings" className="flex items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-1.5 pr-4 shadow-sm cursor-pointer hover:bg-zinc-50 transition-colors">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-linear-to-br from-zinc-800 to-zinc-900 text-white font-bold text-xs shadow-inner">
                 ZS
               </div>
@@ -208,7 +217,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
                 <p className="text-sm font-bold text-zinc-900">Zamoyo Store</p>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mt-0.5">Admin</p>
               </div>
-            </div>
+            </Link>
           </div>
         </header>
 

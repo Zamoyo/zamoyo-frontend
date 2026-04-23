@@ -11,6 +11,7 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import { Button } from "@/components/ui/button";
+import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 
 // ============================================================================
 // 1. DATA CONTRACTS
@@ -116,6 +117,13 @@ function getActivityDotClass(tone: ActivityItem["tone"]) {
   return "bg-blue-500";
 }
 
+function getOrderStatusDotClass(name: OrderStatusPoint["name"]) {
+  if (name === "Processing") return "bg-amber-500";
+  if (name === "Shipped") return "bg-blue-500";
+  if (name === "Delivered") return "bg-[#009E49]";
+  return "bg-red-500";
+}
+
 // ============================================================================
 // 4. SUBCOMPONENTS
 // ============================================================================
@@ -178,13 +186,7 @@ export default function SellerDashboard() {
   }, [range]);
 
   // --- SYSTEM STATES ---
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-sm font-medium text-zinc-500">Loading dashboard metrics...</p>
-      </div>
-    );
-  }
+  if (loading) return <SellerPageLoading variant="dashboard" />;
 
   if (error || !data) {
     return (
@@ -345,7 +347,7 @@ export default function SellerDashboard() {
             <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
               {data.orderStatusData.map((status) => (
                 <div key={status.name} className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: status.color }} />
+                  <div className={`h-2 w-2 rounded-full ${getOrderStatusDotClass(status.name)}`} />
                   <span className="text-[10px] font-bold text-zinc-500">{status.name}</span>
                 </div>
               ))}
@@ -396,7 +398,7 @@ export default function SellerDashboard() {
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-black text-zinc-900">{formatCurrency(order.total)}</p>
                   <Link href={`/seller/orders/${order.id}`}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900">
+                    <Button variant="ghost" size="icon" title={`View order ${order.id}`} aria-label={`View order ${order.id}`} className="h-8 w-8 rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900">
                       <Eye className="h-4 w-4" />
                     </Button>
                   </Link>

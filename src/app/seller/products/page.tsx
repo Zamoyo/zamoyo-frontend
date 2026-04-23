@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 
 // ============================================================================
 // 1. DATA CONTRACTS
@@ -169,6 +171,91 @@ function CategoryDropdown({ value, onChange, categories }: { value: string; onCh
   );
 }
 
+function ProductActionMenu({
+  product,
+  onDuplicate,
+  onToggleDraft,
+  onActivate,
+  onRemove,
+}: {
+  product: SellerProduct;
+  onDuplicate: (product: SellerProduct) => void;
+  onToggleDraft: (productId: string) => void;
+  onActivate: (productId: string) => void;
+  onRemove: (productId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setOpen((prev) => !prev)}
+        className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+      >
+        <MoreVertical className="h-4 w-4" />
+      </Button>
+      {open ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+          />
+          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
+            <button
+              type="button"
+              onClick={() => {
+                onDuplicate(product);
+                setOpen(false);
+              }}
+              className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
+            >
+              Duplicate Listing
+            </button>
+            {product.status === "active" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleDraft(product.id);
+                  setOpen(false);
+                }}
+                className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
+              >
+                Move to Draft
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onActivate(product.id);
+                  setOpen(false);
+                }}
+                className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
+              >
+                Publish Listing
+              </button>
+            )}
+            <div className="my-1 h-px bg-zinc-100" />
+            <button
+              type="button"
+              onClick={() => {
+                onRemove(product.id);
+                setOpen(false);
+              }}
+              className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
+            >
+              Remove Listing
+            </button>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 // ============================================================================
 // 5. MAIN PAGE EXPORT
 // ============================================================================
@@ -180,6 +267,35 @@ export default function SellerProductsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<ProductTab>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const duplicateProduct = useCallback((product: SellerProduct) => {
+    const duplicateId = `${product.id}-copy-${Date.now()}`;
+    setProducts((prev) => [{ ...product, id: duplicateId, status: "draft" }, ...prev]);
+    toast.success(`${product.name} duplicated as draft.`);
+  }, []);
+
+  const moveProductToDraft = useCallback((productId: string) => {
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.id === productId ? { ...product, status: "draft" } : product,
+      ),
+    );
+    toast.success("Product moved to draft.");
+  }, []);
+
+  const publishProduct = useCallback((productId: string) => {
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.id === productId ? { ...product, status: "active" } : product,
+      ),
+    );
+    toast.success("Product is now live.");
+  }, []);
+
+  const removeProduct = useCallback((productId: string) => {
+    setProducts((prev) => prev.filter((product) => product.id !== productId));
+    toast.success("Product removed from this list.");
+  }, []);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -236,13 +352,7 @@ export default function SellerProductsPage() {
   }, [products]);
 
   // --- SYSTEM STATES ---
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-sm font-medium text-zinc-500">Loading products...</p>
-      </div>
-    );
-  }
+  if (loading) return <SellerPageLoading variant="table" />;
 
   if (error) {
     return (
@@ -405,9 +515,13 @@ export default function SellerProductsPage() {
                 <div className="hidden justify-center md:flex"><ListingStatusBadge status={product.status} /></div>
 
                 <div className="hidden justify-end md:flex">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
+                  <ProductActionMenu
+                    product={product}
+                    onDuplicate={duplicateProduct}
+                    onToggleDraft={moveProductToDraft}
+                    onActivate={publishProduct}
+                    onRemove={removeProduct}
+                  />
                 </div>
 
                 {/* Mobile View Additions */}
@@ -416,9 +530,13 @@ export default function SellerProductsPage() {
                   <div className="flex items-center gap-2">
                     <StockBadge product={product} />
                     <ListingStatusBadge status={product.status} />
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
+                    <ProductActionMenu
+                      product={product}
+                      onDuplicate={duplicateProduct}
+                      onToggleDraft={moveProductToDraft}
+                      onActivate={publishProduct}
+                      onRemove={removeProduct}
+                    />
                   </div>
                 </div>
               </div>

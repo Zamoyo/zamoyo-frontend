@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   TrendingUp,
@@ -30,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 
 type TimeRange = "24h" | "7d" | "30d" | "12m";
 type CategoryFilter = "all" | "electronics" | "fashion" | "home-appliances";
@@ -330,8 +332,43 @@ export default function SellerAnalyticsPage() {
   }, [loadData]);
 
   const handleExport = () => {
-    toast.success("Preparing analytics report...");
-    setTimeout(() => toast.success("Report downloaded successfully!"), 1500);
+    if (!data) return;
+    // Export mirrors exactly what is rendered after category + range filtering.
+    const reportRows = [
+      ["Metric", "Value"],
+      ["Range", range],
+      ["Category Filter", categoryFilter],
+      ["Total Revenue", String(Math.round(data.summary.totalRevenue))],
+      ["Total Orders", String(data.summary.totalOrders)],
+      ["Customers", String(data.summary.totalCustomers)],
+      [""],
+      ["Top Products", ""],
+      ["Product", "Sales", "Revenue"],
+      ...filteredTopProducts.map((product) => [
+        product.name,
+        String(product.sales),
+        String(Math.round(product.revenue)),
+      ]),
+      [""],
+      ["Low Performers", ""],
+      ["Product", "Issue", "Stock"],
+      ...filteredLowPerformers.map((item) => [item.name, item.issue, String(item.stock)]),
+    ];
+
+    const csv = reportRows
+      .map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `zamoyo-analytics-${range}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Analytics report exported.");
   };
 
   const filteredTopProducts = useMemo(
@@ -355,28 +392,7 @@ export default function SellerAnalyticsPage() {
     [data, categoryFilter],
   );
 
-  if (loading && !data) {
-    return (
-      <div className="mx-auto max-w-350 animate-pulse space-y-6 pb-24 md:pb-12">
-        <div className="flex justify-between">
-          <div className="h-10 w-40 rounded-xl bg-zinc-200" />
-          <div className="h-10 w-64 rounded-xl bg-zinc-200" />
-        </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <div className="h-28 rounded-2xl bg-zinc-200" />
-          <div className="h-28 rounded-2xl bg-zinc-200" />
-          <div className="h-28 rounded-2xl bg-zinc-200" />
-          <div className="h-28 rounded-2xl bg-zinc-200" />
-          <div className="h-28 rounded-2xl bg-zinc-200" />
-          <div className="h-28 rounded-2xl bg-zinc-200" />
-        </div>
-        <div className="flex gap-6">
-          <div className="h-87.5 flex-1 rounded-3xl bg-zinc-200" />
-          <div className="hidden h-87.5 w-80 rounded-3xl bg-zinc-200 lg:block" />
-        </div>
-      </div>
-    );
-  }
+  if (loading && !data) return <SellerPageLoading variant="dashboard" />;
 
   if (error && !data) {
     return (
@@ -523,9 +539,9 @@ export default function SellerAnalyticsPage() {
               <Package className="h-4 w-4 text-zinc-400" />
               Top Products
             </h2>
-            <Button variant="link" className="h-8 px-2 text-[10px] font-bold text-[#009E49]">
+            <Link href="/seller/products" className="h-8 px-2 text-[10px] font-bold text-[#009E49] hover:underline">
               View All
-            </Button>
+            </Link>
           </div>
           <div className="overflow-x-auto hide-scrollbar">
             <table className="min-w-100 w-full text-left text-sm">
@@ -596,9 +612,11 @@ export default function SellerAnalyticsPage() {
                     {item.issue.replace("-", " ")}
                   </p>
                 </div>
-                <Button variant="outline" size="sm" className="h-8 border-zinc-200 text-[10px] font-bold">
-                  Manage
-                </Button>
+                <Link href="/seller/inventory">
+                  <Button variant="outline" size="sm" className="h-8 border-zinc-200 text-[10px] font-bold">
+                    Manage
+                  </Button>
+                </Link>
               </div>
             ))}
           </div>
