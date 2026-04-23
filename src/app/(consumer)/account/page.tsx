@@ -1,0 +1,284 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import {
+  AlertCircle,
+  Bell,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Heart,
+  MapPin,
+  Package,
+  ShoppingBag,
+  Truck,
+  User,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ProductCard } from "@/components/productCard";
+import { FeedbackState } from "@/components/states/FeedbackState";
+import { useWishlist } from "@/hooks/use-wishlist";
+import { useCart } from "@/hooks/use-cart";
+import { useHydratedValue } from "@/hooks/use-hydrated-value";
+import { getAccountOverview } from "@/services/account";
+import type { AccountOverview } from "@/types/account";
+
+export default function AccountOverviewPage() {
+  const [data, setData] = React.useState<AccountOverview | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const { itemCount: savedItemsCount, hasHydrated: wishlistHydrated } = useWishlist();
+  const { itemCount: cartItemsCount, totalAmount: cartTotal, hasHydrated: cartHydrated } = useCart();
+
+  const safeSavedItemsCount = useHydratedValue(savedItemsCount, 0);
+  const safeCartItemsCount = useHydratedValue(cartItemsCount, 0);
+  const safeCartTotal = useHydratedValue(cartTotal, 0);
+
+  const loadData = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getAccountOverview();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  if (loading) {
+    return <div className="py-20 text-center text-sm font-medium text-zinc-500">Loading your account dashboard...</div>;
+  }
+
+  if (error || !data) {
+    return (
+      <FeedbackState
+        icon={AlertCircle}
+        tone="danger"
+        title="Failed to load dashboard"
+        description={error ?? "We couldn't load your account overview right now."}
+        action={
+          <Button onClick={loadData} variant="outline" className="border-red-200 text-red-700 hover:bg-red-100">
+            Try Again
+          </Button>
+        }
+      />
+    );
+  }
+
+  const unreadNotifs = data.notifications.filter((notification) => notification.unread).length;
+
+  return (
+    <div className="space-y-8 pb-8">
+      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-zinc-200/60 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] animate-in fade-in slide-in-from-bottom-4 duration-500 md:flex-row md:items-center md:p-8">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-zinc-900 md:text-3xl">
+            Welcome back, {data.user.firstName}!
+          </h1>
+          <p className="mt-1 text-sm font-medium text-zinc-500">
+            Manage your orders, track deliveries, and secure your account.
+          </p>
+        </div>
+        <Link href="/account/settings">
+          <Button variant="outline" className="flex h-11 w-full items-center gap-2 rounded-xl border-zinc-200 px-5 text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 hover:text-zinc-900 md:w-auto">
+            <User className="h-4 w-4" /> Edit Profile
+          </Button>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 md:grid-cols-3 md:gap-4" style={{ animationDelay: "100ms" }}>
+        <div className="group relative overflow-hidden rounded-[20px] border border-zinc-200/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-shadow hover:shadow-md md:rounded-3xl md:p-6">
+          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-blue-50 transition-transform group-hover:scale-110" />
+          <div className="relative z-10 flex items-center justify-between md:flex-col md:items-start">
+            <div className="flex items-center gap-3 md:block">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 md:mb-4">
+                <Package className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black leading-none text-zinc-900 md:text-2xl md:leading-normal">{data.activeOrdersCount}</h3>
+                <p className="mt-1 text-xs font-bold text-zinc-500 md:mt-0.5 md:text-sm">
+                  Active Order{data.activeOrdersCount !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+            <Link href="/account/orders" className="flex items-center gap-1 rounded-lg bg-blue-50/50 px-3 py-2 text-[10px] font-bold text-blue-600 hover:underline md:mt-3 md:rounded-none md:bg-transparent md:px-0 md:py-0 md:text-xs">
+              Track <span className="hidden md:inline">Order</span> <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="group relative overflow-hidden rounded-[20px] border border-zinc-200/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-shadow hover:shadow-md md:rounded-3xl md:p-6">
+          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-red-50 transition-transform group-hover:scale-110" />
+          <div className="relative z-10 flex items-center justify-between md:flex-col md:items-start">
+            <div className="flex items-center gap-3 md:block">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 text-red-500 md:mb-4">
+                <Heart className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black leading-none text-zinc-900 md:text-2xl md:leading-normal">
+                  {wishlistHydrated ? safeSavedItemsCount : "—"}
+                </h3>
+                <p className="mt-1 text-xs font-bold text-zinc-500 md:mt-0.5 md:text-sm">Saved Items</p>
+              </div>
+            </div>
+            <Link href="/account/saved" className="flex items-center gap-1 rounded-lg bg-red-50/50 px-3 py-2 text-[10px] font-bold text-red-500 hover:underline md:mt-3 md:rounded-none md:bg-transparent md:px-0 md:py-0 md:text-xs">
+              View <span className="hidden md:inline">Wishlist</span> <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="group relative overflow-hidden rounded-[20px] border border-[#009E49]/20 bg-[linear-gradient(145deg,rgba(0,158,73,0.92),rgba(0,126,58,0.82))] p-5 shadow-lg shadow-[#009E49]/20 transition-shadow hover:shadow-[#009E49]/30 md:rounded-3xl md:p-6">
+          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110" />
+          <div className="relative z-10 flex items-center justify-between md:flex-col md:items-start">
+            <div className="flex items-center gap-3 md:block">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-md md:mb-4">
+                <ShoppingBag className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black leading-none text-white md:text-2xl md:leading-normal">
+                  {cartHydrated ? `K${safeCartTotal.toLocaleString()}` : "—"}
+                </h3>
+                <p className="mt-1 text-xs font-bold text-white/80 md:mt-0.5 md:text-sm">
+                  Cart Subtotal ({cartHydrated ? safeCartItemsCount : 0} item{safeCartItemsCount === 1 ? "" : "s"})
+                </p>
+              </div>
+            </div>
+            <Link href="/checkout" className="flex items-center gap-1 rounded-lg bg-black/10 px-3 py-2 text-[10px] font-bold text-white hover:underline backdrop-blur-sm md:mt-3 md:rounded-none md:bg-transparent md:px-0 md:py-0 md:text-xs md:backdrop-blur-none">
+              Checkout <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500 xl:grid-cols-[2fr_1fr]" style={{ animationDelay: "200ms" }}>
+        <div className="flex h-full flex-col rounded-3xl border border-zinc-200/60 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] md:p-8">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-lg font-black text-zinc-900">Recent Orders</h2>
+            <Link href="/account/orders" className="text-sm font-bold text-[#009E49] hover:underline">
+              View All
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {data.recentOrders.length === 0 ? (
+              <p className="text-sm text-zinc-500">No recent orders found.</p>
+            ) : (
+              data.recentOrders.map((order) => (
+                <div key={order.id} className="rounded-2xl border border-zinc-100 bg-zinc-50/50 p-4 transition-colors hover:border-zinc-300 md:p-5">
+                  <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                    <div>
+                      <h3 className="font-bold text-zinc-900">{order.id}</h3>
+                      <p className="mt-0.5 text-xs font-medium text-zinc-500">
+                        {order.date} • {order.items.reduce((sum, item) => sum + item.qty, 0)} Item{order.items.length === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <div className="flex flex-col md:items-end">
+                      <span className="font-black text-zinc-900">K{order.total.toLocaleString()}</span>
+                      {order.status === "processing" ? (
+                        <Badge className="mt-1 gap-1 border-none bg-amber-100 px-2 shadow-none text-amber-700 hover:bg-amber-100">
+                          <Clock className="h-3 w-3" /> Processing
+                        </Badge>
+                      ) : (
+                        <Badge className="mt-1 gap-1 border-none bg-emerald-100 px-2 shadow-none text-emerald-700 hover:bg-emerald-100">
+                          <CheckCircle2 className="h-3 w-3" /> Delivered
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator className="mb-4 bg-zinc-200/60" />
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1.5 font-medium text-zinc-600">
+                      <Truck className="h-4 w-4 text-zinc-400" /> {order.estDelivery}
+                    </span>
+                    <Link href={`/account/orders/${order.id}`}>
+                      <Button variant="ghost" size="sm" className="h-8 font-bold text-[#009E49] hover:bg-[#009E49]/10 hover:text-[#009E49]">
+                        Track
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <div className="rounded-3xl border border-zinc-200/60 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-lg font-black text-zinc-900">
+                <Bell className="h-5 w-5 text-zinc-400" /> Updates
+              </h2>
+              {unreadNotifs > 0 ? (
+                <Badge className="flex min-w-5 items-center justify-center rounded-full border-none bg-red-500 px-1.5 py-0 text-white hover:bg-red-500">
+                  {unreadNotifs}
+                </Badge>
+              ) : null}
+            </div>
+
+            <div className="space-y-4">
+              {data.notifications.map((notification) => (
+                <div key={notification.id} className="relative border-l-2 border-zinc-100 pl-4">
+                  {notification.unread ? (
+                    <span className="absolute -left-1.25 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-4 ring-white" />
+                  ) : null}
+                  <h4 className={`text-sm font-bold ${notification.unread ? "text-zinc-900" : "text-zinc-600"}`}>
+                    {notification.title}
+                  </h4>
+                  <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{notification.desc}</p>
+                  <span className="mt-1 block text-[10px] font-bold text-zinc-400">{notification.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-zinc-200/60 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-lg font-black text-zinc-900">
+                <MapPin className="h-5 w-5 text-zinc-400" /> Default Address
+              </h2>
+              <Link href="/account/addresses" className="text-xs font-bold text-[#009E49] hover:underline">
+                Manage
+              </Link>
+            </div>
+            <div className="rounded-2xl border border-zinc-100 bg-zinc-50/80 p-4">
+              <p className="mb-1 text-sm font-bold text-zinc-900">{data.defaultAddress.name}</p>
+              <p className="text-xs leading-relaxed text-zinc-600">
+                {data.defaultAddress.street}
+                <br />
+                {data.defaultAddress.area}
+                <br />
+                {data.defaultAddress.city}
+              </p>
+              <p className="mt-2 text-xs font-medium text-zinc-500">{data.defaultAddress.phone}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section className="animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-500" style={{ animationDelay: "300ms" }}>
+        <div className="mb-6 flex items-center justify-between px-2">
+          <h2 className="text-xl font-black text-zinc-900">Recently Viewed</h2>
+          <Link href="/categories" className="text-sm font-bold text-[#009E49] hover:underline">
+            Continue Shopping
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {data.recentlyViewed.map((product) => (
+            <ProductCard key={`${product.id}-${product.slug}`} product={product} />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

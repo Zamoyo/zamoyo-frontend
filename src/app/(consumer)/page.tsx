@@ -1,0 +1,21 @@
+import { HomePageClient } from "@/components/home/HomePageClient";
+import { getHomeCategories, getHomeHeroBanners } from "@/services/categories";
+import { getFlashSaleProducts, getTrendingProducts } from "@/services/products";
+
+export default async function HomePage() {
+  const [categories, heroBanners, flashSaleProducts, trendingProducts] = await Promise.all([
+    getHomeCategories(),
+    getHomeHeroBanners(),
+    getFlashSaleProducts(),
+    getTrendingProducts(),
+  ]);
+
+  return (
+    <HomePageClient
+      categories={categories}
+      heroBanners={heroBanners}
+      flashSaleProducts={flashSaleProducts}
+      trendingProducts={trendingProducts}
+    />
+  );
+}
