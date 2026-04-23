@@ -50,7 +50,7 @@ const PRIMARY_NAV_LINKS: NavLink[] = [
 
 
 const DROPDOWN_WRAPPER = "absolute top-full z-50 pt-2 transition-all duration-200";
-const DROPDOWN_CONTENT = "overflow-hidden rounded-[28px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.76),rgba(255,255,255,0.64))] shadow-[0_20px_44px_rgba(15,23,42,0.12)] ring-1 ring-black/5 backdrop-blur-3xl";
+const DROPDOWN_CONTENT = "overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,0.88))] shadow-[0_20px_44px_rgba(15,23,42,0.16)] ring-1 ring-black/5 backdrop-blur-3xl";
 const DROPDOWN_LINK = "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-white/70 hover:text-[#009E49]";
 
 function Divider() {
@@ -256,7 +256,7 @@ function AccountDropdown({
   return (
     <div
       ref={containerRef}
-      className="relative"
+      className="relative z-30"
       onMouseEnter={() => isDesktopViewport() && onDesktopOpen()}
       onMouseLeave={() => isDesktopViewport() && onDesktopClose()}
     >
@@ -289,7 +289,14 @@ function AccountDropdown({
           isOpen ? "visible translate-y-0 opacity-100" : "invisible translate-y-2 opacity-0",
         )}
       >
-        <div className={cn(DROPDOWN_CONTENT, "p-3")}>
+        <div
+          className={cn(
+            DROPDOWN_CONTENT,
+            "p-3",
+            mobileOpen &&
+              "border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,255,255,0.93))] shadow-[0_24px_48px_rgba(15,23,42,0.2)]",
+          )}
+        >
           {isLoggedIn ? (
             <LoggedInMenu onDevToggleAuth={onDevToggleAuth} />
           ) : (
@@ -629,6 +636,7 @@ function MobileDrawer({
             <div className="flex items-center gap-3">
               <button
                 type="button"
+                aria-label="Back to categories"
                 onClick={() => onCategoryViewChange("root")}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-white/45 bg-white/32 text-zinc-600 backdrop-blur-xl transition-colors hover:bg-white/52"
               >
@@ -644,8 +652,10 @@ function MobileDrawer({
 
         <div className="flex-1 overflow-hidden">
           <div
-            className="flex h-full w-[200%] transition-transform duration-300"
-            style={{ transform: categoryView === "category" ? "translateX(-50%)" : "translateX(0%)" }}
+            className={cn(
+              "flex h-full w-[200%] transition-transform duration-300",
+              categoryView === "category" ? "-translate-x-1/2" : "translate-x-0"
+            )}
           >
             <div className="w-1/2 overflow-y-auto px-5 py-4">
               <div className="space-y-6">
@@ -805,7 +815,7 @@ export default function Navbar() {
               : "border-white/40 bg-[linear-gradient(180deg,rgba(255,255,255,0.62),rgba(255,255,255,0.5))] shadow-[0_12px_28px_rgba(15,23,42,0.07)] backdrop-blur-2xl",
           )}
         >
-          <div className="relative z-10 flex h-16 items-center justify-between gap-4 px-4 md:h-20 md:px-6 xl:px-12">
+          <div className="relative z-30 flex h-16 items-center justify-between gap-4 px-4 md:h-20 md:px-6 xl:px-12">
             <div className="flex items-center gap-3 md:gap-0">
               <Button
                 variant="ghost"
