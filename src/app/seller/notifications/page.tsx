@@ -261,6 +261,7 @@ export default function SellerNotificationsPage() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value as NotificationType | "all")}
+          aria-label="Filter by notification type"
           className="h-9 appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 pr-8 text-xs font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]"
         >
           <option value="all">All Types</option>

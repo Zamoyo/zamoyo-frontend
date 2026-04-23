@@ -1,5 +1,3 @@
-// src/services/api.ts
-
 export class ApiError extends Error {
   status: number;
   details?: unknown;
