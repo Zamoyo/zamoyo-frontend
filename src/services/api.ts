@@ -1,3 +1,5 @@
+import { getStoredAccessToken } from "@/services/auth-session";
+
 export class ApiError extends Error {
   status: number;
   details?: unknown;
@@ -16,6 +18,7 @@ const BASE_URL =
 interface FetchOptions extends RequestInit {
   timeout?: number;
   query?: Record<string, string | number | boolean | null | undefined>;
+  authMode?: "include" | "omit";
 }
 
 function buildUrl(endpoint: string, query?: FetchOptions["query"]): string {
@@ -46,6 +49,7 @@ export async function apiClient<T>(
   const {
     timeout = 10_000,
     query,
+    authMode = "include",
     headers,
     body,
     ...fetchOptions
@@ -57,6 +61,13 @@ export async function apiClient<T>(
   const resolvedHeaders = new Headers(headers);
   if (!resolvedHeaders.has("Accept")) {
     resolvedHeaders.set("Accept", "application/json");
+  }
+
+  if (authMode === "include" && !resolvedHeaders.has("Authorization")) {
+    const token = getStoredAccessToken();
+    if (token) {
+      resolvedHeaders.set("Authorization", `Bearer ${token}`);
+    }
   }
 
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;

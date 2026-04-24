@@ -32,11 +32,16 @@ export interface PermissionPreferencesInput {
   notificationsEnabled: boolean;
 }
 
+export type AuthRole = "buyer" | "seller" | "admin" | "support";
+
 export interface AuthUser {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  role?: AuthRole;
+  phone?: string;
+  avatarUrl?: string;
 }
 
 export interface AuthSession {
@@ -49,4 +54,17 @@ export interface AuthActionResult {
   success: true;
   message: string;
   nextPath?: string;
+}
+
+export interface UpdateMeInput {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  avatarUrl?: string;
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword?: string;
 }

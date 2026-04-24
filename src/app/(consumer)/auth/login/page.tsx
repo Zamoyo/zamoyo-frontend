@@ -2,29 +2,46 @@
 
 import Link from "next/link";
 import { Eye, EyeOff, ArrowLeft, X, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { login } from "@/services/auth";
+import { getPostLoginRedirectPath, getStoredAuthSession, login } from "@/services/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next");
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const existingSession = getStoredAuthSession();
+    if (!existingSession) return;
+
+    const redirectPath = getPostLoginRedirectPath(existingSession.user, nextPath);
+    router.replace(redirectPath);
+  }, [nextPath, router]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       setIsSubmitting(true);
       setError(null);
-      await login({ email, password });
-      router.push("/");
+      setSuccess(null);
+
+      const session = await login({ email, password });
+      setSuccess("Signed in successfully. Redirecting...");
+
+      const redirectPath = getPostLoginRedirectPath(session.user, nextPath);
+      router.replace(redirectPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to sign in.");
+      setSuccess(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -100,6 +117,7 @@ export default function LoginPage() {
             </div>
 
             {error ? <p className="text-xs font-medium text-red-300">{error}</p> : null}
+            {success ? <p className="text-xs font-medium text-emerald-300">{success}</p> : null}
 
             <Button
               disabled={isSubmitting || !email || !password}
