@@ -10,6 +10,8 @@ import type { Address } from "@/types/address";
 import type { Product } from "@/types/product";
 import type { OrderSummary } from "@/types/order";
 import { normalizeProduct } from "@/lib/normalizers/product";
+import { getStoredAuthUser } from "@/services/auth-session";
+import { changePassword, logout, updateMe } from "@/services/auth";
 
 const ACCOUNT_USER: AccountUserProfile = {
   name: "John Banda",
@@ -202,7 +204,18 @@ export async function getSavedAddresses(): Promise<Address[]> {
 }
 
 export function getAccountUserProfile(): AccountUserProfile {
-  return ACCOUNT_USER;
+  const currentUser = getStoredAuthUser();
+
+  if (!currentUser) return ACCOUNT_USER;
+
+  return {
+    ...ACCOUNT_USER,
+    name: `${currentUser.firstName} ${currentUser.lastName}`.trim() || ACCOUNT_USER.name,
+    email: currentUser.email || ACCOUNT_USER.email,
+    firstName: currentUser.firstName || ACCOUNT_USER.firstName,
+    lastName: currentUser.lastName || ACCOUNT_USER.lastName,
+    phone: currentUser.phone || ACCOUNT_USER.phone,
+  };
 }
 
 export async function getAccountSettings(): Promise<AccountSettings> {
@@ -216,23 +229,31 @@ export async function getAccountSettings(): Promise<AccountSettings> {
 export async function saveAccountProfile(
   profile: AccountSettings["profile"],
 ): Promise<AccountSettings["profile"]> {
-  return simulateRequest(profile, {
-    delay: 650,
-    errorRate: 0.04,
-    errorMessage: "Failed to update profile.",
+  const updatedUser = await updateMe({
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    phone: profile.phone,
   });
+
+  return {
+    ...profile,
+    firstName: updatedUser.firstName,
+    lastName: updatedUser.lastName,
+    email: updatedUser.email,
+    phone: updatedUser.phone ?? profile.phone,
+  };
 }
 
 export async function updateAccountPassword(input: {
   currentPassword: string;
   newPassword: string;
 }): Promise<{ success: true }> {
-  void input;
-  return simulateRequest({ success: true as const }, {
-    delay: 650,
-    errorRate: 0.04,
-    errorMessage: "Failed to update password.",
+  await changePassword({
+    currentPassword: input.currentPassword,
+    newPassword: input.newPassword,
   });
+
+  return { success: true };
 }
 
 export async function saveNotificationPreferences(
@@ -262,9 +283,6 @@ export async function saveAddresses(addresses: Address[]): Promise<Address[]> {
 }
 
 export async function signOutAccount(): Promise<{ success: true }> {
-  return simulateRequest({ success: true as const }, {
-    delay: 450,
-    errorRate: 0.03,
-    errorMessage: "Failed to sign out.",
-  });
+  await logout();
+  return { success: true };
 }
