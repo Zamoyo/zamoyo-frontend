@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState, type ComponentType, type ReactNode } from "react";
 import {
   Bell, CircleHelp, LayoutDashboard, LogOut, Package,
-  Plus, Settings, ShoppingCart, Store, TrendingUp, Wallet, Boxes,
+  Plus, Settings, ShoppingCart, Store, TrendingUp, Wallet, Boxes, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // --- TYPES & NAV DATA ---
 type SellerNavItem = {
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   match?: "exact" | "startsWith";
 };
 
@@ -61,23 +63,35 @@ function getPageTitle(pathname: string) {
 type NavLinkProps = {
   href: string;
   label: string;
-  Icon: React.ComponentType<{ className?: string }>;
+  Icon: ComponentType<{ className?: string }>;
   isActive: boolean;
+  collapsed?: boolean;
 };
 
 // --- EXTRACTED NAV COMPONENTS ---
-function NavLink({ href, label, Icon, isActive }: NavLinkProps) {
+function NavLink({ href, label, Icon, isActive, collapsed = false }: NavLinkProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-all ${
+      aria-label={label}
+      title={collapsed ? label : undefined}
+      className={cn(
+        "group flex h-10 items-center rounded-xl text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1A10]",
+        collapsed ? "justify-center px-0" : "gap-3 px-3",
         isActive
           ? "bg-[#009E49] text-white shadow-[0_4px_15px_rgba(0,158,73,0.3)]"
-          : "text-[#80b898] hover:bg-[#112E1C] hover:text-white"
-      }`}
+          : "text-[#80b898] hover:bg-[#112E1C] hover:text-white",
+      )}
     >
       <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-[#5e9676]"}`} />
-      <span>{label}</span>
+      <span
+        className={cn(
+          "overflow-hidden whitespace-nowrap transition-all duration-300",
+          collapsed ? "w-0 opacity-0" : "w-36 opacity-100",
+        )}
+      >
+        {label}
+      </span>
     </Link>
   );
 }
@@ -94,10 +108,26 @@ function MobileNavLink({ href, label, Icon, isActive }: NavLinkProps) {
 }
 
 // --- MAIN LAYOUT COMPONENT ---
-export default function SellerLayout({ children }: { children: React.ReactNode }) {
+const SELLER_SIDEBAR_COLLAPSED_KEY = "zamoyo_seller_sidebar_collapsed";
+
+function getInitialSidebarCollapsed() {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(SELLER_SIDEBAR_COLLAPSED_KEY) === "true";
+}
+
+export default function SellerLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "";
   const router = useRouter();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed);
   const pageTitle = getPageTitle(pathname);
+
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem(SELLER_SIDEBAR_COLLAPSED_KEY, String(next));
+      return next;
+    });
+  };
 
   const handleSignOut = () => {
     router.push("/auth/login");
@@ -136,15 +166,25 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
       {/* =========================================
           2. DESKTOP SIDEBAR
           ========================================= */}
-      <aside className="sticky top-0 z-40 hidden h-screen w-64 flex-col border-r border-[#143320] bg-[#0A1A10] shadow-[10px_0_30px_rgba(0,0,0,0.1)] md:flex">
+      <aside
+        className={cn(
+          "sticky top-0 z-40 hidden h-screen flex-col border-r border-[#143320] bg-[#0A1A10] shadow-[10px_0_30px_rgba(0,0,0,0.1)] transition-[width] duration-300 ease-out md:flex",
+          sidebarCollapsed ? "w-20" : "w-64",
+        )}
+      >
         
         {/* Brand Area */}
-        <div className="flex h-18 items-center border-b border-[#143320] px-6">
-          <Link href="/seller" className="flex items-center gap-3 transition-opacity hover:opacity-90">
+        <div className={cn("flex h-18 items-center border-b border-[#143320] transition-all duration-300", sidebarCollapsed ? "justify-center px-3" : "px-5")}>
+          <Link
+            href="/seller"
+            aria-label="Zamoyo Seller Hub"
+            title={sidebarCollapsed ? "Zamoyo Seller Hub" : undefined}
+            className={cn("flex min-w-0 items-center rounded-xl transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1A10]", sidebarCollapsed ? "justify-center" : "gap-3")}
+          >
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#009E49] text-lg font-extrabold text-white shadow-[0_0_15px_rgba(0,158,73,0.5)]">
               Z
             </div>
-            <div className="flex flex-col">
+            <div className={cn("flex min-w-0 flex-col overflow-hidden transition-all duration-300", sidebarCollapsed ? "w-0 opacity-0" : "w-36 opacity-100")}>
               <span className="leading-none text-lg font-black tracking-tight text-white">Zamoyo</span>
               <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#009E49]">Seller Hub</span>
             </div>
@@ -152,8 +192,8 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
-          <p className="mb-3 px-2 text-[10px] font-bold uppercase tracking-widest text-[#457a5b]">Menu</p>
+        <nav className={cn("flex-1 overflow-y-auto py-6 custom-scrollbar", sidebarCollapsed ? "px-3" : "px-4")}>
+          <p className={cn("mb-3 overflow-hidden px-2 text-[10px] font-bold uppercase tracking-widest text-[#457a5b] transition-all duration-300", sidebarCollapsed ? "h-0 opacity-0" : "h-4 opacity-100")}>Menu</p>
           <div className="flex flex-col gap-1">
             {SELLER_NAV_ITEMS.map((item) => (
               <NavLink 
@@ -162,22 +202,38 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
                 label={item.label}
                 Icon={item.icon}
                 isActive={isRouteActive(pathname, item.href, item.match)} 
+                collapsed={sidebarCollapsed}
               />
             ))}
           </div>
         </nav>
 
         {/* Footer Actions */}
-        <div className="border-t border-[#143320] p-4 space-y-2">
-          <Link href="/" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#112E1C] py-2.5 text-xs font-bold text-[#80b898] transition-colors hover:bg-[#183d26] hover:text-white">
-            <Store className="h-4 w-4" /> View Public Store
+        <div className={cn("space-y-2 border-t border-[#143320] p-4", sidebarCollapsed && "px-3")}>
+          <Link
+            href="/"
+            aria-label="View public store"
+            title={sidebarCollapsed ? "View Public Store" : undefined}
+            className={cn(
+              "flex h-10 w-full items-center justify-center rounded-xl bg-[#112E1C] text-xs font-bold text-[#80b898] transition-colors hover:bg-[#183d26] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1A10]",
+              sidebarCollapsed ? "gap-0 px-0" : "gap-2 px-3",
+            )}
+          >
+            <Store className="h-4 w-4" />
+            <span className={cn("overflow-hidden whitespace-nowrap transition-all duration-300", sidebarCollapsed ? "w-0 opacity-0" : "w-28 opacity-100")}>View Public Store</span>
           </Link>
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-[#ff8a8a] transition-colors hover:bg-red-500/10 hover:text-red-400"
+            aria-label="Sign out"
+            title={sidebarCollapsed ? "Sign Out" : undefined}
+            className={cn(
+              "flex h-10 w-full cursor-pointer items-center justify-center rounded-xl text-xs font-bold text-[#ff8a8a] transition-colors hover:bg-red-500/10 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1A10] active:scale-[0.98]",
+              sidebarCollapsed ? "gap-0 px-0" : "gap-2 px-3",
+            )}
           >
-            <LogOut className="h-4 w-4" /> Sign Out
+            <LogOut className="h-4 w-4" />
+            <span className={cn("overflow-hidden whitespace-nowrap transition-all duration-300", sidebarCollapsed ? "w-0 opacity-0" : "w-16 opacity-100")}>Sign Out</span>
           </button>
         </div>
       </aside>
@@ -190,7 +246,18 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
         {/* Desktop Header (Glassmorphism) */}
         <header className="sticky top-0 z-30 hidden h-18 items-center justify-between border-b border-zinc-200/80 bg-white/80 px-8 backdrop-blur-md md:flex">
           
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={sidebarCollapsed ? "Expand seller sidebar" : "Collapse seller sidebar"}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={handleSidebarToggle}
+              className="h-10 w-10 rounded-2xl border border-zinc-200/80 bg-white text-zinc-600 shadow-sm hover:border-[#009E49]/20 hover:bg-[#009E49]/8 hover:text-[#009E49]"
+            >
+              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </Button>
             <h1 className="truncate text-2xl font-black tracking-tight text-zinc-900">{pageTitle}</h1>
           </div>
 

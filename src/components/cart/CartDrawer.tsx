@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { useState, type ReactNode } from "react";
 import {
   ShoppingCart,
   Plus,
@@ -16,6 +18,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetClose,
   SheetTitle,
   SheetTrigger,
   SheetFooter,
@@ -25,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCart, type CartItem } from "@/hooks/use-cart";
 
 type CartDrawerProps = {
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 type CartIdentity = {
@@ -39,11 +42,13 @@ function formatCurrency(value: number) {
 
 function CartItemRow({
   item,
+  onNavigate,
   onIncrease,
   onDecrease,
   onRemove,
 }: {
   item: CartItem;
+  onNavigate: () => void;
   onIncrease: (identity: CartIdentity) => void;
   onDecrease: (identity: CartIdentity) => void;
   onRemove: (identity: CartIdentity) => void;
@@ -54,19 +59,25 @@ function CartItemRow({
     <div className="flex gap-4">
       <Link
         href={`/product/${item.slug}`}
+        onClick={onNavigate}
         className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-zinc-200/50 bg-zinc-50 p-1"
       >
-        <div
-          className="absolute inset-1 bg-contain bg-center bg-no-repeat mix-blend-multiply"
-          style={{ backgroundImage: `url('${item.image}')` }}
-        />
+        <div className="absolute inset-1 mix-blend-multiply">
+  <Image
+    src={item.image}
+    alt={item.name ?? "Cart item image"}
+    fill
+    className="object-contain"
+  />
+</div>
       </Link>
 
       <div className="flex flex-1 min-w-0 flex-col justify-between">
         <div>
           <Link
             href={`/product/${item.slug}`}
-            className="mb-0.5 line-clamp-1 text-sm font-bold leading-tight text-zinc-800 transition-colors hover:text-[#009E49]"
+            onClick={onNavigate}
+            className="mb-0.5 line-clamp-1 text-sm font-bold leading-tight text-zinc-800 transition-colors hover:text-brand-green"
           >
             {item.name}
           </Link>
@@ -92,6 +103,7 @@ function CartItemRow({
             {/* FIX: Added shrink-0 to the button so it never squishes */}
             <button
               type="button"
+              title={item.quantity <= 1 ? "Remove item" : "Decrease quantity"}
               onClick={() => {
                 if (item.quantity <= 1) onRemove(identity);
                 else onDecrease(identity);
@@ -112,8 +124,9 @@ function CartItemRow({
             {/* FIX: Added shrink-0 to the button so it never squishes */}
             <button
               type="button"
+              title="Increase quantity"
               onClick={() => onIncrease(identity)}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-zinc-600 transition-all hover:text-[#009E49] hover:shadow-sm"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-zinc-600 transition-all hover:text-brand-green hover:shadow-sm"
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -124,7 +137,7 @@ function CartItemRow({
   );
 }
 
-function EmptyCartState() {
+function EmptyCartState({ onNavigate }: { onNavigate: () => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 py-12 text-center">
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400">
@@ -136,8 +149,8 @@ function EmptyCartState() {
         Add something you like and it’ll show up here.
       </p>
 
-      <Link href="/categories" className="mt-5">
-        <Button className="rounded-xl bg-[#009E49] font-bold text-white hover:bg-[#00853d]">
+      <Link href="/categories" className="mt-5" onClick={onNavigate}>
+        <Button className="rounded-xl bg-brand-green font-bold text-zinc-500 hover:bg-brand-green-dark">
           Continue Shopping
         </Button>
       </Link>
@@ -146,6 +159,8 @@ function EmptyCartState() {
 }
 
 export function CartDrawer({ children }: CartDrawerProps) {
+  const [open, setOpen] = useState(false);
+
   const {
     items,
     itemCount,
@@ -161,15 +176,16 @@ export function CartDrawer({ children }: CartDrawerProps) {
   const displayTotalAmount = hasHydrated ? totalAmount : 0;
   const deliveryFee = displayItemCount > 0 ? 50 : 0;
   const total = displayTotalAmount + deliveryFee;
+  const closeDrawer = () => setOpen(false);
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{children}</SheetTrigger>
 
       <SheetContent className="flex h-full min-h-0 w-full flex-col overflow-hidden border-l border-white/50 bg-white/85 p-0 shadow-[0_0_60px_rgba(0,0,0,0.1)] backdrop-blur-2xl sm:max-w-md">
         <SheetHeader className="shrink-0 border-b border-zinc-200/50 bg-white/40 px-6 py-5">
           <SheetTitle className="flex items-center gap-2 text-xl font-black text-zinc-900">
-            <ShoppingCart className="h-5 w-5 text-[#009E49]" />
+            <ShoppingCart className="h-5 w-5 text-brand-green" />
             Your Cart
             <Badge className="ml-1 bg-zinc-900 text-white hover:bg-zinc-800">
               {displayItemCount}
@@ -189,6 +205,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
                   <CartItemRow
                     key={`${item.id}-${item.variant ?? "default"}`}
                     item={item}
+                    onNavigate={closeDrawer}
                     onIncrease={increaseQuantity}
                     onDecrease={decreaseQuantity}
                     onRemove={removeItem}
@@ -219,28 +236,30 @@ export function CartDrawer({ children }: CartDrawerProps) {
 
                 <div className="flex items-center justify-between">
                   <span className="text-base font-bold text-zinc-900">Total</span>
-                  <span className="text-xl font-black text-[#FF6B00]">
+                  <span className="text-xl font-black text-brand-orange">
                     {formatCurrency(total)}
                   </span>
                 </div>
               </div>
 
-              <Link href="/checkout" className="w-full">
-                <Button className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#009E49] text-base font-bold text-white shadow-lg shadow-[#009E49]/20 transition-all hover:-translate-y-0.5 hover:bg-[#00853d]">
-                  Proceed to Checkout
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+              <SheetClose asChild>
+                <Link href="/checkout" className="w-full" onClick={closeDrawer}>
+                  <Button className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-green text-base font-bold text-white shadow-lg shadow-brand-green/20 transition-all hover:-translate-y-0.5 hover:bg-brand-green-dark">
+                    Proceed to Checkout
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </SheetClose>
 
               <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#009E49]" />
+                <ShieldCheck className="h-3.5 w-3.5 text-brand-green" />
                 100% Secure Checkout
               </div>
             </SheetFooter>
           </>
         ) : (
           <div className="flex-1">
-            <EmptyCartState />
+            <EmptyCartState onNavigate={closeDrawer} />
           </div>
         )}
       </SheetContent>
