@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { QueryProvider } from "@/components/query-provider";
 
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -39,6 +40,7 @@ export default function RootLayout({
           <Toaster position="top-center" richColors />
           {children}
           <SpeedInsights />
+          <Analytics />
         </QueryProvider>
       </body>
     </html>
