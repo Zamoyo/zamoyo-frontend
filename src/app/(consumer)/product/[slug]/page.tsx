@@ -26,7 +26,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { ProductCard } from "@/components/productCard";
 import { WishlistButton } from "@/components/WishlistButton";
 import { AddToCartButton } from "@/components/AddToCartButton";
@@ -82,41 +81,56 @@ function ProductImageGallery({
   return (
     <div className="space-y-4 md:sticky md:top-25 group">
       <div className="md:hidden">
-        <Carousel options={{ loop: true }} className="w-full">
-          <div className="pointer-events-none absolute left-4 top-4 z-30 flex items-center gap-2">
-            <Link href="/" className="pointer-events-auto">
-              <Button variant="ghost" size="icon" title="Go back" aria-label="Go back" className="h-8 w-8 rounded-full bg-white/80 text-zinc-900 shadow-sm backdrop-blur-md hover:bg-white">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <WishlistButton
-              product={wishlistProduct}
-              className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-red-500"
-              iconClassName="h-4 w-4"
+        <div className="space-y-3">
+          <div className="relative flex aspect-4/3 w-full items-center justify-center overflow-hidden bg-zinc-50">
+            <div className="pointer-events-none absolute left-4 top-4 z-30 flex items-center gap-2">
+              <Link href="/" className="pointer-events-auto">
+                <Button variant="ghost" size="icon" title="Go back" aria-label="Go back" className="h-8 w-8 rounded-full bg-white/80 text-zinc-900 shadow-sm backdrop-blur-md hover:bg-white">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <WishlistButton
+                product={wishlistProduct}
+                className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-zinc-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-red-500"
+                iconClassName="h-4 w-4"
+              />
+              {badge ? (
+                <Badge className="pointer-events-auto border-none bg-[#FF6B00] px-3 py-1 text-[10px] uppercase tracking-widest shadow-md">
+                  {badge}
+                </Badge>
+              ) : null}
+            </div>
+            <Image
+              src={activeImage}
+              alt={title}
+              fill
+              sizes="100vw"
+              unoptimized
+              className="object-contain mix-blend-multiply"
             />
-            {badge ? (
-              <Badge className="pointer-events-auto border-none bg-[#FF6B00] px-3 py-1 text-[10px] uppercase tracking-widest shadow-md">
-                {badge}
-              </Badge>
-            ) : null}
           </div>
-          <CarouselContent>
+          <div className="hide-scrollbar flex gap-2 overflow-x-auto px-4 pb-1">
             {images.map((src, index) => (
-              <CarouselItem key={src}>
-                <div className="relative flex aspect-4/3 w-full items-center justify-center overflow-hidden bg-zinc-50">
-                  <Image
-                    src={src}
-                    alt={`${title} image ${index + 1}`}
-                    fill
-                    sizes="100vw"
-                    unoptimized
-                    className="object-contain mix-blend-multiply"
-                  />
-                </div>
-              </CarouselItem>
+              <button
+                key={src}
+                type="button"
+                onClick={() => setActiveImage(src)}
+                title={`Preview image ${index + 1}`}
+                aria-label={`Preview image ${index + 1}`}
+                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${activeImage === src ? "border-[#009E49] shadow-md" : "border-zinc-200 bg-zinc-50 opacity-80"}`}
+              >
+                <Image
+                  src={src}
+                  alt={`${title} thumbnail ${index + 1}`}
+                  fill
+                  sizes="64px"
+                  unoptimized
+                  className="object-cover mix-blend-multiply"
+                />
+              </button>
             ))}
-          </CarouselContent>
-        </Carousel>
+          </div>
+        </div>
       </div>
 
       <div className="hidden md:block relative aspect-auto h-120 w-full overflow-hidden rounded-3xl border border-zinc-200/50 bg-zinc-50 shadow-sm">
