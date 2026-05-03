@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Facebook, Instagram, Send, CreditCard, Smartphone, ShieldCheck, X } from "lucide-react";
+import { CircleHelp, CreditCard, Package, Send, ShieldCheck, Smartphone, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -28,6 +28,12 @@ const CATEGORY_LINKS = [
   { label: "Computing", href: "/category/computing" },
   { label: "Fashion", href: "/category/fashion" },
   { label: "Supermarket", href: "/category/supermarket" },
+];
+
+const FOOTER_ACTION_LINKS = [
+  { label: "Seller", href: "/sell", icon: Store },
+  { label: "Track", href: "/track-order", icon: Package },
+  { label: "Help", href: "/help", icon: CircleHelp },
 ];
 
 // --- MAIN EXPORT ---
@@ -56,16 +62,16 @@ export function Footer() {
   };
 
   return (
-    <footer className="relative bg-zinc-900 text-zinc-300 pt-10 pb-6 border-t border-zinc-900">
+    <footer className="relative border-t border-zinc-900 bg-zinc-900 pt-10 pb-6 text-zinc-300">
 
       <div className="container mx-auto max-w-7xl px-4 md:px-6">
         
         {/* Main Footer Grid - Tightened gaps and margins */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 md:gap-8 mb-10">
+        <div className="mb-10 grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
           
           {/* Brand & App Download */}
-          <div className="lg:col-span-2 space-y-4">
-            <Link href="/" className="inline-block">
+          <div className="space-y-4 lg:col-span-2">
+            <Link href="/" className="inline-block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900">
               <span className="text-2xl md:text-3xl font-black tracking-tighter text-white">
                 ZAMOYO<span className="text-[#FF6B00]">.</span>
               </span>
@@ -74,17 +80,17 @@ export function Footer() {
               Zambia&apos;s premier shopping marketplace. Connecting trusted sellers with buyers across Lusaka.
             </p>
             
-            <div className="flex gap-3 pt-1">
-              <Link href="#" className="h-8 w-8 rounded-full bg-zinc-900 flex items-center justify-center hover:bg-[#009E49] hover:text-white transition-colors">
-                <Facebook className="h-4 w-4" />
-              </Link>
-              <Link href="#" className="h-8 w-8 rounded-full bg-zinc-900 flex items-center justify-center hover:bg-[#009E49] hover:text-white transition-colors">
-                <X className="h-4 w-4" />
-                
-              </Link>
-              <Link href="#" className="h-8 w-8 rounded-full bg-zinc-900 flex items-center justify-center hover:bg-[#009E49] hover:text-white transition-colors">
-                <Instagram className="h-4 w-4" />
-              </Link>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {FOOTER_ACTION_LINKS.map(({ label, href, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-bold text-zinc-300 transition-all hover:-translate-y-0.5 hover:border-[#009E49]/40 hover:bg-[#009E49]/12 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 active:translate-y-0"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </Link>
+              ))}
             </div>
           </div>
 
@@ -96,7 +102,7 @@ export function Footer() {
               <ul className="space-y-2 text-xs md:text-sm">
                 {COMPANY_LINKS.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="hover:text-[#FF6B00] transition-colors">
+                    <Link href={link.href} className="rounded-sm transition-colors hover:text-[#FF6B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900">
                       {link.label}
                     </Link>
                   </li>
@@ -109,7 +115,7 @@ export function Footer() {
               <ul className="space-y-2.5 text-sm">
                 {SUPPORT_LINKS.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="hover:text-white transition-colors">{link.label}</Link>
+                    <Link href={link.href} className="rounded-sm transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900">{link.label}</Link>
                   </li>
                 ))}
               </ul>
@@ -121,7 +127,7 @@ export function Footer() {
               <ul className="space-y-2 text-xs md:text-sm">
                 {CATEGORY_LINKS.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="hover:text-[#FF6B00] transition-colors">
+                    <Link href={link.href} className="rounded-sm transition-colors hover:text-[#FF6B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900">
                       {link.label}
                     </Link>
                   </li>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   AlertCircle,
   CheckCircle2,
@@ -194,10 +195,15 @@ export default function OrdersPage() {
                   <div className="space-y-4">
                     {order.items.map((item, index) => (
                       <div key={`${order.id}-${index}`} className="flex gap-4">
-                        <div
-                          className="h-16 w-16 shrink-0 rounded-xl border border-zinc-100 bg-zinc-50 bg-contain bg-center bg-no-repeat mix-blend-multiply md:h-20 md:w-20"
-                          style={{ backgroundImage: `url(${item.image})` }}
-                        />
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-100 bg-zinc-50 md:h-20 md:w-20">
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            fill
+                            sizes="80px"
+                            className="object-contain mix-blend-multiply"
+                          />
+                        </div>
                         <div className="flex flex-col justify-center">
                           <p className="line-clamp-2 text-sm font-bold text-zinc-900 md:text-base">{item.name}</p>
                           <p className="mt-1 text-xs font-medium text-zinc-500">Qty: {item.qty}</p>

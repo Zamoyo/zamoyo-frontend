@@ -4,7 +4,15 @@ export default function PrivacyPage() {
   return (
     <MarketplaceInfoPage
       title="Privacy Policy"
+      eyebrow="Data and trust"
+      tone="policy"
       description="Zamoyo handles customer and seller data to operate the marketplace safely, process transactions, and improve platform reliability."
+      highlights={["Purposeful data use", "Order and delivery support", "Fraud prevention", "Account update control"]}
+      stats={[
+        { value: "Less", label: "Noise" },
+        { value: "More", label: "Control" },
+        { value: "Safe", label: "Data" },
+      ]}
       sections={[
         {
           title: "What We Collect",
@@ -19,8 +27,34 @@ export default function PrivacyPage() {
           body: "You can request account data updates through support channels. Sensitive payment processing follows provider-level security controls.",
         },
       ]}
+      steps={[
+        {
+          title: "Collect what is needed",
+          body: "Core account, order, and delivery information supports the marketplace experience.",
+        },
+        {
+          title: "Use it with purpose",
+          body: "Data helps process orders, protect accounts, improve discovery, and support seller operations.",
+        },
+        {
+          title: "Keep support reachable",
+          body: "Customers can contact support when profile details or account data need review.",
+        },
+      ]}
+      faqs={[
+        {
+          question: "Does Zamoyo process payments directly?",
+          answer: "Sensitive payment handling follows provider-level controls; Zamoyo uses payment data only to support marketplace operations.",
+        },
+        {
+          question: "Can account details be updated?",
+          answer: "Yes. Shoppers can use account settings or support channels when information needs to be corrected.",
+        },
+      ]}
       ctaLabel="Contact Support"
       ctaHref="/help"
+      secondaryCtaLabel="Terms"
+      secondaryCtaHref="/terms"
     />
   );
 }

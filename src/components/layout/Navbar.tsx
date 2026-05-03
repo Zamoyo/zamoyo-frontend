@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, type ComponentType, type ReactNode } from "react";
 import {
   ShoppingCart, User, MapPin, HelpCircle, Store, ChevronDown, Flame, Menu, X, Heart, Package, LogOut,
-  Settings, LayoutGrid, FolderOpen, ChevronRight, ArrowLeft,
+  Settings, FolderOpen, ChevronRight, ArrowLeft, Info,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,10 +48,31 @@ const PRIMARY_NAV_LINKS: NavLink[] = [
   { label: "Health & Beauty", href: "/category/health-and-beauty" },
 ];
 
+const MOBILE_TOP_CATEGORY_LINKS: NavLink[] = [
+  { label: "New Arrivals", href: "/new-arrivals" },
+  { label: "Hot Deals", href: "/deals" },
+  { label: "Best Sellers", href: "/best-sellers" },
+  { label: "Electronics", href: "/category/electronics" },
+  { label: "Fashion", href: "/category/fashion" },
+  { label: "Home & Living", href: "/category/home-and-living" },
+];
+
+type UtilityMobileLink = NavLink & {
+  icon: ComponentType<{ className?: string }>;
+};
+
+const MOBILE_UTILITY_LINKS: UtilityMobileLink[] = [
+  { label: "Sell on Zamoyo", href: "/sell", icon: Store },
+  { label: "Track Order", href: "/track-order", icon: Package },
+  { label: "Help Center", href: "/help", icon: HelpCircle },
+  { label: "About Us", href: "/about", icon: Info },
+  { label: "Delivery in Lusaka", href: "/track", icon: MapPin },
+];
+
 
 const DROPDOWN_WRAPPER = "absolute top-full z-50 pt-2 transition-all duration-200";
 const DROPDOWN_CONTENT = "overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,0.88))] shadow-[0_20px_44px_rgba(15,23,42,0.16)] ring-1 ring-black/5 backdrop-blur-3xl";
-const DROPDOWN_LINK = "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-white/70 hover:text-[#009E49]";
+const DROPDOWN_LINK = "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-700 transition-all hover:bg-white/70 hover:text-[#009E49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] focus-visible:ring-offset-2 active:scale-[0.98]";
 
 function Divider() {
   return <div className="my-1 h-px w-full bg-white/55" />;
@@ -153,9 +174,9 @@ function TopBar() {
         >
           <Store className="h-3.5 w-3.5" /> Sell on Zamoyo
         </Link>
-        <div className="flex cursor-pointer items-center gap-1.5 transition-colors hover:text-white">
+        <Link href="/track" className="flex cursor-pointer items-center gap-1.5 rounded-sm transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
           <MapPin className="h-3.5 w-3.5" /> Deliver to Lusaka
-        </div>
+        </Link>
         <div className="flex items-center gap-1.5 text-[#FF6B00]">
           <Flame className="h-3 w-3" /> New Sellers Get 50% Off Fees
         </div>
@@ -221,7 +242,11 @@ function LoggedInMenu({ onDevToggleAuth }: { onDevToggleAuth: () => void }) {
         <Settings className="h-4 w-4 text-zinc-400" /> Settings
       </Link>
       <Divider />
-      <button className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 hover:text-red-700">
+      <button
+        type="button"
+        onClick={onDevToggleAuth}
+        className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition-all hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 active:scale-[0.98]"
+      >
         <LogOut className="h-4 w-4 text-red-500" /> Log Out
       </button>
       <DevAuthToggle label="Switch to Logged-Out View" onToggle={onDevToggleAuth} />
@@ -360,8 +385,6 @@ function CategoryBar({
     if (!isDropdownOpen && hoverTimeout.current) clearTimeout(hoverTimeout.current);
   }, [isDropdownOpen]);
 
-  const featuredCategories = categoryLinks.slice(0, 4);
-
   return (
     <div
       className={cn(
@@ -391,32 +414,36 @@ function CategoryBar({
           <div
             className={cn(
               DROPDOWN_WRAPPER,
-              "left-0 w-272 max-w-[calc(100vw-48px)]",
+              "left-0 w-[760px] max-w-[calc(100vw-48px)]",
               isDropdownOpen
                 ? "visible translate-y-0 opacity-100"
                 : "invisible -translate-y-2 opacity-0",
             )}
           >
-            <div className={cn(DROPDOWN_CONTENT, "flex h-104 w-full p-0")}>
-              <div className="w-72 shrink-0 border-r border-white/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0.12))] p-3 backdrop-blur-2xl">
-                <div className="mb-3 rounded-2xl border border-white/65 bg-white/42 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] backdrop-blur-xl">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Browse</p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-900">
-                    Explore every department in one place.
-                  </p>
+            <div className={cn(DROPDOWN_CONTENT, "grid max-h-[420px] w-full grid-cols-[15.5rem_minmax(0,1fr)] p-0")}>
+              <div className="border-r border-white/45 bg-white/35 p-3 backdrop-blur-2xl">
+                <div className="mb-2 flex items-center justify-between px-2">
+                  <SectionHeading>Departments</SectionHeading>
+                  <Link
+                    href="/categories"
+                    className="rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#009E49] transition-colors hover:bg-white/60"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    View all
+                  </Link>
                 </div>
 
-                <div className="max-h-87 space-y-1 overflow-y-auto pr-1">
+                <div className="max-h-[360px] space-y-1 overflow-y-auto pr-1">
                   {categoryLinks.map((category) => (
                     <button
                       key={category.href}
                       type="button"
                       onMouseEnter={() => handleCategoryHover(category)}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition-all",
+                        "flex w-full cursor-pointer items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] active:scale-[0.99]",
                         activeCategory?.href === category.href
-                          ? "border-[#009E49]/12 bg-white/62 text-[#009E49] shadow-[0_10px_22px_rgba(15,23,42,0.08)] backdrop-blur-xl"
-                          : "border-transparent text-zinc-700 hover:border-white/45 hover:bg-white/38 hover:text-[#009E49] hover:backdrop-blur-xl",
+                          ? "border-[#009E49]/20 bg-white/80 text-[#009E49] shadow-sm"
+                          : "border-transparent text-zinc-700 hover:border-white/60 hover:bg-white/55 hover:text-[#009E49]",
                       )}
                     >
                       <span className="truncate">{category.label}</span>
@@ -429,109 +456,65 @@ function CategoryBar({
                     </button>
                   ))}
                   {!categoryLinks.length ? (
-                    <div className="rounded-2xl border border-dashed border-white/45 bg-white/35 px-4 py-5 text-sm text-zinc-500 backdrop-blur-xl">
+                    <div className="rounded-xl border border-dashed border-white/55 bg-white/45 px-4 py-5 text-sm text-zinc-500">
                       Categories will appear here once they are available.
                     </div>
                   ) : null}
                 </div>
               </div>
 
-              <div className="min-w-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(255,255,255,0.34),rgba(255,255,255,0.18))] p-6 backdrop-blur-2xl">
+              <div className="min-w-0 overflow-y-auto bg-[linear-gradient(180deg,rgba(255,255,255,0.48),rgba(255,255,255,0.28))] p-5 backdrop-blur-2xl">
                 {activeCategory ? (
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_18rem]">
-                  <div className="rounded-[26px] border border-white/55 bg-[linear-gradient(135deg,rgba(0,158,73,0.12),rgba(255,255,255,0.58)_48%,rgba(255,107,0,0.1))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-2xl">
-                    <div className="mb-5 flex items-start justify-between gap-4 border-b border-white/45 pb-4">
+                  <div>
+                    <div className="mb-4 flex items-start justify-between gap-4 border-b border-white/55 pb-4">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/50 bg-white/55 text-[#009E49] shadow-sm backdrop-blur-xl">
-                            <LayoutGrid className="h-5 w-5" />
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/65 text-[#009E49] shadow-sm">
+                            <FolderOpen className="h-4 w-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                              Category
-                            </p>
+                            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Category</p>
                             <h3 className="truncate text-lg font-black text-zinc-900">
                               {activeCategory.label}
                             </h3>
                           </div>
                         </div>
-                        <p className="mt-3 max-w-2xl text-sm text-zinc-600">
-                          Shop curated picks, everyday essentials, and the most popular items in{" "}
-                          {activeCategory.label.toLowerCase()}.
+                        <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-600">
+                          Jump straight into the most useful sections without opening a giant menu.
                         </p>
                       </div>
                       <Link
                         href={activeCategory.href}
-                        className="shrink-0 rounded-full border border-white/55 bg-white/52 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#009E49] backdrop-blur-xl transition-colors hover:bg-white/72 hover:text-[#00853d]"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="shrink-0 rounded-full border border-white/65 bg-white/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#009E49] transition-colors hover:bg-white hover:text-[#00853d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]"
                       >
                         Shop All
                       </Link>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5">
                       {activeCategory.children?.map((child) => (
                         <Link
                           key={child.href}
                           href={child.href}
-                          className="group rounded-2xl border border-white/55 bg-white/42 px-4 py-3 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-[#009E49]/15 hover:bg-white/58 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="group rounded-xl border border-white/60 bg-white/55 px-3 py-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#009E49]/20 hover:bg-white/75 hover:shadow-[0_10px_20px_rgba(15,23,42,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/55 text-zinc-400 transition-colors group-hover:bg-[#009E49]/10 group-hover:text-[#009E49]">
-                              <FolderOpen className="h-4 w-4" />
-                            </div>
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-zinc-900 transition-colors group-hover:text-[#009E49]">
                                 {child.label}
                               </p>
-                              <p className="mt-1 text-xs text-zinc-500">
-                                Browse {child.label.toLowerCase()} in this section.
-                              </p>
+                              <p className="mt-0.5 text-xs text-zinc-500">Browse section</p>
                             </div>
+                            <ChevronRight className="ml-auto mt-0.5 h-4 w-4 shrink-0 text-zinc-300 transition-colors group-hover:text-[#009E49]" />
                           </div>
                         </Link>
-                      )) ?? <p className="col-span-2 text-sm text-zinc-500">No subcategories found.</p>}
+                      )) ?? <p className="col-span-2 rounded-xl border border-dashed border-white/55 bg-white/45 px-4 py-5 text-sm text-zinc-500">No subcategories found.</p>}
                     </div>
-                  </div>
-
-                  <div className="flex flex-col rounded-[26px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.42),rgba(255,255,255,0.26))] p-4 backdrop-blur-2xl">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
-                      Popular Departments
-                    </p>
-                    <div className="mt-4 space-y-2">
-                      {featuredCategories.map((category) => (
-                        <button
-                          key={category.href}
-                          type="button"
-                          onMouseEnter={() => handleCategoryHover(category)}
-                          className={cn(
-                            "flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-semibold transition-all",
-                            activeCategory.href === category.href
-                              ? "bg-white/65 text-[#009E49] shadow-sm backdrop-blur-xl"
-                              : "text-zinc-700 hover:bg-white/42 hover:text-[#009E49] hover:backdrop-blur-xl",
-                          )}
-                        >
-                          <span className="truncate">{category.label}</span>
-                          <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" />
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-auto rounded-2xl border border-dashed border-white/45 bg-white/38 p-4 backdrop-blur-xl">
-                      <p className="text-xs font-semibold text-zinc-900">Need the full catalog?</p>
-                      <p className="mt-1 text-xs leading-5 text-zinc-500">
-                        Use the category rail to jump between departments without leaving the menu.
-                      </p>
-                      <Link
-                        href="/categories"
-                        className="mt-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[#009E49] hover:underline"
-                      >
-                        View all departments
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </div>
-                  </div>
                   </div>
                 ) : (
-                  <div className="flex h-full items-center justify-center rounded-[26px] border border-dashed border-white/45 bg-white/28 p-8 text-center backdrop-blur-2xl">
+                  <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-white/55 bg-white/45 p-8 text-center">
                     <div>
                       <p className="text-sm font-semibold text-zinc-900">Category menu unavailable</p>
                       <p className="mt-2 text-sm text-zinc-500">
@@ -608,28 +591,31 @@ function MobileDrawer({
       />
       <div
         className={cn(
-          "absolute left-0 top-0 flex h-full w-72 flex-col border-r border-white/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.74),rgba(255,255,255,0.58))] shadow-[0_20px_44px_rgba(15,23,42,0.18)] backdrop-blur-3xl transition-transform duration-300",
+          "absolute left-0 top-0 flex h-full w-80 max-w-[88vw] flex-col border-r border-white/40 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,255,255,0.72))] shadow-[0_24px_54px_rgba(15,23,42,0.2)] backdrop-blur-3xl transition-transform duration-300",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-20 items-center justify-between border-b border-white/35 px-5 bg-white/16 backdrop-blur-xl">
+        <div className="flex h-18 items-center justify-between border-b border-white/45 bg-white/30 px-4 backdrop-blur-xl">
           <Link href="/" className="flex items-center gap-2" onClick={onClose}>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#009E49] text-lg font-extrabold text-white shadow-md">
               Z
             </div>
-            <span className="text-xl font-black tracking-tighter text-zinc-900">Zamoyo</span>
+            <div>
+              <span className="text-xl font-black tracking-tighter text-zinc-900">Zamoyo</span>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">Shop Menu</p>
+            </div>
           </Link>
           <Button variant="ghost" size="icon" className="rounded-full text-zinc-500 hover:bg-white/45" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>
         </div>
 
-        <div className="border-b border-white/30 bg-white/12 px-5 py-4 backdrop-blur-xl">
+        <div className="border-b border-white/35 bg-white/22 px-4 py-3.5 backdrop-blur-xl">
           {categoryView === "root" ? (
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Shop by department</p>
-              <p className="mt-1 text-sm font-semibold text-zinc-900">
-                Browse categories and jump straight into subcategories.
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Shop by department</p>
+              <p className="mt-1 text-sm font-semibold leading-tight text-zinc-900">
+                Find what you need quickly.
               </p>
             </div>
           ) : (
@@ -643,7 +629,7 @@ function MobileDrawer({
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Category</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Category</p>
                 <p className="truncate text-sm font-semibold text-zinc-900">{activeCategory.label}</p>
               </div>
             </div>
@@ -657,21 +643,21 @@ function MobileDrawer({
               categoryView === "category" ? "-translate-x-1/2" : "translate-x-0"
             )}
           >
-            <div className="w-1/2 overflow-y-auto px-5 py-4">
-              <div className="space-y-6">
-                <div className="space-y-3">
+            <div className="flex w-1/2 min-h-0 flex-col px-4 pb-4 pt-3">
+              <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
+                <div className="space-y-2.5">
                   <SectionHeading>Top Categories</SectionHeading>
-                  <div className="grid gap-2">
-                    {PRIMARY_NAV_LINKS.map(({ label, href }) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {MOBILE_TOP_CATEGORY_LINKS.map(({ label, href }) => (
                       <Link
                         key={href}
                         href={href}
                         onClick={onClose}
                         className={cn(
-                          "rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors",
+                          "rounded-xl border px-3 py-2.5 text-[13px] font-semibold leading-tight transition-colors",
                           href === "/new-arrivals"
-                            ? "border-[#FF6B00]/20 bg-[#FF6B00]/10 text-[#FF6B00] backdrop-blur-xl"
-                            : "border-white/45 bg-white/32 text-zinc-800 backdrop-blur-xl hover:border-white/60 hover:bg-white/48",
+                            ? "border-[#FF6B00]/25 bg-[#FF6B00]/12 text-[#FF6B00] backdrop-blur-xl"
+                            : "border-white/55 bg-white/36 text-zinc-800 backdrop-blur-xl hover:border-white/70 hover:bg-white/56",
                         )}
                       >
                         {label}
@@ -682,63 +668,85 @@ function MobileDrawer({
 
                 <Divider />
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <SectionHeading>All Categories</SectionHeading>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {categoryLinks.map((category) => (
                       <button
                         key={category.href}
                         type="button"
                         onClick={() => handleCategoryOpen(category)}
                         className={cn(
-                          "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition-all",
+                          "flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-all",
                           activeCategory.href === category.href
-                            ? "border-[#009E49]/18 bg-[#009E49]/8 text-[#009E49] backdrop-blur-xl"
-                            : "border-white/45 bg-white/28 text-zinc-700 backdrop-blur-xl hover:border-white/60 hover:bg-white/44",
+                            ? "border-[#009E49]/22 bg-[#009E49]/10 text-[#009E49] backdrop-blur-xl"
+                            : "border-white/55 bg-white/30 text-zinc-700 backdrop-blur-xl hover:border-white/75 hover:bg-white/48",
                         )}
                       >
-                        <span className="truncate">{category.label}</span>
+                        <div className="min-w-0">
+                          <p className="truncate">{category.label}</p>
+                          <p className="text-[10px] font-medium text-zinc-400">
+                            {category.children?.length ?? 0} subcategories
+                          </p>
+                        </div>
                         <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
                       </button>
                     ))}
                     {!categoryLinks.length ? (
-                      <div className="rounded-2xl border border-dashed border-white/45 bg-white/24 px-4 py-5 text-sm text-zinc-500 backdrop-blur-xl">
+                      <div className="rounded-xl border border-dashed border-white/45 bg-white/24 px-4 py-4 text-sm text-zinc-500 backdrop-blur-xl">
                         Categories will appear here once they are available.
                       </div>
                     ) : null}
                   </div>
                 </div>
               </div>
+
+              <div className="mt-4 space-y-2 border-t border-white/40 pt-3">
+                <SectionHeading>Quick Links</SectionHeading>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {MOBILE_UTILITY_LINKS.map(({ label, href, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={onClose}
+                      className="flex items-center gap-2 rounded-xl border border-white/55 bg-white/36 px-3 py-2.5 text-sm font-semibold text-zinc-700 backdrop-blur-xl transition-colors hover:border-white/75 hover:bg-white/56 hover:text-[#009E49]"
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-zinc-400" />
+                      <span className="truncate">{label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="w-1/2 overflow-y-auto px-5 py-4">
-              <div className="rounded-[26px] border border-white/45 bg-[linear-gradient(180deg,rgba(255,255,255,0.42),rgba(255,255,255,0.26))] p-4 backdrop-blur-2xl">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+            <div className="w-1/2 overflow-y-auto px-4 py-3">
+              <div className="rounded-2xl border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.5),rgba(255,255,255,0.34))] p-4 backdrop-blur-2xl">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
                   Browse {activeCategory.label}
                 </p>
                 <Link
                   href={activeCategory.href}
                   onClick={onClose}
-                  className="mt-3 flex items-center justify-between rounded-2xl border border-white/45 bg-white/42 px-4 py-3 text-sm font-semibold text-zinc-900 shadow-sm backdrop-blur-xl transition-colors hover:text-[#009E49]"
+                  className="mt-3 flex items-center justify-between rounded-xl border border-white/60 bg-white/48 px-3 py-2.5 text-sm font-semibold text-zinc-900 shadow-sm backdrop-blur-xl transition-colors hover:text-[#009E49]"
                 >
                   <span>Shop all {activeCategory.label}</span>
                   <ChevronRight className="h-4 w-4 text-zinc-400" />
                 </Link>
               </div>
 
-              <div className="mt-4 space-y-2">
+              <div className="mt-3 grid grid-cols-1 gap-1.5">
                 {activeCategory.children?.map((child) => (
                   <Link
                     key={child.href}
                     href={child.href}
                     onClick={onClose}
-                    className="flex items-center justify-between rounded-2xl border border-white/45 bg-white/24 px-4 py-3 text-sm font-medium text-zinc-700 backdrop-blur-xl transition-all hover:border-[#009E49]/15 hover:bg-[#009E49]/6 hover:text-[#009E49]"
+                    className="flex items-center justify-between rounded-xl border border-white/55 bg-white/30 px-3 py-2.5 text-sm font-medium text-zinc-700 backdrop-blur-xl transition-all hover:border-[#009E49]/18 hover:bg-[#009E49]/8 hover:text-[#009E49]"
                   >
                     <span className="truncate">{child.label}</span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
                   </Link>
                 )) ?? (
-                  <div className="rounded-2xl border border-dashed border-white/45 bg-white/24 px-4 py-5 text-sm text-zinc-500 backdrop-blur-xl">
+                  <div className="rounded-xl border border-dashed border-white/45 bg-white/24 px-4 py-4 text-sm text-zinc-500 backdrop-blur-xl">
                     No subcategories available yet.
                   </div>
                 )}
