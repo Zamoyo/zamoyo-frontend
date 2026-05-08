@@ -9,6 +9,13 @@ import {
 import { Toaster, toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  ActionMenu,
+  ActionMenuContent,
+  ActionMenuItem,
+  ActionMenuSeparator,
+  ActionMenuTrigger,
+} from "@/components/ui/action-menu";
 import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 import {
   sellerOrdersApi,
@@ -82,51 +89,41 @@ function OrderActionMenu({
   };
 
   return (
-    <div className="relative">
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        onClick={() => setIsOpen(!isOpen)}
-        className="h-8 w-8 shrink-0 rounded-xl text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
+    <ActionMenu open={isOpen} onOpenChange={setIsOpen}>
+      <ActionMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Open order actions for ${order.id}`}
+          className="h-8 w-8 shrink-0 rounded-xl text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </ActionMenuTrigger>
 
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-1 w-44 origin-top-right overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-top-2">
-            <div className="flex flex-col space-y-0.5">
-              <button 
-                onClick={handleCopyId}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-              >
-                <Copy className="h-3.5 w-3.5 text-zinc-400" /> Copy Order ID
-              </button>
-              
-              <a 
-                href={`tel:${order.phone}`}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-              >
-                <Phone className="h-3.5 w-3.5 text-zinc-400" /> Call Buyer
-              </a>
-              
-              <div className="my-1 h-px bg-zinc-100" />
-              
-              <button 
-                onClick={() => {
-                  onCancelOrder(order.id);
-                  setIsOpen(false);
-                }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
-              >
-                <XCircle className="h-3.5 w-3.5" /> Cancel Order
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+      <ActionMenuContent>
+        <ActionMenuItem onClick={handleCopyId}>
+          <Copy className="h-3.5 w-3.5 text-zinc-400" /> Copy Order ID
+        </ActionMenuItem>
+        <a
+          href={`tel:${order.phone}`}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
+          onClick={() => setIsOpen(false)}
+        >
+          <Phone className="h-3.5 w-3.5 text-zinc-400" /> Call Buyer
+        </a>
+        <ActionMenuSeparator />
+        <ActionMenuItem
+          onClick={() => {
+            onCancelOrder(order.id);
+            setIsOpen(false);
+          }}
+          className="text-red-600 hover:bg-red-50 focus-visible:ring-red-200"
+        >
+          <XCircle className="h-3.5 w-3.5" /> Cancel Order
+        </ActionMenuItem>
+      </ActionMenuContent>
+    </ActionMenu>
   );
 }
 
@@ -363,6 +360,7 @@ export default function SellerOrdersPage() {
 
         <div className="flex gap-3">
           <select 
+            aria-label="Filter orders by status"
             value={statusFilter} 
             title="Filter by status"
             onChange={(e) => setStatusFilter(e.target.value as SellerOrderStatus | "all")} 
@@ -373,6 +371,7 @@ export default function SellerOrdersPage() {
           </select>
 
           <select 
+            aria-label="Filter orders by date range"
             value={dateFilter} 
             title="Filter by date range"
             onChange={(e) => setDateFilter(e.target.value as DateFilter)} 

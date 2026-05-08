@@ -55,7 +55,7 @@ export default function VerifyCodePage() {
       <div className="absolute inset-0 z-0 bg-black/60 lg:bg-black/40"></div>
       <div className="relative z-10 flex min-h-screen flex-col justify-center border-r border-white/10 bg-black/30 px-6 shadow-[0_0_50px_rgba(0,0,0,0.3)] backdrop-blur-2xl supports-backdrop-filter:bg-black/20 lg:px-12">
         <Link href="/auth/forgot-password">
-          <Button variant="ghost" size="icon" className="absolute left-4 top-4 z-20 h-8 w-8 rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
+          <Button aria-label="Go back" variant="ghost" size="icon" className="absolute left-4 top-4 z-20 h-8 w-8 rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
@@ -87,6 +87,7 @@ export default function VerifyCodePage() {
                   ref={(element) => {
                     inputRefs.current[index] = element;
                   }}
+                  aria-label={`Verification code digit ${index + 1}`}
                   type="text"
                   inputMode="numeric"
                   maxLength={1}
@@ -120,7 +121,7 @@ export default function VerifyCodePage() {
 
       <div className="relative z-10 hidden flex-col justify-end p-16 lg:flex xl:p-24">
         <Link href="/">
-          <Button variant="ghost" size="icon" className="absolute right-6 top-6 rounded-full border border-white/10 bg-black/20 text-white backdrop-blur-md transition-colors hover:bg-black/40">
+          <Button aria-label="Close verification page" variant="ghost" size="icon" className="absolute right-6 top-6 rounded-full border border-white/10 bg-black/20 text-white backdrop-blur-md transition-colors hover:bg-black/40">
             <X className="h-5 w-5" />
           </Button>
         </Link>

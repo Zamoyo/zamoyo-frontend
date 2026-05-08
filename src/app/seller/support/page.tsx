@@ -319,12 +319,14 @@ export default function SellerSupportPage() {
                 <div className="border-t border-zinc-200 bg-white p-4 shrink-0">
                   <div className="relative">
                     <textarea 
+                      aria-label="Reply message"
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       placeholder="Type your reply..." 
                       className="min-h-20 w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 p-3 pr-14 text-sm font-medium shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-zinc-900"
                     />
                     <Button 
+                      aria-label="Send reply"
                       size="icon" 
                       onClick={handleSendReply}
                       disabled={!replyText.trim() || isReplying}

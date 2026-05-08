@@ -189,7 +189,7 @@ export default function CheckoutPage() {
                 </label>
                 <label className="space-y-1.5">
                   <span className="text-xs font-bold uppercase tracking-wider text-zinc-600">Area / Neighborhood</span>
-                  <select value={delivery.area} onChange={updateDelivery("area")} className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#009E49]" required>
+                  <select aria-label="Delivery area" value={delivery.area} onChange={updateDelivery("area")} className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#009E49]" required>
                     <option value="">Select your area...</option>
                     {areaOptions.map((area) => (
                       <option key={area} value={area}>{area}</option>

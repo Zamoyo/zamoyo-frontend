@@ -62,7 +62,7 @@ export default function SellOnZamoyoLanding() {
 
         <div className="relative z-10 flex min-h-screen flex-col justify-center border-r border-white/10 bg-black/40 px-6 pb-32 pt-12 shadow-[0_0_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl supports-backdrop-filter:bg-black/20 lg:px-12">
           <Link href="/">
-            <Button variant="ghost" size="icon" className="absolute left-6 top-6 z-20 h-10 w-10 rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
+            <Button aria-label="Go back" variant="ghost" size="icon" className="absolute left-6 top-6 z-20 h-10 w-10 rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
@@ -123,7 +123,7 @@ export default function SellOnZamoyoLanding() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-300">Business Type</label>
-                    <select value={form.businessType} onChange={(event) => updateField("businessType", event.target.value)} className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white outline-none backdrop-blur-md focus-visible:ring-[#009E49]">
+                    <select aria-label="Business type" value={form.businessType} onChange={(event) => updateField("businessType", event.target.value)} className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white outline-none backdrop-blur-md focus-visible:ring-[#009E49]">
                       <option value="individual" className="bg-zinc-900 text-white">Individual Seller</option>
                       <option value="registered" className="bg-zinc-900 text-white">Registered Business</option>
                     </select>

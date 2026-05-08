@@ -362,9 +362,9 @@ export default function SellerPayoutsPage() {
         </div>
         <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row">
           <select
+            aria-label="Filter payouts by status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as PayoutFilterStatus)}
-            aria-label="Filter by payout status"
             className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
           >
             <option value="all">All Statuses</option>
@@ -373,9 +373,9 @@ export default function SellerPayoutsPage() {
             <option value="failed">Failed</option>
           </select>
           <select
+            aria-label="Sort payouts"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortBy)}
-            aria-label="Sort transactions by"
             className="col-span-2 h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
           >
             <option value="newest">Newest First</option>
@@ -514,6 +514,7 @@ export default function SellerPayoutsPage() {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Close withdrawal modal"
                 disabled={isWithdrawing}
                 onClick={() => setIsWithdrawModalOpen(false)}
                 className="h-8 w-8 rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"

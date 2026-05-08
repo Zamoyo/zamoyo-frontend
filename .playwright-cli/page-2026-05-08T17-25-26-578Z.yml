@@ -1,0 +1,273 @@
+- generic [active] [ref=e1]:
+  - link "Passa ai contenuti principali" [ref=e13] [cursor=pointer]:
+    - /url: "#main-content"
+    - generic [ref=e14]:
+      - generic [ref=e15]: Passa ai contenuti principali
+      - img [ref=e16]
+  - banner [ref=e18]:
+    - button "Menu Carriera" [ref=e21] [cursor=pointer]:
+      - generic [ref=e27]: Menu Carriera
+    - link "Sito carriera di Belka" [ref=e29] [cursor=pointer]:
+      - /url: https://careers.belkadigital.com/
+      - img "Sito carriera di Belka" [ref=e30]
+    - button "Condividi la pagina" [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]: Condividi la pagina
+      - img [ref=e36]
+  - main [ref=e38]:
+    - generic [ref=e39]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - text: Service Delivery · Belka HQ ·
+          - generic [ref=e43]:
+            - text: Completamente remoto
+            - img [ref=e44]
+        - heading "Junior Frontend Developer" [level=1] [ref=e46]
+        - button "Candidati per questo ruolo" [ref=e48] [cursor=pointer]:
+          - generic [ref=e50]: Candidati per questo ruolo
+      - button "Scorri il contenuto" [ref=e52] [cursor=pointer]:
+        - img [ref=e53]
+    - generic [ref=e56]:
+      - heading "Chi siamo" [level=2] [ref=e57]
+      - paragraph [ref=e58]:
+        - text: "Belka è un Digital Product Studio che aiuta aziende con prodotti digitali a crescere. Siamo un team di 10 persone — strategist, designer e developer — che lavorano da Trento e in remoto. Negli ultimi cinque anni abbiamo collaborato con alcune delle aziende più innovative in Italia: Fatture in Cloud,"
+        - link "Subito.it" [ref=e59] [cursor=pointer]:
+          - /url: http://Subito.it
+        - text: ", NeN,"
+        - link "Segugio.it" [ref=e60] [cursor=pointer]:
+          - /url: http://Segugio.it
+        - text: ", Banca Sella, Walliance, Mooney e tante altre."
+      - heading "Il ruolo" [level=2] [ref=e61]
+      - paragraph [ref=e62]:
+        - text: Stiamo cercando un
+        - strong [ref=e63]: Junior Frontend Developer
+        - text: da inserire nel team. Lavorerai su progetti reali, fianco a fianco con strategist, designer e project manager.
+      - paragraph [ref=e64]: "Sarai responsabile dello sviluppo end-to-end di un progetto: dall'handoff con design alla consegna al cliente. Sei una persona curiosa, tieni d'occhio l'evoluzione degli strumenti AI e hai già iniziato a integrarli nel tuo flusso di lavoro quotidiano."
+      - heading "Cosa farai" [level=2] [ref=e65]
+      - list [ref=e66]:
+        - listitem [ref=e67]:
+          - paragraph [ref=e68]: Tradurre prototipi in interfacce funzionanti
+        - listitem [ref=e69]:
+          - paragraph [ref=e70]: Integrare API REST in prodotti già esistenti o in fase di sviluppo
+        - listitem [ref=e71]:
+          - paragraph [ref=e72]: Analizzare e stimare l'impegno richiesto per portare a termine i task che ti verranno assegnati
+        - listitem [ref=e73]:
+          - paragraph [ref=e74]: Lavorare nel rispetto delle stime concordate, mantenendo il team di Belka informato sull'avanzamento dei task e su eventuali criticità
+      - heading "Requisiti" [level=2] [ref=e75]
+      - list [ref=e76]:
+        - listitem [ref=e77]:
+          - paragraph [ref=e78]:
+            - strong [ref=e79]: 1-2 anni di esperienza
+            - text: nello sviluppo frontend
+        - listitem [ref=e80]:
+          - paragraph [ref=e81]: Conoscenza di React, React Native, TypeScript
+        - listitem [ref=e82]:
+          - paragraph [ref=e83]: Esperienza nell'integrazione di API REST (non è richiesta conoscenza di sviluppo backend)
+        - listitem [ref=e84]:
+          - paragraph [ref=e85]: Hai già lavorato su prodotti software di media complessità
+        - listitem [ref=e86]:
+          - paragraph [ref=e87]: Hai collaborato con designer e PM all'interno di un team strutturato
+        - listitem [ref=e88]:
+          - paragraph [ref=e89]: "Curiosità per il mondo AI: tieni d'occhio l'evoluzione degli strumenti e sai usarli in modo consapevole. L'AI accelera il tuo lavoro, non lo sostituisce"
+      - heading "Plus" [level=4] [ref=e90]
+      - list [ref=e91]:
+        - listitem [ref=e92]:
+          - paragraph [ref=e93]: Esperienza con Supabase
+        - listitem [ref=e94]:
+          - paragraph [ref=e95]: Esperienza con Next.js e/o Expo
+      - heading "Cosa offriamo" [level=2] [ref=e96]
+      - list [ref=e97]:
+        - listitem [ref=e98]:
+          - paragraph [ref=e99]: RAL tra 24k€ e 28k€, in base all'esperienza
+        - listitem [ref=e100]:
+          - paragraph [ref=e101]: Contratto a tempo indeterminato sotto il CCNL Metalmeccanico
+        - listitem [ref=e102]:
+          - paragraph [ref=e103]: MacBook, monitor esterno e gli strumenti che ti servono per lavorare bene
+        - listitem [ref=e104]:
+          - paragraph [ref=e105]: 1.000€/anno di budget per la tua formazione
+        - listitem [ref=e106]:
+          - paragraph [ref=e107]: 1:1 settimanali con il tuo manager
+        - listitem [ref=e108]:
+          - paragraph [ref=e109]: Lavori da Trento o in remoto, con una visita trimestrale in HQ
+      - heading "Come funziona il processo di selezione?" [level=2] [ref=e110]
+      - paragraph [ref=e111]: Cerchiamo persone grintose, che vogliono crescere facendo squadra e che sanno mettere un pizzico di magia in quello che fanno. Ecco perché il nostro processo di selezione è strutturato per conoscerci davvero e capire se siamo la squadra giusta l’uno per l’altro.
+      - list [ref=e112]:
+        - listitem [ref=e113]:
+          - paragraph [ref=e114]:
+            - strong [ref=e115]: Screening del CV
+        - listitem [ref=e116]:
+          - paragraph [ref=e117]:
+            - strong [ref=e118]: Chiamata conoscitiva
+        - listitem [ref=e119]:
+          - paragraph [ref=e120]:
+            - strong [ref=e121]: Cultural fit e competenze tecniche
+        - listitem [ref=e122]:
+          - paragraph [ref=e123]:
+            - strong [ref=e124]: Reference Check
+        - listitem [ref=e125]:
+          - paragraph [ref=e126]:
+            - strong [ref=e127]: Selezione
+      - paragraph [ref=e128]: Tutto il processo dura circa un mese. A ogni step riceverai un feedback, sempre. Se ti rivedi nei nostri valori e vuoi fare la differenza, ci vediamo al primo step! 🚀
+    - generic [ref=e131]:
+      - term [ref=e132]: Dipartimento
+      - definition [ref=e133]: Service Delivery
+      - term [ref=e134]: Stato remoto
+      - definition [ref=e135]: Completamente remoto
+    - generic [ref=e137]:
+      - generic [ref=e138]:
+        - heading "A proposito di Belka" [level=2] [ref=e139]
+        - paragraph [ref=e141]
+      - generic [ref=e142]:
+        - generic [ref=e143]: Fondata nel 2015
+        - generic [ref=e144]: Fatturato 1 milione
+    - button "Candidati per questo ruolo" [disabled] [ref=e145]
+    - generic [ref=e146]:
+      - generic [ref=e148]:
+        - generic [ref=e150]:
+          - generic [ref=e151]:
+            - text: Service Delivery · Belka HQ ·
+            - generic [ref=e152]:
+              - text: Completamente remoto
+              - img [ref=e153]
+          - heading "Junior Frontend Developer" [level=1] [ref=e155]
+        - generic [ref=e209]:
+          - generic [ref=e212]:
+            - generic [ref=e213]:
+              - text: Perché Belka e perché adesso
+              - superscript [ref=e214]: "*"
+              - generic [ref=e215]: Obbligatorio
+            - textbox "Perché Belka e perché adesso Obbligatorio" [ref=e216]: Belka looks like the right place to grow because the role combines product-focused frontend work, design handoff, REST API integration, and close collaboration with designers and project managers. I am applying now because I want a fully remote frontend role where I can contribute real React/TypeScript work, keep improving my product thinking, and learn from a small team that cares about polished digital products.
+          - generic [ref=e219]:
+            - generic [ref=e220]: Hai esperienza diretta con TypeScript nello sviluppo frontend? Se sì, quali funzionalità avanzate hai utilizzato?
+            - textbox "Hai esperienza diretta con TypeScript nello sviluppo frontend? Se sì, quali funzionalità avanzate hai utilizzato?" [ref=e221]: Yes. I have used TypeScript in frontend projects with React and Next.js, including typed component props, reusable interfaces, API response types, generic utility functions, union types for UI states, strict form/data models, and type-safe integration with REST and GraphQL data. I focus on keeping types practical and maintainable so they improve code quality without making the code harder to read.
+          - group "Hai mai utilizzato strumenti di AI per la generazione di interfacce come lovable.dev, Clode o simili? Obbligatorio" [ref=e224]:
+            - generic [ref=e226]:
+              - text: Hai mai utilizzato strumenti di AI per la generazione di interfacce come lovable.dev, Clode o simili?
+              - superscript [ref=e227]: "*"
+              - generic [ref=e228]: Obbligatorio
+            - generic [ref=e229]:
+              - generic [ref=e230]:
+                - radio "Sì" [checked] [ref=e231]
+                - generic [ref=e232] [cursor=pointer]: Sì
+              - generic [ref=e233]:
+                - radio "No" [ref=e234]
+                - generic [ref=e235] [cursor=pointer]: "No"
+          - group "Hai già lavorato con Next.js in un contesto di produzione? Obbligatorio" [ref=e238]:
+            - generic [ref=e240]:
+              - text: Hai già lavorato con Next.js in un contesto di produzione?
+              - superscript [ref=e241]: "*"
+              - generic [ref=e242]: Obbligatorio
+            - generic [ref=e243]:
+              - generic [ref=e244]:
+                - radio "Sì" [checked] [ref=e245]
+                - generic [ref=e246] [cursor=pointer]: Sì
+              - generic [ref=e247]:
+                - radio "No" [ref=e248]
+                - generic [ref=e249] [cursor=pointer]: "No"
+          - generic [ref=e250]:
+            - heading "Informazioni personali" [level=2] [ref=e251]
+            - button "Candidati con LinkedIn" [ref=e255] [cursor=pointer]:
+              - img [ref=e256]
+              - text: Candidati con LinkedIn
+          - generic [ref=e258]:
+            - generic [ref=e259]:
+              - generic [ref=e260]:
+                - text: Nome
+                - superscript [ref=e261]: "*"
+                - generic [ref=e262]: Obbligatorio
+              - textbox "Nome Obbligatorio" [ref=e263]: Daniel
+            - generic [ref=e264]:
+              - generic [ref=e265]:
+                - text: Cognome
+                - superscript [ref=e266]: "*"
+                - generic [ref=e267]: Obbligatorio
+              - textbox "Cognome Obbligatorio" [ref=e268]: Abu
+          - generic [ref=e269]:
+            - generic [ref=e270]:
+              - generic [ref=e271]:
+                - text: E-mail
+                - superscript [ref=e272]: "*"
+                - generic [ref=e273]: Obbligatorio
+              - textbox "E-mail Obbligatorio" [ref=e274]: danielabudiara18@gmail.com
+            - generic [ref=e275]:
+              - generic [ref=e276]: Telefono
+              - generic [ref=e277]:
+                - button "Paese selezionato" [ref=e279] [cursor=pointer]
+                - textbox "Numero di telefono con prefisso internazionale" [ref=e283]:
+                  - /placeholder: +39 312 345 6789
+          - generic [ref=e285]:
+            - generic [ref=e286]:
+              - text: Carica il CV
+              - superscript [ref=e287]: "*"
+              - generic [ref=e288]: Obbligatorio
+            - generic [ref=e329]:
+              - link "Daniel Abu - Frontend Developer CV.pdf":
+                - /url: javascript:void(0);
+              - button "Annulla la selezione del file" [ref=e330] [cursor=pointer]:
+                - img [ref=e331]
+          - generic [ref=e296]:
+            - generic [ref=e297]: File aggiuntivi
+            - generic [ref=e298] [cursor=pointer]:
+              - generic [ref=e302]: Trascina il file o carica
+              - button "File aggiuntivi" [ref=e303]
+          - generic [ref=e304]:
+            - generic [ref=e305]: Lettera di presentazione
+            - textbox "Lettera di presentazione" [ref=e306]
+          - generic [ref=e309]:
+            - generic [ref=e312]:
+              - checkbox "Obbligatorio. Inviando questa candidatura, dichiaro di aver letto la Informativa sulla Privacy e accetto che Belka memorizzi i miei dati personali per poter elaborare la mia candidatura." [ref=e313] [cursor=pointer]
+              - generic [ref=e314] [cursor=pointer]:
+                - generic [ref=e315]: Obbligatorio.
+                - text: Inviando questa candidatura, dichiaro di aver letto la
+                - link "Informativa sulla Privacy" [ref=e316]:
+                  - /url: https://careers.belkadigital.com/privacy-policy
+                - text: e accetto che Belka memorizzi i miei dati personali per poter elaborare la mia candidatura.
+                - superscript [ref=e317]: "*"
+            - generic [ref=e320]:
+              - checkbox "Sì, Belka può contattarmi direttamente per opportunità di lavoro future." [ref=e321] [cursor=pointer]
+              - generic [ref=e322] [cursor=pointer]: Sì, Belka può contattarmi direttamente per opportunità di lavoro future.
+            - button "Invia la candidatura" [ref=e323] [cursor=pointer]
+      - button "Chiudi modale" [ref=e324] [cursor=pointer]:
+        - img [ref=e325]
+  - contentinfo [ref=e161]:
+    - generic [ref=e163]:
+      - list [ref=e164]:
+        - listitem [ref=e165]:
+          - link "Home" [ref=e166] [cursor=pointer]:
+            - /url: https://careers.belkadigital.com/
+        - listitem [ref=e167]:
+          - link "Offerte" [ref=e168] [cursor=pointer]:
+            - /url: https://careers.belkadigital.com/jobs
+        - listitem [ref=e169]:
+          - link "Dati e privacy" [ref=e170] [cursor=pointer]:
+            - /url: /data-privacy
+        - listitem [ref=e171]:
+          - button "Gestisci cookie" [ref=e172] [cursor=pointer]
+      - link "Instagram" [ref=e174] [cursor=pointer]:
+        - /url: https://www.instagram.com/belkadigital/
+        - img [ref=e175]
+      - link "belkadigital.com" [ref=e177] [cursor=pointer]:
+        - /url: https://belkadigital.com
+    - generic [ref=e178]:
+      - generic [ref=e179]:
+        - link "Accesso dipendenti" [ref=e180] [cursor=pointer]:
+          - /url: https://app.teamtailor.com/companies/-XQF6wq4vrI@eu/dashboard
+        - generic [ref=e181]: ·
+        - link "SSO" [ref=e182] [cursor=pointer]:
+          - /url: /sso_login
+      - link "Accesso Connect candidati" [ref=e184] [cursor=pointer]:
+        - /url: /connect/login
+  - generic [ref=e186]:
+    - heading "Lavori già in Belka?" [level=2] [ref=e187]
+    - paragraph [ref=e188]: Aiutaci a trovare insieme il tuo prossimo collega.
+    - generic [ref=e190] [cursor=pointer]:
+      - textbox "Indirizzo e-mail senza dominio" [ref=e191]
+      - generic [ref=e192]:
+        - textbox "Indirizzo e-mail senza dominio" [ref=e193]: nome
+        - generic [ref=e194]: "@belkadigital.com"
+      - button "Accedi" [ref=e195]:
+        - generic [ref=e196]: Accedi
+        - img [ref=e197]
+  - link "Sistema di tracking del candidato di Teamtailor" [ref=e200] [cursor=pointer]:
+    - /url: https://www.teamtailor.com/?utm_campaign=poweredby&utm_content=careers.belkadigital.com&utm_medium=referral&utm_source=career-site
+    - img [ref=e201]
+    - generic [ref=e206]: Sistema di tracking del candidato di Teamtailor

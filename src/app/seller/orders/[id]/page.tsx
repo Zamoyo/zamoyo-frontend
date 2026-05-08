@@ -205,7 +205,7 @@ export default function OrderDetailsPage({
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               <Link href="/seller/orders">
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm hover:bg-zinc-100">
+                <Button aria-label="Go back to orders" variant="ghost" size="icon" className="h-9 w-9 rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm hover:bg-zinc-100">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               </Link>
@@ -362,7 +362,7 @@ export default function OrderDetailsPage({
 
       {/* 5. MOBILE BOTTOM ACTION BAR */}
       <div className="fixed bottom-0 left-0 z-30 flex w-full gap-3 border-t border-zinc-200 bg-white/95 p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] backdrop-blur-md md:hidden">
-        <Button variant="outline" size="icon" onClick={handlePrintReceipt} className="h-12 w-12 shrink-0 rounded-xl border-zinc-200 text-zinc-700 bg-white">
+        <Button aria-label="Print receipt" variant="outline" size="icon" onClick={handlePrintReceipt} className="h-12 w-12 shrink-0 rounded-xl border-zinc-200 text-zinc-700 bg-white">
           <Printer className="h-5 w-5" />
         </Button>
 
@@ -385,6 +385,7 @@ export default function OrderDetailsPage({
         <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
           <button
             type="button"
+            aria-label="Close refund contest modal"
             className="absolute inset-0 bg-zinc-900/45 backdrop-blur-sm"
             onClick={() => setIsRefundModalOpen(false)}
           />
@@ -394,6 +395,7 @@ export default function OrderDetailsPage({
               Explain why this refund should be reviewed again by an admin.
             </p>
             <textarea
+              aria-label="Refund contest reason"
               value={refundReason}
               onChange={(event) => setRefundReason(event.target.value)}
               placeholder="Add order evidence, delivery notes, or buyer communication details."

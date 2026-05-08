@@ -207,6 +207,7 @@ export default function SellerDashboard() {
             </div>
             
             <select
+              aria-label="Dashboard date range"
               value={range}
               onChange={(e) => setRange(e.target.value as SellerDashboardRange)}
               className="h-10 rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-xs font-bold text-zinc-700 outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] w-full sm:w-auto appearance-none cursor-pointer"

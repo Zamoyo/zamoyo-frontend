@@ -1,0 +1,329 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - img "Ethereum Community Fund Logo" [ref=e6]
+    - generic [ref=e7]:
+      - paragraph [ref=e8]: Front-end Developer
+      - paragraph [ref=e9]:
+        - generic "Location" [ref=e10]:
+          - img [ref=e11]
+        - text: Remote, Remote, Switzerland
+        - generic "Employees can work remotely" [ref=e13]:
+          - img [ref=e14]
+  - generic [ref=e18]:
+    - generic:
+      - generic [ref=e22]:
+        - banner:
+          - heading "Front-end Developer" [level=1] [ref=e23]
+        - main [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - generic [ref=e28]:
+                - heading "Easy Apply" [level=3] [ref=e30]:
+                  - generic: Easy Apply
+                - paragraph [ref=e32]:
+                  - generic: Choose an option to autocomplete your application. You can still fill your profile manually.
+                - generic [ref=e33]:
+                  - generic [ref=e37]:
+                    - generic [ref=e39]:
+                      - generic [ref=e40]:
+                        - generic [ref=e41]: Choose a file
+                        - generic [ref=e42]: or drop it here
+                      - button "Choose a file or drop it here" [ref=e43] [cursor=pointer]
+                      - generic [ref=e44]: 10MB size limit
+                    - alert:
+                      - paragraph
+                  - paragraph [ref=e46]:
+                    - generic: or
+                  - button "Apply With Indeed" [ref=e52] [cursor=pointer]
+              - generic [ref=e54]:
+                - heading "Personal information" [level=3] [ref=e56]:
+                  - generic: Personal information
+                - paragraph [ref=e58]:
+                  - generic: Fields marked with * are required.
+                - generic [ref=e64]:
+                  - button "Upload profile image" [ref=e66] [cursor=pointer]:
+                    - img [ref=e68]
+                  - alert:
+                    - paragraph
+                - generic [ref=e70]:
+                  - generic [ref=e75]:
+                    - generic [ref=e80] [cursor=pointer]: First name*
+                    - textbox "First name" [ref=e83]:
+                      - /placeholder: ""
+                      - text: Daniel
+                    - alert [ref=e84]:
+                      - paragraph
+                  - generic [ref=e89]:
+                    - generic [ref=e94] [cursor=pointer]: Last name*
+                    - textbox "Last name" [ref=e97]:
+                      - /placeholder: ""
+                      - text: Abu
+                    - alert [ref=e98]:
+                      - paragraph
+                - generic [ref=e99]:
+                  - generic [ref=e104]:
+                    - generic [ref=e109] [cursor=pointer]: Email*
+                    - textbox "Email" [ref=e112]:
+                      - /placeholder: ""
+                      - text: danielabudiara18@gmail.com
+                    - alert [ref=e113]:
+                      - paragraph
+                  - generic [ref=e118]:
+                    - generic [ref=e123] [cursor=pointer]: Confirm your email*
+                    - textbox "Confirm your email" [ref=e126]:
+                      - /placeholder: ""
+                    - alert [ref=e127]:
+                      - paragraph [ref=e348]:
+                        - generic [ref=e349]:
+                          - img "Error" [ref=e350]:
+                            - img [ref=e351]
+                          - alert [ref=e353]:
+                            - generic [ref=e354]: Please provide a valid email address
+                - generic [ref=e128]:
+                  - generic [ref=e135]:
+                    - generic:
+                      - generic [ref=e139]:
+                        - generic [ref=e142]:
+                          - generic [ref=e147] [cursor=pointer]: City
+                          - combobox "City" [ref=e150]
+                        - img [ref=e154]
+                      - status [ref=e156]
+                    - alert [ref=e157]:
+                      - paragraph
+                  - generic [ref=e164]:
+                    - generic [ref=e169] [cursor=pointer]: Phone number
+                    - generic [ref=e170]:
+                      - button "Country code" [ref=e177] [cursor=pointer]:
+                        - generic:
+                          - generic:
+                            - paragraph
+                        - img [ref=e186]
+                      - textbox "Phone number" [ref=e193]:
+                        - /placeholder: ""
+                    - alert [ref=e194]:
+                      - paragraph
+              - generic [ref=e196]:
+                - generic [ref=e197]:
+                  - heading "Experience" [level=3] [ref=e199]:
+                    - generic: Experience
+                  - generic "Add experience entry" [ref=e201]:
+                    - button "Add" [ref=e202] [cursor=pointer]:
+                      - generic [ref=e203]:
+                        - img [ref=e205]
+                        - generic [ref=e207]: Add
+                - generic:
+                  - list
+                - generic [ref=e363]:
+                  - generic [ref=e364]:
+                    - paragraph [ref=e365]: Frontend Developer 2022 - Present
+                    - paragraph [ref=e366]: Freelance
+                    - paragraph [ref=e367]: "* Led a small team of 3 developers on an e-commerce platform using React, TypeScript, Tailwind CSS, and Material UI, including Stripe payment integration and responsive shopping flows.* Improved shopping experience with faster page interactions and stronger mobile responsiveness, contributing to an estimated 30% site-speed improvement.* Designed and developed a photography service platform with interactive galleries, booking flows, SEO-focused structure, and responsive Tailwind CSS interfaces.* Built a modern banking platform with a cleaner user experience, improved performance, and responsive layouts that increased mobile traffic by an estimated 25%.* Built a photographer portfolio site using Firebase for real-time data handling and user authentication.* Contributed to a Flutter project by integrating REST API data flows for improved client-server communication.* Implemented real-time chat and authentication flows using Firebase Firestore for a social platform prototype.* Used GraphQL, Prisma, PostgreSQL, REST APIs, and Firebase across projects to support efficient data access and integration-ready frontend experiences."
+                  - generic [ref=e368]:
+                    - generic "Edit experience Frontend Developer Freelance" [ref=e369]:
+                      - button [ref=e370] [cursor=pointer]:
+                        - img [ref=e373]
+                    - generic "Delete experience Frontend Developer Freelance" [ref=e375]:
+                      - button [ref=e376] [cursor=pointer]:
+                        - img [ref=e379]
+              - generic [ref=e209]:
+                - generic [ref=e210]:
+                  - heading "Education" [level=3] [ref=e212]:
+                    - generic: Education
+                  - generic "Add education entry" [ref=e214]:
+                    - button "Add" [expanded] [ref=e215] [cursor=pointer]:
+                      - generic [ref=e216]:
+                        - img [ref=e218]
+                        - generic [ref=e220]: Add
+                - generic:
+                  - list
+                - generic [ref=e381]:
+                  - generic [ref=e389]:
+                    - generic [ref=e390]:
+                      - paragraph [ref=e391]: Sakarya University 2027
+                      - paragraph [ref=e392]: Computer Engineering
+                      - paragraph
+                      - paragraph
+                    - generic [ref=e393]:
+                      - generic "Edit education Computer Engineering Sakarya University" [ref=e394]:
+                        - button [ref=e395] [cursor=pointer]:
+                          - img [ref=e398]
+                      - generic "Delete education Computer Engineering Sakarya University" [ref=e400]:
+                        - button [ref=e401] [cursor=pointer]:
+                          - img [ref=e404]
+                  - generic [ref=e413]:
+                    - generic [ref=e414]:
+                      - paragraph [ref=e415]: Angela Yu, Udemy 2021
+                      - paragraph [ref=e416]: The Complete Web Development Bootcamp
+                      - paragraph
+                      - paragraph
+                    - generic [ref=e417]:
+                      - generic "Edit education The Complete Web Development Bootcamp Angela Yu, Udemy" [ref=e418]:
+                        - button [ref=e419] [cursor=pointer]:
+                          - img [ref=e422]
+                      - generic "Delete education The Complete Web Development Bootcamp Angela Yu, Udemy" [ref=e424]:
+                        - button [ref=e425] [cursor=pointer]:
+                          - img [ref=e428]
+                  - generic [ref=e833]:
+                    - generic [ref=e834]:
+                      - paragraph [ref=e835]: "2023"
+                      - paragraph [ref=e836]: Firebase course/certification - Fireship.io
+                      - paragraph
+                      - paragraph
+                    - generic [ref=e837]:
+                      - generic "Edit education Firebase course/certification - Fireship.io ," [active] [ref=e838]:
+                        - button [ref=e839] [cursor=pointer]:
+                          - img [ref=e842]
+                      - generic "Delete education Firebase course/certification - Fireship.io ," [ref=e844]:
+                        - button [ref=e845] [cursor=pointer]:
+                          - img [ref=e848]
+                  - generic [ref=e631]:
+                    - paragraph [ref=e632]: Fields marked with * are required.
+                    - generic [ref=e637]:
+                      - generic:
+                        - generic [ref=e641]:
+                          - generic [ref=e644]:
+                            - generic [ref=e649] [cursor=pointer]: Institution*
+                            - combobox "Institution" [ref=e652]
+                          - img [ref=e656]
+                        - status [ref=e658]
+                      - alert [ref=e659]:
+                        - paragraph [ref=e660]:
+                          - generic [ref=e661]:
+                            - img "Error" [ref=e662]:
+                              - img [ref=e663]
+                            - generic:
+                              - alert
+                    - generic [ref=e665]:
+                      - generic [ref=e670]:
+                        - generic [ref=e675] [cursor=pointer]: Major
+                        - textbox "Major" [ref=e678]:
+                          - /placeholder: ""
+                          - text: React and JavaScript learning through YouTube and Fireship.io
+                        - alert [ref=e679]:
+                          - paragraph
+                      - generic [ref=e684]:
+                        - generic [ref=e689] [cursor=pointer]: Degree
+                        - textbox "Degree" [ref=e692]:
+                          - /placeholder: ""
+                        - alert [ref=e693]:
+                          - paragraph
+                    - generic [ref=e699]:
+                      - generic:
+                        - generic [ref=e703]:
+                          - generic [ref=e706]:
+                            - generic [ref=e711] [cursor=pointer]: School location
+                            - combobox "School location" [ref=e714]
+                          - img [ref=e718]
+                        - status [ref=e720]
+                      - alert [ref=e721]:
+                        - paragraph
+                    - generic [ref=e726]:
+                      - generic [ref=e731] [cursor=pointer]: Description
+                      - textbox "Description" [ref=e733]:
+                        - /placeholder: ""
+                      - alert [ref=e734]:
+                        - paragraph
+                    - generic [ref=e735]:
+                      - generic [ref=e741]:
+                        - generic [ref=e746] [cursor=pointer]: From
+                        - generic "From" [ref=e747]:
+                          - generic [ref=e751]:
+                            - img [ref=e754]
+                            - textbox "From" [ref=e757]:
+                              - /placeholder: Pick a date
+                        - alert [ref=e758]:
+                          - paragraph
+                      - generic [ref=e764]:
+                        - generic [ref=e769] [cursor=pointer]: To
+                        - generic "To" [ref=e770]:
+                          - generic [ref=e774]:
+                            - img [ref=e777]
+                            - textbox "To" [ref=e780]:
+                              - /placeholder: Pick a date
+                        - alert [ref=e781]:
+                          - paragraph
+                    - generic [ref=e786]:
+                      - checkbox [ref=e789] [cursor=pointer]
+                      - generic [ref=e796] [cursor=pointer]: I currently attend
+                    - generic [ref=e797]:
+                      - generic "Cancel adding education entry" [ref=e799]:
+                        - button "Cancel" [ref=e800] [cursor=pointer]:
+                          - generic [ref=e802]: Cancel
+                      - generic "Save education entry" [ref=e804]:
+                        - button "Save" [ref=e805] [cursor=pointer]:
+                          - generic [ref=e807]: Save
+              - generic [ref=e222]:
+                - heading "Your Profiles" [level=3] [ref=e224]:
+                  - generic: Your Profiles
+                - paragraph [ref=e226]:
+                  - generic: Fields marked with * are required.
+                - generic [ref=e227]:
+                  - generic [ref=e231]:
+                    - generic [ref=e236] [cursor=pointer]: LinkedIn
+                    - textbox "LinkedIn" [ref=e239]:
+                      - /placeholder: ""
+                    - alert [ref=e240]:
+                      - paragraph
+                  - generic [ref=e244]:
+                    - generic [ref=e249] [cursor=pointer]: Facebook
+                    - textbox "Facebook" [ref=e252]:
+                      - /placeholder: ""
+                    - alert [ref=e253]:
+                      - paragraph
+                  - generic [ref=e257]:
+                    - generic [ref=e262] [cursor=pointer]: X (fka Twitter)
+                    - textbox "X (fka Twitter)" [ref=e265]:
+                      - /placeholder: ""
+                    - alert [ref=e266]:
+                      - paragraph
+                  - generic [ref=e270]:
+                    - generic [ref=e275] [cursor=pointer]: Website
+                    - textbox "Website" [ref=e278]:
+                      - /placeholder: ""
+                    - alert [ref=e279]:
+                      - paragraph
+              - generic [ref=e281]:
+                - heading "Resume" [level=3] [ref=e283]:
+                  - generic: Resume
+                - generic [ref=e286]:
+                  - generic [ref=e287]:
+                    - generic [ref=e288]:
+                      - generic [ref=e289]:
+                        - generic [ref=e290]: Choose a file
+                        - generic [ref=e291]: or drop it here
+                      - button "Choose a file or drop it here" [ref=e292] [cursor=pointer]
+                      - generic [ref=e293]: 10MB size limit
+                    - list [ref=e808]:
+                      - listitem [ref=e809]:
+                        - img [ref=e811]
+                        - generic [ref=e814]: Daniel Abu - Frontend Developer CV.pdf
+                        - button "Delete file" [ref=e816]:
+                          - button [ref=e817] [cursor=pointer]:
+                            - img [ref=e820]
+                  - alert:
+                    - paragraph
+              - generic [ref=e295]:
+                - heading "Message to the Hiring Team" [level=3] [ref=e297]:
+                  - generic: Message to the Hiring Team
+                - generic [ref=e302]:
+                  - generic [ref=e307] [cursor=pointer]: Let the company know about your interest working there
+                  - textbox "Let the company know about your interest working there" [ref=e309]:
+                    - /placeholder: ""
+                  - alert [ref=e310]:
+                    - paragraph
+              - generic [ref=e320]:
+                - checkbox "Please be informed that your application to this job offer will trigger some processing of your personal data by the recruiting company, the data controller. SmartRecruiters, the data processor, has no control over such personal data processing. For more information on these personal data processing, please refer to the recruiting company’s privacy notice." [ref=e323] [cursor=pointer]
+                - generic [ref=e329] [cursor=pointer]:
+                  - generic [ref=e330]: Please be informed that your application to this job offer will trigger some processing of your personal data by the recruiting company, the data controller. SmartRecruiters, the data processor, has no control over such personal data processing. For more information on these personal data processing, please refer to the recruiting company’s privacy notice.
+                  - text: "*"
+            - button "Submit" [ref=e337] [cursor=pointer]:
+              - generic [ref=e339]: Submit
+        - generic [ref=e342]:
+          - generic [ref=e344]:
+            - paragraph [ref=e345]: powered by
+            - img "SmartRecruiters - Logo" [ref=e346]
+          - button "Cookie Settings" [ref=e347] [cursor=pointer]
+      - generic:
+        - generic:
+          - status
+          - alert

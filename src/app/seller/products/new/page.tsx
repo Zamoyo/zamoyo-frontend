@@ -277,7 +277,7 @@ export default function AddProductPage() {
         <div className="sticky top-18 md:top-0 z-20 mb-6 -mx-4 flex items-center justify-between border-b border-zinc-200/50 bg-[#f4fbf6]/80 px-4 py-4 backdrop-blur-md md:mx-0 md:border-none md:px-0">
           <div className="flex items-center gap-3">
             <Link href="/seller/products">
-              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm hover:bg-zinc-100">
+              <Button aria-label="Go back to products" type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm hover:bg-zinc-100">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
@@ -322,7 +322,7 @@ export default function AddProductPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Condition</label>
-                    <select value={condition} onChange={(e) => setCondition(e.target.value as ProductCondition)} className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-medium text-zinc-900 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]">
+                    <select aria-label="Product condition" value={condition} onChange={(e) => setCondition(e.target.value as ProductCondition)} className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-medium text-zinc-900 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]">
                       <option value="new">Brand New</option>
                       <option value="used-like-new">Used - Like New</option>
                       <option value="used-good">Used - Good</option>
@@ -333,7 +333,7 @@ export default function AddProductPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Description</label>
-                  <textarea placeholder="Describe your product's features and benefits..." value={description} onChange={(e) => setDescription(e.target.value)} className={`min-h-32 w-full resize-y rounded-xl border bg-zinc-50 p-4 text-sm font-medium shadow-inner outline-none focus-visible:ring-2 ${inputErrorClass(errors.description)}`} />
+                  <textarea aria-label="Product description" placeholder="Describe your product's features and benefits..." value={description} onChange={(e) => setDescription(e.target.value)} className={`min-h-32 w-full resize-y rounded-xl border bg-zinc-50 p-4 text-sm font-medium shadow-inner outline-none focus-visible:ring-2 ${inputErrorClass(errors.description)}`} />
                   {fieldError(errors.description)}
                 </div>
               </div>
@@ -355,6 +355,7 @@ export default function AddProductPage() {
               </button>
               <input
                 ref={fileInputRef}
+                aria-label="Upload product images"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 multiple
@@ -395,7 +396,7 @@ export default function AddProductPage() {
                   <div key={index} className="animate-in flex items-center gap-2 fade-in slide-in-from-top-2">
                     <Input placeholder="e.g. RAM" value={spec.name} onChange={(e) => updateSpec(index, "name", e.target.value)} className="h-11 w-1/3 rounded-xl border-zinc-200 bg-zinc-50 text-sm shadow-inner focus-visible:ring-[#009E49]" />
                     <Input placeholder="e.g. 16GB" value={spec.value} onChange={(e) => updateSpec(index, "value", e.target.value)} className="h-11 flex-1 rounded-xl border-zinc-200 bg-zinc-50 text-sm shadow-inner focus-visible:ring-[#009E49]" />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeSpec(index)} className="h-11 w-11 shrink-0 rounded-xl text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                    <Button aria-label={`Remove specification ${index + 1}`} type="button" variant="ghost" size="icon" onClick={() => removeSpec(index)} className="h-11 w-11 shrink-0 rounded-xl text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
                 <Button type="button" variant="outline" onClick={addSpec} className="mt-2 h-11 w-full rounded-xl border-dashed border-zinc-300 font-bold text-zinc-600 transition-all hover:border-[#009E49] hover:bg-[#009E49]/5 hover:text-[#009E49]"><PlusCircle className="mr-2 h-4 w-4" /> Add Specification</Button>
@@ -543,7 +544,7 @@ export default function AddProductPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Delivery Type</label>
-                  <select value={deliveryType} onChange={(e) => setDeliveryType(e.target.value)} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-medium text-zinc-900 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]">
+                  <select aria-label="Delivery type" value={deliveryType} onChange={(e) => setDeliveryType(e.target.value)} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-medium text-zinc-900 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]">
                     <option value="standard">Standard</option>
                     <option value="express">Express</option>
                   </select>
@@ -577,7 +578,7 @@ export default function AddProductPage() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Meta Description</label>
-                      <textarea placeholder="Write a short summary..." value={seo.description} onChange={(e) => setSeo({...seo, description: e.target.value})} className="min-h-20 w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]" />
+                      <textarea aria-label="SEO meta description" placeholder="Write a short summary..." value={seo.description} onChange={(e) => setSeo({...seo, description: e.target.value})} className="min-h-20 w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]" />
                     </div>
                   </div>
 

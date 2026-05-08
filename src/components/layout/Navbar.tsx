@@ -607,7 +607,7 @@ function MobileDrawer({
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">Shop Menu</p>
             </div>
           </Link>
-          <Button variant="ghost" size="icon" className="rounded-full text-zinc-500 hover:bg-white/45" onClick={onClose}>
+          <Button aria-label="Close menu" variant="ghost" size="icon" className="rounded-full text-zinc-500 hover:bg-white/45" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -830,6 +830,7 @@ export default function Navbar() {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Open menu"
                 className="-ml-2 text-zinc-900 md:hidden"
                 onClick={() => {
                   setMobileCategoryView("root");

@@ -149,7 +149,7 @@ export function Footer() {
                   placeholder="Enter email" 
                   className="bg-zinc-900 border-zinc-800 text-white text-xs placeholder:text-zinc-500 h-10 pr-10 rounded-xl focus-visible:ring-[#FF6B00]"
                 />
-                <Button type="submit" disabled={isSubmitting} size="icon" className="absolute right-1 top-1 h-8 w-8 rounded-lg bg-[#FF6B00] hover:bg-[#e66000] text-white">
+                <Button aria-label="Subscribe to newsletter" type="submit" disabled={isSubmitting} size="icon" className="absolute right-1 top-1 h-8 w-8 rounded-lg bg-[#FF6B00] hover:bg-[#e66000] text-white">
                   <Send className="h-3.5 w-3.5" />
                 </Button>
               </div>

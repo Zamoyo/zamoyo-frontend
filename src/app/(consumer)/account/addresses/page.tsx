@@ -317,7 +317,7 @@ export default function AddressesPage() {
 
               <label className="space-y-1.5">
                 <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Type</span>
-                <select value={addressForm.type} onChange={updateAddressForm("type")} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-medium text-zinc-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#009E49]">
+                <select aria-label="Address type" value={addressForm.type} onChange={updateAddressForm("type")} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-medium text-zinc-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#009E49]">
                   <option value="Home">Home</option>
                   <option value="Work">Work</option>
                 </select>

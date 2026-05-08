@@ -160,11 +160,11 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/seller/products/new">
-            <Button size="icon" className="h-8 w-8 rounded-full bg-[#009E49] text-white hover:bg-[#00853d] shadow-sm">
+            <Button aria-label="Add product" size="icon" className="h-8 w-8 rounded-full bg-[#009E49] text-white hover:bg-[#00853d] shadow-sm">
               <Plus className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href="/seller/notifications" className="relative flex h-8 w-8 items-center justify-center rounded-full text-[#80b898] transition-colors hover:bg-white/5 hover:text-white">
+          <Link href="/seller/notifications" aria-label="Open notifications" className="relative flex h-8 w-8 items-center justify-center rounded-full text-[#80b898] transition-colors hover:bg-white/5 hover:text-white">
             <Bell className="h-5 w-5" />
             <span className="absolute right-1.5 top-1 h-2 w-2 rounded-full bg-[#FF6B00] border-2 border-[#0A1A10]" />
           </Link>
@@ -278,7 +278,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
             <div className="h-6 w-px bg-zinc-200"></div>
 
-            <Link href="/seller/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 shadow-sm">
+            <Link href="/seller/notifications" aria-label="Open notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 shadow-sm">
               <Bell className="h-4 w-4" />
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-[#FF6B00]" />
             </Link>
@@ -357,6 +357,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
         ))}
         <button
           type="button"
+          aria-label="Open more seller tools"
           onClick={() => setMobileMoreOpen((open) => !open)}
           className="flex h-14 flex-1 flex-col items-center justify-center"
         >

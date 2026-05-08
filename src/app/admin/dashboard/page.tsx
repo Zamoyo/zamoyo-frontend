@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
   );
 
   return (
-    <div className="mx-auto max-w-[100rem] animate-in space-y-6 fade-in slide-in-from-bottom-4 duration-500 min-w-0 pb-12">
+    <div className="mx-auto max-w-400 animate-in space-y-6 fade-in slide-in-from-bottom-4 duration-500 min-w-0 pb-12">
       
       {/* 1. HEADER */}
       <div>

@@ -9,6 +9,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  ActionMenu,
+  ActionMenuContent,
+  ActionMenuItem,
+  ActionMenuNote,
+  ActionMenuSeparator,
+  ActionMenuTrigger,
+} from "@/components/ui/action-menu";
 import { toast } from "sonner";
 import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
 import {
@@ -169,65 +177,50 @@ function ProductActionMenu({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setOpen((prev) => !prev)}
-        className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
-      >
-        <MoreVertical className="h-4 w-4" />
-      </Button>
-      {open ? (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-            aria-label="Close menu"
-          />
-          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
-            <button
-              type="button"
-              onClick={() => {
-                onDuplicate(product);
-                setOpen(false);
-              }}
-              className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-            >
-              Duplicate Listing
-            </button>
-            {product.status === "draft" || product.status === "needs_changes" || product.status === "rejected" ? (
-              <button
-                type="button"
-                onClick={() => {
-                  onSubmitForReview(product.id);
-                  setOpen(false);
-                }}
-                className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-              >
-                {product.status === "draft" ? "Submit for Review" : "Resubmit for Review"}
-              </button>
-            ) : (
-              <div className="rounded-xl px-3 py-2 text-left text-[11px] font-bold text-zinc-500">
-                Status controlled by moderation flow
-              </div>
-            )}
-            <div className="my-1 h-px bg-zinc-100" />
-            <button
-              type="button"
-              onClick={() => {
-                onRemove(product.id);
-                setOpen(false);
-              }}
-              className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
-            >
-              Remove Listing
-            </button>
-          </div>
-        </>
-      ) : null}
-    </div>
+    <ActionMenu open={open} onOpenChange={setOpen}>
+      <ActionMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Open product actions for ${product.title}`}
+          className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </ActionMenuTrigger>
+      <ActionMenuContent>
+        <ActionMenuItem
+          onClick={() => {
+            onDuplicate(product);
+            setOpen(false);
+          }}
+        >
+          Duplicate Listing
+        </ActionMenuItem>
+        {product.status === "draft" || product.status === "needs_changes" || product.status === "rejected" ? (
+          <ActionMenuItem
+            onClick={() => {
+              onSubmitForReview(product.id);
+              setOpen(false);
+            }}
+          >
+            {product.status === "draft" ? "Submit for Review" : "Resubmit for Review"}
+          </ActionMenuItem>
+        ) : (
+          <ActionMenuNote>Status controlled by moderation flow</ActionMenuNote>
+        )}
+        <ActionMenuSeparator />
+        <ActionMenuItem
+          onClick={() => {
+            onRemove(product.id);
+            setOpen(false);
+          }}
+          className="text-red-600 hover:bg-red-50 focus-visible:ring-red-200"
+        >
+          Remove Listing
+        </ActionMenuItem>
+      </ActionMenuContent>
+    </ActionMenu>
   );
 }
 

@@ -57,7 +57,7 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
       
       <div className="relative w-full max-w-lg animate-in zoom-in-95 fade-in rounded-3xl bg-white p-6 shadow-2xl overflow-hidden">
         <div className="absolute top-4 right-4">
-          <Button variant="ghost" size="icon" disabled={isCreating} onClick={onClose} className="h-8 w-8 rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900">
+          <Button aria-label="Close ticket modal" variant="ghost" size="icon" disabled={isCreating} onClick={onClose} className="h-8 w-8 rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -116,6 +116,7 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Message</label>
             <textarea 
+              aria-label="Support ticket message"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Provide as much detail as possible..." 

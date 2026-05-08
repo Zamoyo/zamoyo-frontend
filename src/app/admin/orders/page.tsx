@@ -121,7 +121,7 @@ export default function AdminOrdersPage() {
   );
 
   return (
-    <div className="mx-auto max-w-[100rem] animate-in space-y-6 fade-in slide-in-from-bottom-4 duration-500 min-w-0 pb-12">
+    <div className="mx-auto max-w-400 animate-in space-y-6 fade-in slide-in-from-bottom-4 duration-500 min-w-0 pb-12">
       
       {/* 1. HEADER */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end shrink-0">

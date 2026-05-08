@@ -19,6 +19,13 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  ActionMenu,
+  ActionMenuContent,
+  ActionMenuItem,
+  ActionMenuSeparator,
+  ActionMenuTrigger,
+} from "@/components/ui/action-menu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { inventoryApi, type InventoryProduct } from "@/services/inventory";
@@ -96,60 +103,47 @@ function InventoryItemMenu({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setOpen((prev) => !prev)}
-        className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
+    <ActionMenu open={open} onOpenChange={setOpen}>
+      <ActionMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Open inventory actions"
+          className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </ActionMenuTrigger>
 
-      {open ? (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-            aria-label="Close item menu"
-          />
-          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
-            <button
-              type="button"
-              onClick={() => {
-                onToggleSelect(item.id);
-                setOpen(false);
-              }}
-              className="flex w-full cursor-pointer rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-            >
-              {isSelected ? "Unselect Item" : "Select Item"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onRestock(item.id, item.threshold);
-                setOpen(false);
-              }}
-              className="flex w-full cursor-pointer rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-            >
-              Restock to Threshold
-            </button>
-            <div className="my-1 h-px bg-zinc-100" />
-            <button
-              type="button"
-              onClick={() => {
-                onMarkOutOfStock(item.id);
-                setOpen(false);
-              }}
-              className="flex w-full cursor-pointer rounded-xl px-3 py-2 text-left text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
-            >
-              Mark Out of Stock
-            </button>
-          </div>
-        </>
-      ) : null}
-    </div>
+      <ActionMenuContent>
+        <ActionMenuItem
+          onClick={() => {
+            onToggleSelect(item.id);
+            setOpen(false);
+          }}
+        >
+          {isSelected ? "Unselect Item" : "Select Item"}
+        </ActionMenuItem>
+        <ActionMenuItem
+          onClick={() => {
+            onRestock(item.id, item.threshold);
+            setOpen(false);
+          }}
+        >
+          Restock to Threshold
+        </ActionMenuItem>
+        <ActionMenuSeparator />
+        <ActionMenuItem
+          onClick={() => {
+            onMarkOutOfStock(item.id);
+            setOpen(false);
+          }}
+          className="text-red-600 hover:bg-red-50 focus-visible:ring-red-200"
+        >
+          Mark Out of Stock
+        </ActionMenuItem>
+      </ActionMenuContent>
+    </ActionMenu>
   );
 }
 
@@ -430,6 +424,7 @@ export default function SellerInventoryPage() {
 
         <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row">
           <select
+            aria-label="Filter inventory by status"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as InventoryStatus | "all")}
             className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
@@ -441,6 +436,7 @@ export default function SellerInventoryPage() {
           </select>
 
           <select
+            aria-label="Filter inventory by category"
             value={categoryFilter}
             onChange={(event) => setCategoryFilter(event.target.value)}
             className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
@@ -454,6 +450,7 @@ export default function SellerInventoryPage() {
           </select>
 
           <select
+            aria-label="Sort inventory"
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value as SortOption)}
             className="col-span-2 h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-44"
@@ -610,6 +607,7 @@ export default function SellerInventoryPage() {
                           <Button
                             variant="outline"
                             size="icon"
+                            aria-label={`Decrease stock for ${item.name}`}
                             className="h-9 w-9 shrink-0 rounded-lg text-zinc-500 hover:text-zinc-900"
                             onClick={() => adjustStock(item.id, item.stock, -1)}
                           >
@@ -630,6 +628,7 @@ export default function SellerInventoryPage() {
                           <Button
                             variant="outline"
                             size="icon"
+                            aria-label={`Increase stock for ${item.name}`}
                             className="h-9 w-9 shrink-0 rounded-lg text-zinc-500 hover:text-zinc-900"
                             onClick={() => adjustStock(item.id, item.stock, 1)}
                           >
@@ -639,6 +638,7 @@ export default function SellerInventoryPage() {
                           {isEditing ? (
                             <Button
                               size="icon"
+                              aria-label={`Save stock for ${item.name}`}
                               onClick={() => handleInlineStockSave(item.id)}
                               disabled={isItemSaving}
                               className="ml-1 h-9 w-9 shrink-0 rounded-lg bg-[#009E49] text-white hover:bg-[#00853d]"
@@ -743,6 +743,7 @@ export default function SellerInventoryPage() {
                             <Button
                               variant="outline"
                               size="icon"
+                              aria-label={`Decrease stock for ${item.name}`}
                               className="h-8 w-8 shrink-0 rounded-lg text-zinc-500 hover:text-zinc-900"
                               onClick={() => adjustStock(item.id, item.stock, -1)}
                             >
@@ -763,6 +764,7 @@ export default function SellerInventoryPage() {
                             <Button
                               variant="outline"
                               size="icon"
+                              aria-label={`Increase stock for ${item.name}`}
                               className="h-8 w-8 shrink-0 rounded-lg text-zinc-500 hover:text-zinc-900"
                               onClick={() => adjustStock(item.id, item.stock, 1)}
                             >
@@ -772,6 +774,7 @@ export default function SellerInventoryPage() {
                             {isEditing ? (
                               <Button
                                 size="icon"
+                                aria-label={`Save stock for ${item.name}`}
                                 onClick={() => handleInlineStockSave(item.id)}
                                 disabled={isItemSaving}
                                 className="ml-1 h-8 w-8 shrink-0 rounded-lg bg-[#009E49] text-white hover:bg-[#00853d]"
