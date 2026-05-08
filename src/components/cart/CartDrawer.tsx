@@ -63,13 +63,13 @@ function CartItemRow({
         className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-zinc-200/50 bg-zinc-50 p-1"
       >
         <div className="absolute inset-1 mix-blend-multiply">
-  <Image
-    src={item.image}
-    alt={item.name ?? "Cart item image"}
-    fill
-    className="object-contain"
-  />
-</div>
+          <Image
+            src={item.image}
+            alt={item.name ?? "Cart item image"}
+            fill
+            className="object-contain"
+          />
+        </div>
       </Link>
 
       <div className="flex flex-1 min-w-0 flex-col justify-between">
@@ -77,7 +77,7 @@ function CartItemRow({
           <Link
             href={`/product/${item.slug}`}
             onClick={onNavigate}
-            className="mb-0.5 line-clamp-1 text-sm font-bold leading-tight text-zinc-800 transition-colors hover:text-brand-green"
+            className="mb-0.5 line-clamp-1 text-sm font-bold leading-tight text-zinc-800 transition-colors hover:text-[#009E49]"
           >
             {item.name}
           </Link>
@@ -89,18 +89,12 @@ function CartItemRow({
           ) : null}
         </div>
 
-        {/* FIX: Added gap-2 and items-center to ensure proper spacing on mobile */}
         <div className="mt-2 flex items-center justify-between gap-2">
-          
-          {/* FIX: Added truncate so a massive price doesn't push the buttons off-screen */}
           <span className="truncate text-sm font-black text-zinc-900">
             {formatCurrency(item.price)}
           </span>
 
-          {/* FIX: Added shrink-0 and reduced gap to 2 for tighter mobile fit */}
           <div className="flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200/50 bg-zinc-100 p-1 shadow-sm">
-            
-            {/* FIX: Added shrink-0 to the button so it never squishes */}
             <button
               type="button"
               title={item.quantity <= 1 ? "Remove item" : "Decrease quantity"}
@@ -121,12 +115,11 @@ function CartItemRow({
               {item.quantity}
             </span>
 
-            {/* FIX: Added shrink-0 to the button so it never squishes */}
             <button
               type="button"
               title="Increase quantity"
               onClick={() => onIncrease(identity)}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-zinc-600 transition-all hover:text-brand-green hover:shadow-sm"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-zinc-600 transition-all hover:text-[#009E49] hover:shadow-sm"
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -150,7 +143,7 @@ function EmptyCartState({ onNavigate }: { onNavigate: () => void }) {
       </p>
 
       <Link href="/categories" className="mt-5" onClick={onNavigate}>
-        <Button className="rounded-xl bg-brand-green font-bold text-zinc-500 hover:bg-brand-green-dark">
+        <Button className="rounded-xl bg-[#009E49] font-bold text-white hover:bg-[#00853d]">
           Continue Shopping
         </Button>
       </Link>
@@ -185,7 +178,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
       <SheetContent className="flex h-full min-h-0 w-full flex-col overflow-hidden border-l border-white/50 bg-white/85 p-0 shadow-[0_0_60px_rgba(0,0,0,0.1)] backdrop-blur-2xl sm:max-w-md">
         <SheetHeader className="shrink-0 border-b border-zinc-200/50 bg-white/40 px-6 py-5">
           <SheetTitle className="flex items-center gap-2 text-xl font-black text-zinc-900">
-            <ShoppingCart className="h-5 w-5 text-brand-green" />
+            <ShoppingCart className="h-5 w-5 text-[#009E49]" />
             Your Cart
             <Badge className="ml-1 bg-zinc-900 text-white hover:bg-zinc-800">
               {displayItemCount}
@@ -236,7 +229,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
 
                 <div className="flex items-center justify-between">
                   <span className="text-base font-bold text-zinc-900">Total</span>
-                  <span className="text-xl font-black text-brand-orange">
+                  <span className="text-xl font-black text-[#FF6B00]">
                     {formatCurrency(total)}
                   </span>
                 </div>
@@ -244,7 +237,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
 
               <SheetClose asChild>
                 <Link href="/checkout" className="w-full" onClick={closeDrawer}>
-                  <Button className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-green text-base font-bold text-white shadow-lg shadow-brand-green/20 transition-all hover:-translate-y-0.5 hover:bg-brand-green-dark">
+                  <Button className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#009E49] text-base font-bold text-white shadow-lg shadow-[#009E49]/20 transition-all hover:-translate-y-0.5 hover:bg-[#00853d]">
                     Proceed to Checkout
                     <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -252,7 +245,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
               </SheetClose>
 
               <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                <ShieldCheck className="h-3.5 w-3.5 text-brand-green" />
+                <ShieldCheck className="h-3.5 w-3.5 text-[#009E49]" />
                 100% Secure Checkout
               </div>
             </SheetFooter>

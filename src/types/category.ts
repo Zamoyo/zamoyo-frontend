@@ -34,6 +34,16 @@ export interface CategoryPageData {
   slug: string;
   meta: CategoryHeroMeta;
   products: Product[];
+  pagination: ProductPaginationMeta;
+}
+
+export interface ProductPaginationMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  startItem: number;
+  endItem: number;
 }
 
 export type CategorySortOption =

@@ -39,6 +39,7 @@ const TOP_BAR_LINKS: NavLink[] = [
 ];
 
 const PRIMARY_NAV_LINKS: NavLink[] = [
+  { label: "All Products", href: "/products" },
   { label: "New Arrivals", href: "/new-arrivals" },
   { label: "Hot Deals", href: "/deals" },
   { label: "Best Sellers", href: "/best-sellers" },
@@ -49,6 +50,7 @@ const PRIMARY_NAV_LINKS: NavLink[] = [
 ];
 
 const MOBILE_TOP_CATEGORY_LINKS: NavLink[] = [
+  { label: "All Products", href: "/products" },
   { label: "New Arrivals", href: "/new-arrivals" },
   { label: "Hot Deals", href: "/deals" },
   { label: "Best Sellers", href: "/best-sellers" },

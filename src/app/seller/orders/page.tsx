@@ -10,48 +10,17 @@ import { Toaster, toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
+import {
+  sellerOrdersApi,
+  type SellerOrderStatus,
+  type SellerOrderSummary,
+  type SellerPaymentStatus,
+} from "@/services/seller-orders";
 
 // ============================================================================
 // 1. DATA CONTRACTS
 // ============================================================================
-type OrderStatus = "new" | "processing" | "shipped" | "delivered" | "cancelled" | "refund";
-type PaymentStatus = "paid" | "cod" | "refunded" | "failed";
 type DateFilter = "today" | "7days" | "30days" | "all";
-
-type SellerOrder = {
-  id: string;
-  customer: string;
-  phone: string;
-  items: number;
-  total: number;
-  status: OrderStatus;
-  paymentStatus: PaymentStatus;
-  location: string;
-  createdAt: string;
-};
-
-// ============================================================================
-// 2. MOCK API SERVICE (The Engine)
-// ============================================================================
-const MOCK_ORDERS: SellerOrder[] = [
-  { id: "ORD-9921", customer: "Chanda M.", phone: "+260971111111", items: 2, total: 18500, status: "new", paymentStatus: "paid", location: "Kabulonga", createdAt: "2026-04-11T14:50:00" },
-  { id: "ORD-9920", customer: "Bupe K.", phone: "+260972222222", items: 1, total: 450, status: "new", paymentStatus: "cod", location: "Woodlands", createdAt: "2026-04-11T13:00:00" },
-  { id: "ORD-9918", customer: "Emmanuel B.", phone: "+260973333333", items: 3, total: 4200, status: "processing", paymentStatus: "paid", location: "Matero", createdAt: "2026-04-10T10:20:00" },
-  { id: "ORD-9915", customer: "Sarah T.", phone: "+260974444444", items: 1, total: 2100, status: "shipped", paymentStatus: "paid", location: "Chilenje", createdAt: "2026-04-09T15:30:00" },
-  { id: "ORD-9910", customer: "David L.", phone: "+260975555555", items: 1, total: 1450, status: "delivered", paymentStatus: "paid", location: "Avondale", createdAt: "2026-04-08T10:10:00" },
-  { id: "ORD-9907", customer: "Mwaka P.", phone: "+260976666666", items: 2, total: 800, status: "cancelled", paymentStatus: "failed", location: "Chelstone", createdAt: "2026-04-07T09:15:00" },
-  { id: "ORD-9905", customer: "Joseph N.", phone: "+260977777777", items: 1, total: 1200, status: "refund", paymentStatus: "refunded", location: "Roma", createdAt: "2026-04-06T11:40:00" },
-];
-
-async function fetchSellerOrders(): Promise<SellerOrder[]> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // 5% chance of network error to test our robust UI handling
-      if (Math.random() < 0.05) reject(new Error("Failed to load seller orders."));
-      else resolve(MOCK_ORDERS);
-    }, 800);
-  });
-}
 
 // ============================================================================
 // 3. UI CONFIG & LOGIC HELPERS
@@ -65,7 +34,7 @@ const STATUS_COLUMNS = [
   { id: "refund", title: "Refunds", icon: RotateCcw, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
 ] as const;
 
-const PAYMENT_STYLES: Record<PaymentStatus, string> = {
+const PAYMENT_STYLES: Record<SellerPaymentStatus, string> = {
   paid: "bg-[#009E49]/10 text-[#009E49] border-[#009E49]/20",
   cod: "bg-zinc-100 text-zinc-700 border-zinc-200",
   refunded: "bg-orange-50 text-orange-700 border-orange-200",
@@ -96,7 +65,7 @@ function OrderActionMenu({
   order,
   onCancelOrder,
 }: {
-  order: SellerOrder;
+  order: SellerOrderSummary;
   onCancelOrder: (orderId: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -165,7 +134,7 @@ function OrderCard({
   order,
   onCancelOrder,
 }: {
-  order: SellerOrder;
+  order: SellerOrderSummary;
   onCancelOrder: (orderId: string) => void;
 }) {
   const statusMeta = STATUS_COLUMNS.find(c => c.id === order.status);
@@ -222,27 +191,18 @@ function OrderCard({
 // 5. MAIN PAGE EXPORT
 // ============================================================================
 export default function SellerOrdersPage() {
-  const [orders, setOrders] = useState<SellerOrder[]>([]);
+  const [orders, setOrders] = useState<SellerOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<OrderStatus | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+  const [activeTab, setActiveTab] = useState<SellerOrderStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<SellerOrderStatus | "all">("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("30days");
   
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const handleCancelOrder = useCallback((orderId: string) => {
-    setOrders((prev) =>
-      prev.map((order) => {
-        if (order.id !== orderId) return order;
-        if (order.status === "cancelled") return order;
-        if (order.status === "delivered") return order;
-        return { ...order, status: "cancelled", paymentStatus: "failed" };
-      }),
-    );
-
+  const handleCancelOrder = useCallback(async (orderId: string) => {
     const target = orders.find((order) => order.id === orderId);
     if (!target) return;
 
@@ -254,7 +214,17 @@ export default function SellerOrdersPage() {
       toast.error("Delivered orders cannot be cancelled.");
       return;
     }
-    toast.success(`Order ${orderId} cancelled.`);
+    try {
+      await sellerOrdersApi.cancelOrder(orderId);
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === orderId ? { ...order, status: "cancelled", paymentStatus: "failed" } : order,
+        ),
+      );
+      toast.success(`Order ${orderId} cancelled.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to cancel order.");
+    }
   }, [orders]);
 
   // --- API DATA FETCHING ---
@@ -262,7 +232,7 @@ export default function SellerOrdersPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchSellerOrders();
+      const data = await sellerOrdersApi.fetchSummaries();
       setOrders(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -395,7 +365,7 @@ export default function SellerOrdersPage() {
           <select 
             value={statusFilter} 
             title="Filter by status"
-            onChange={(e) => setStatusFilter(e.target.value as OrderStatus | "all")} 
+            onChange={(e) => setStatusFilter(e.target.value as SellerOrderStatus | "all")} 
             className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] md:w-40"
           >
             <option value="all">All Statuses</option>

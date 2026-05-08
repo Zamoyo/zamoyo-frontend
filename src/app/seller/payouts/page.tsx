@@ -9,45 +9,20 @@ import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-// import { cn } from "@/lib/utils";
 import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
+import { calculatePayoutQuote, DEFAULT_MARKETPLACE_FINANCE_CONFIG, type SellerWalletBalances } from "@/services/marketplace-finance";
+import {
+  sellerWalletApi,
+  type PayoutMethod,
+  type PayoutStatus,
+  type PayoutTransaction,
+} from "@/services/seller-wallet";
 
 // ============================================================================
 // 1. DATA CONTRACTS (Strictly Typed)
 // ============================================================================
-export type PayoutStatus = "pending" | "processing" | "paid" | "failed" | "cancelled";
+type PayoutFilterStatus = PayoutStatus | "all";
 type SortBy = "newest" | "oldest" | "amount-high";
-
-export interface PayoutTransaction {
-  id: string;
-  reference: string;
-  amount: number;
-  fee: number;
-  netAmount: number;
-  status: PayoutStatus;
-  method: string;
-  requestedAt: string;
-  paidAt: string | null;
-  failureReason?: string;
-}
-
-export interface WalletStats {
-  available: number;
-  pending: number;
-  withdrawn: number;
-  grossEarnings: number;
-  totalFees: number;
-  totalRefunds: number;
-}
-
-export interface PayoutMethod {
-  id: string;
-  type: "mobile_money" | "bank";
-  provider: string;
-  accountName: string;
-  maskedAccount: string;
-  isDefault: boolean;
-}
 
 type StatusUI = {
   label: string;
@@ -62,57 +37,6 @@ type PayoutMethodDraft = {
   provider: string;
   accountName: string;
   accountNumber: string;
-};
-
-// ============================================================================
-// 2. MOCK API SERVICE (The Engine)
-// ============================================================================
-const MOCK_STATS: WalletStats = {
-  available: 8450,
-  pending: 2300,
-  withdrawn: 45000,
-  grossEarnings: 58000,
-  totalFees: 1740,
-  totalRefunds: 510,
-};
-
-const MOCK_METHODS: PayoutMethod[] = [
-  { id: "pm-1", type: "mobile_money", provider: "MTN Mobile Money", accountName: "Zamoyo Store", maskedAccount: "******1111", isDefault: true },
-];
-
-const MOCK_HISTORY: PayoutTransaction[] = [
-  { id: "WD-8892", reference: "REF-MTN-992A", amount: 4500, fee: 45, netAmount: 4455, status: "paid", method: "MTN Mobile Money", requestedAt: "2026-04-10T09:00:00Z", paidAt: "2026-04-10T11:30:00Z" },
-  { id: "WD-8891", reference: "REF-MTN-991B", amount: 1200, fee: 12, netAmount: 1188, status: "pending", method: "MTN Mobile Money", requestedAt: "2026-04-15T14:20:00Z", paidAt: null },
-  { id: "WD-8885", reference: "REF-ZAN-885C", amount: 8500, fee: 85, netAmount: 8415, status: "failed", method: "Zanaco Bank", requestedAt: "2026-03-28T10:00:00Z", paidAt: null, failureReason: "Invalid account routing number." },
-  { id: "WD-8880", reference: "REF-MTN-880D", amount: 3200, fee: 32, netAmount: 3168, status: "paid", method: "MTN Mobile Money", requestedAt: "2026-03-15T08:15:00Z", paidAt: "2026-03-15T09:45:00Z" },
-];
-
-const payoutsApi = {
-  async fetchDashboard(): Promise<{ stats: WalletStats; history: PayoutTransaction[]; methods: PayoutMethod[] }> {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (Math.random() < 0.05) reject(new Error("Network Error: Failed to fetch wallet data."));
-        resolve({ stats: MOCK_STATS, history: MOCK_HISTORY, methods: MOCK_METHODS });
-      }, 800);
-    });
-  },
-  async requestPayout(amount: number, methodId: string): Promise<PayoutTransaction> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: `WD-${Math.floor(Math.random() * 10000)}`,
-          reference: `PENDING-${Math.floor(Math.random() * 1000)}`,
-          amount,
-          fee: amount * 0.01,
-          netAmount: amount - amount * 0.01,
-          status: "pending",
-          method: methodId === "pm-1" ? "MTN Mobile Money" : "Bank Transfer",
-          requestedAt: new Date().toISOString(),
-          paidAt: null,
-        });
-      }, 1000);
-    });
-  }
 };
 
 // ============================================================================
@@ -134,12 +58,10 @@ function formatDate(isoString: string) {
 
 function getStatusUI(status: PayoutStatus): StatusUI {
   switch (status) {
-    case "paid":
-      return { label: "Paid", bg: "bg-[#009E49]/10", text: "text-[#009E49]", border: "border-[#009E49]/20", icon: CheckCircle2 };
+    case "successful":
+      return { label: "Successful", bg: "bg-[#009E49]/10", text: "text-[#009E49]", border: "border-[#009E49]/20", icon: CheckCircle2 };
     case "pending":
       return { label: "Pending", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", icon: Clock3 };
-    case "processing":
-      return { label: "Processing", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", icon: ArrowUpRight };
     case "failed":
       return { label: "Failed", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", icon: XCircle };
     case "cancelled":
@@ -153,7 +75,7 @@ function getStatusUI(status: PayoutStatus): StatusUI {
 // 4. MAIN PAGE EXPORT
 // ============================================================================
 export default function SellerPayoutsPage() {
-  const [stats, setStats] = useState<WalletStats | null>(null);
+  const [balances, setBalances] = useState<SellerWalletBalances | null>(null);
   const [history, setHistory] = useState<PayoutTransaction[]>([]);
   const [methods, setMethods] = useState<PayoutMethod[]>([]);
 
@@ -161,7 +83,7 @@ export default function SellerPayoutsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<PayoutStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<PayoutFilterStatus>("all");
   const [sortBy, setSortBy] = useState<SortBy>("newest");
 
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
@@ -176,14 +98,19 @@ export default function SellerPayoutsPage() {
     accountNumber: "",
   });
 
-  const MIN_WITHDRAWAL = 100;
+  const payoutConfig = DEFAULT_MARKETPLACE_FINANCE_CONFIG.payoutFee;
+  const MIN_WITHDRAWAL = payoutConfig.minimumWithdrawal;
+  const withdrawalQuote = useMemo(
+    () => calculatePayoutQuote(Number(withdrawAmount) || 0, payoutConfig),
+    [payoutConfig, withdrawAmount],
+  );
 
   const loadDashboard = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await payoutsApi.fetchDashboard();
-      setStats(data.stats);
+      const data = await sellerWalletApi.fetchDashboard();
+      setBalances(data.balances);
       setHistory(data.history);
       setMethods(data.methods);
     } catch (err) {
@@ -209,7 +136,7 @@ export default function SellerPayoutsPage() {
     });
 
     result.sort((a, b) => {
-      if (sortBy === "amount-high") return b.amount - a.amount;
+      if (sortBy === "amount-high") return b.requestedAmount - a.requestedAmount;
       if (sortBy === "oldest") return new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime();
       return new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime();
     });
@@ -260,22 +187,32 @@ export default function SellerPayoutsPage() {
 
   const handleWithdrawSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stats || !defaultMethod) return;
+    if (!balances || !defaultMethod) return;
 
     const amountNum = Number(withdrawAmount);
     if (Number.isNaN(amountNum) || amountNum < MIN_WITHDRAWAL) {
       toast.error(`Minimum withdrawal is ${formatCurrency(MIN_WITHDRAWAL)}`);
       return;
     }
-    if (amountNum > stats.available) {
+    if (amountNum > balances.availableBalance) {
       toast.error("Amount exceeds available balance");
       return;
     }
 
     setIsWithdrawing(true);
     try {
-      const newTx = await payoutsApi.requestPayout(amountNum, defaultMethod.id);
-      setStats({ ...stats, available: stats.available - amountNum, pending: stats.pending + amountNum });
+      const newTx = await sellerWalletApi.requestPayout(amountNum, defaultMethod);
+      setBalances((current) =>
+        current
+          ? {
+              ...current,
+              availableBalance: current.availableBalance - newTx.requestedAmount,
+              pendingBalance: current.pendingBalance + newTx.requestedAmount,
+              totalWithdrawn: current.totalWithdrawn + newTx.requestedAmount,
+              totalPayoutFeesPaid: current.totalPayoutFeesPaid + newTx.withdrawalFee,
+            }
+          : current,
+      );
       setHistory((prev) => [newTx, ...prev]);
       toast.success("Withdrawal requested successfully!");
       setIsWithdrawModalOpen(false);
@@ -291,7 +228,7 @@ export default function SellerPayoutsPage() {
 
   if (loading) return <SellerPageLoading variant="table" />;
 
-  if (error || !stats) {
+  if (error || !balances) {
     return (
       <div className="mt-6 flex flex-col items-center justify-center rounded-3xl border border-red-100 bg-red-50 p-8 text-center">
         <AlertCircle className="mb-3 h-8 w-8 text-red-500" />
@@ -324,15 +261,15 @@ export default function SellerPayoutsPage() {
               <span className="rounded-md bg-white/20 px-2 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">Ready to pay</span>
             </div>
             <p className="text-xs font-bold uppercase tracking-wider text-[#99e6bc]">Available Balance</p>
-            <h3 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">{formatCurrency(stats.available)}</h3>
+            <h3 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">{formatCurrency(balances.availableBalance)}</h3>
           </div>
 
           <Button
             onClick={() => setIsWithdrawModalOpen(true)}
-            disabled={stats.available < MIN_WITHDRAWAL}
+            disabled={balances.availableBalance < MIN_WITHDRAWAL}
             className="mt-6 h-11 w-full rounded-xl bg-white text-sm font-black text-[#009E49] shadow-sm hover:bg-zinc-50 active:scale-95 disabled:bg-zinc-100 disabled:text-zinc-400 disabled:opacity-90"
           >
-            {stats.available < MIN_WITHDRAWAL ? `Min. Withdrawal: ${formatCurrency(MIN_WITHDRAWAL)}` : "Request Payout"}
+            {balances.availableBalance < MIN_WITHDRAWAL ? `Min. Withdrawal: ${formatCurrency(MIN_WITHDRAWAL)}` : "Request Payout"}
           </Button>
         </div>
 
@@ -341,8 +278,8 @@ export default function SellerPayoutsPage() {
             <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
               <Clock3 className="h-4 w-4" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700/70">Pending Clearance</p>
-            <h3 className="mt-1 text-2xl font-black text-amber-900">{formatCurrency(stats.pending)}</h3>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700/70">Pending Balance</p>
+            <h3 className="mt-1 text-2xl font-black text-amber-900">{formatCurrency(balances.pendingBalance)}</h3>
             <p className="mt-1 text-xs font-medium text-amber-700/80">Clears 24h after delivery</p>
           </div>
 
@@ -351,7 +288,7 @@ export default function SellerPayoutsPage() {
               <ArrowUpRight className="h-4 w-4" />
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Withdrawn</p>
-            <h3 className="mt-1 text-2xl font-black text-zinc-900">{formatCurrency(stats.withdrawn)}</h3>
+            <h3 className="mt-1 text-2xl font-black text-zinc-900">{formatCurrency(balances.totalWithdrawn)}</h3>
           </div>
         </div>
 
@@ -363,20 +300,24 @@ export default function SellerPayoutsPage() {
             </h2>
             <div className="space-y-2.5 text-sm">
               <div className="flex justify-between font-bold text-zinc-700">
-                <span>Gross Sales</span>
-                <span>{formatCurrency(stats.grossEarnings)}</span>
+                <span>Sales Revenue</span>
+                <span>{formatCurrency(balances.totalSales)}</span>
               </div>
               <div className="flex justify-between font-medium text-zinc-500">
-                <span>Zamoyo Fees (3%)</span>
-                <span className="text-red-500">-{formatCurrency(stats.totalFees)}</span>
+                <span>Zamoyo Commission</span>
+                <span className="text-red-500">-{formatCurrency(balances.totalCommissionPaid)}</span>
+              </div>
+              <div className="flex justify-between font-medium text-zinc-500">
+                <span>Withdrawal Fees</span>
+                <span className="text-red-500">-{formatCurrency(balances.totalPayoutFeesPaid)}</span>
               </div>
               <div className="flex justify-between font-medium text-zinc-500">
                 <span>Refunds</span>
-                <span className="text-red-500">-{formatCurrency(stats.totalRefunds)}</span>
+                <span className="text-red-500">-{formatCurrency(balances.totalRefunds)}</span>
               </div>
               <div className="flex justify-between border-t border-zinc-100 pt-2 font-black text-zinc-900">
                 <span>Net Earnings</span>
-                <span className="text-[#009E49]">{formatCurrency(stats.grossEarnings - stats.totalFees - stats.totalRefunds)}</span>
+                <span className="text-[#009E49]">{formatCurrency(balances.totalSales - balances.totalCommissionPaid - balances.totalRefunds)}</span>
               </div>
             </div>
           </div>
@@ -422,14 +363,13 @@ export default function SellerPayoutsPage() {
         <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as PayoutStatus | "all")}
+            onChange={(e) => setStatusFilter(e.target.value as PayoutFilterStatus)}
             aria-label="Filter by payout status"
             className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-700 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] sm:w-40"
           >
             <option value="all">All Statuses</option>
-            <option value="paid">Paid</option>
+            <option value="successful">Successful</option>
             <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
             <option value="failed">Failed</option>
           </select>
           <select
@@ -480,8 +420,8 @@ export default function SellerPayoutsPage() {
                         <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{tx.reference}</p>
                       </td>
                       <td className="p-4">
-                        <p className="font-black text-zinc-900">{formatCurrency(tx.netAmount)}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Fee: {formatCurrency(tx.fee)}</p>
+                        <p className="font-black text-zinc-900">{formatCurrency(tx.sellerReceives)}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Withdrawal Fee: {formatCurrency(tx.withdrawalFee)}</p>
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${statusUI.bg} ${statusUI.text} ${statusUI.border}`}>
@@ -525,7 +465,7 @@ export default function SellerPayoutsPage() {
                 <div key={tx.id} className="p-4 transition-colors hover:bg-zinc-50/50">
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-bold text-zinc-900">{formatCurrency(tx.netAmount)}</p>
+                      <p className="font-bold text-zinc-900">{formatCurrency(tx.sellerReceives)}</p>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{formatDate(tx.requestedAt)}</p>
                     </div>
                     <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${statusUI.bg} ${statusUI.text} ${statusUI.border}`}>
@@ -588,7 +528,7 @@ export default function SellerPayoutsPage() {
             <form onSubmit={handleWithdrawSubmit} className="space-y-5">
               <div className="flex items-center justify-between rounded-2xl border border-[#009E49]/20 bg-[#009E49]/5 p-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#009E49]">Available Balance</span>
-                <span className="text-lg font-black text-zinc-900">{formatCurrency(stats.available)}</span>
+                <span className="text-lg font-black text-zinc-900">{formatCurrency(balances.availableBalance)}</span>
               </div>
 
               <div className="space-y-2">
@@ -606,7 +546,7 @@ export default function SellerPayoutsPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setWithdrawAmount(stats.available.toString())}
+                    onClick={() => setWithdrawAmount(balances.availableBalance.toString())}
                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-zinc-200/50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-600 hover:bg-zinc-200"
                   >
                     Max
@@ -627,6 +567,21 @@ export default function SellerPayoutsPage() {
                 </div>
               ) : null}
 
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm">
+                <div className="flex justify-between font-bold text-zinc-700">
+                  <span>Requested Amount</span>
+                  <span>{formatCurrency(withdrawalQuote.requestedAmount)}</span>
+                </div>
+                <div className="mt-2 flex justify-between font-medium text-zinc-500">
+                  <span>Withdrawal Fee</span>
+                  <span>-{formatCurrency(withdrawalQuote.withdrawalFee)}</span>
+                </div>
+                <div className="mt-2 flex justify-between border-t border-zinc-200 pt-2 font-black text-zinc-900">
+                  <span>Seller Receives</span>
+                  <span className="text-[#009E49]">{formatCurrency(withdrawalQuote.sellerReceives)}</span>
+                </div>
+              </div>
+
               <div className="pt-2">
                 <Button
                   type="submit"
@@ -636,7 +591,7 @@ export default function SellerPayoutsPage() {
                   {isWithdrawing ? "Processing..." : "Confirm Withdrawal"}
                 </Button>
                 <p className="mt-3 text-center text-[10px] font-medium text-zinc-500">
-                  Payouts are processed within 24 hours. A standard 1% withdrawal fee applies.
+                  Withdrawal fee is 1%, minimum K3 and capped at K15. Minimum withdrawal is {formatCurrency(MIN_WITHDRAWAL)}.
                 </p>
               </div>
             </form>
@@ -746,12 +701,20 @@ export default function SellerPayoutsPage() {
                 <p className="mt-1 font-bold text-zinc-900">{getStatusUI(selectedTransaction.status).label}</p>
               </div>
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Gross Amount</p>
-                <p className="mt-1 font-bold text-zinc-900">{formatCurrency(selectedTransaction.amount)}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Requested Amount</p>
+                <p className="mt-1 font-bold text-zinc-900">{formatCurrency(selectedTransaction.requestedAmount)}</p>
               </div>
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Net Amount</p>
-                <p className="mt-1 font-bold text-zinc-900">{formatCurrency(selectedTransaction.netAmount)}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Withdrawal Fee</p>
+                <p className="mt-1 font-bold text-zinc-900">{formatCurrency(selectedTransaction.withdrawalFee)}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Net Amount Received</p>
+                <p className="mt-1 font-bold text-zinc-900">{formatCurrency(selectedTransaction.sellerReceives)}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Provider</p>
+                <p className="mt-1 font-bold capitalize text-zinc-900">{selectedTransaction.provider.providerName}</p>
               </div>
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 md:col-span-2">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Reference</p>

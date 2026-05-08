@@ -40,7 +40,7 @@ type NotificationTypeMeta = {
 };
 
 // ============================================================================
-// 2. MOCK API SERVICE (The Engine)
+// 2. FRONTEND FIXTURE SERVICE
 // ============================================================================
 const now = new Date();
 const today1 = new Date(now.getTime() - 15 * 60000).toISOString();
@@ -58,10 +58,9 @@ const MOCK_NOTIFICATIONS: SellerNotification[] = [
 
 const notificationsApi = {
   async fetchAll(): Promise<SellerNotification[]> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       setTimeout(() => {
-        if (Math.random() < 0.05) reject(new Error("Failed to load notifications."));
-        else resolve([...MOCK_NOTIFICATIONS]);
+        resolve(MOCK_NOTIFICATIONS.map((notification) => ({ ...notification, meta: notification.meta ? { ...notification.meta } : undefined })));
       }, 600);
     });
   },

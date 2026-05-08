@@ -136,7 +136,13 @@ export const useCart = create<CartStore>()(
       name: "zamoyo-cart-storage",
       partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (!state) return;
+
+        const restoredState = buildCartState(state.items);
+        state.items = restoredState.items;
+        state.itemCount = restoredState.itemCount;
+        state.totalAmount = restoredState.totalAmount;
+        state.setHasHydrated(true);
       },
     },
   ),

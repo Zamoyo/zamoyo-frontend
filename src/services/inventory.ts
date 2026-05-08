@@ -1,4 +1,5 @@
 import type { Product } from "@/types/product";
+import { fetchSellerCatalogProducts } from "@/services/seller-catalog";
 
 export interface Category {
   id: string;
@@ -223,9 +224,37 @@ const MOCK_NETWORK_DELAY_MS = 500;
 
 export const inventoryApi = {
   async fetchAll(): Promise<InventoryProduct[]> {
+    const sellerProducts = await fetchSellerCatalogProducts();
+    const source =
+      sellerProducts.length > 0
+        ? sellerProducts.map<RawInventoryData>((product) => ({
+            id: product.id,
+            slug: product.slug,
+            sku: product.sku,
+            name: product.title,
+            category: { id: product.categorySlug, name: product.categoryName },
+            image: product.images.find((image) => image.isPrimary)?.url ?? product.images[0]?.url ?? null,
+            price: product.salePrice ?? product.price,
+            originalPrice: product.salePrice ? product.price : null,
+            stock: product.stock,
+            threshold: product.lowStockThreshold,
+            lastUpdated: product.updatedAt,
+            hasVariants: product.variants.length > 1,
+            variants: product.variants.map((variant) => ({
+              id: variant.id,
+              name: `${variant.label}: ${variant.value}`,
+              sku: variant.sku,
+              stock: variant.stock,
+            })),
+            rating: 4.7,
+            reviews: 42,
+            badge: product.status === "pending_review" ? "Pending Review" : null,
+          }))
+        : RAW_MOCK_DATA;
+
     return new Promise((resolve) => {
       window.setTimeout(() => {
-        resolve(RAW_MOCK_DATA.map(normalizeInventoryProduct));
+        resolve(source.map(normalizeInventoryProduct));
       }, MOCK_NETWORK_DELAY_MS);
     });
   },

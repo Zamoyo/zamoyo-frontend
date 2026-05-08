@@ -23,13 +23,13 @@ function formatDate(isoString: string) {
 }
 
 const STATUS_UI: Record<OrderStatus, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
-  "pending": { label: "Pending", bg: "bg-amber-100/80", text: "text-amber-800", border: "border-amber-200", icon: ClockIcon },
-  "processing": { label: "Processing", bg: "bg-blue-100/80", text: "text-blue-800", border: "border-blue-200", icon: RefreshCcw },
-  "shipped": { label: "In Transit", bg: "bg-indigo-100/80", text: "text-indigo-800", border: "border-indigo-200", icon: Truck },
-  "delivered": { label: "Delivered", bg: "bg-emerald-100/80", text: "text-emerald-800", border: "border-emerald-200", icon: CheckCircle2 },
-  "cancelled": { label: "Cancelled", bg: "bg-zinc-100/80", text: "text-zinc-600", border: "border-zinc-200", icon: PackageX },
-  "refunded": { label: "Refunded", bg: "bg-purple-100/80", text: "text-purple-800", border: "border-purple-200", icon: RefreshCcw },
-  "escalated": { label: "Escalated", bg: "bg-rose-100/80", text: "text-rose-800", border: "border-rose-300 shadow-[0_0_10px_rgba(225,29,72,0.2)]", icon: AlertTriangle },
+  "pending": { label: "Pending", bg: "bg-amber-950", text: "text-amber-100", border: "border-amber-400/50", icon: ClockIcon },
+  "processing": { label: "Processing", bg: "bg-sky-950", text: "text-sky-100", border: "border-sky-400/50", icon: RefreshCcw },
+  "shipped": { label: "In Transit", bg: "bg-indigo-950", text: "text-indigo-100", border: "border-indigo-400/50", icon: Truck },
+  "delivered": { label: "Delivered", bg: "bg-emerald-950", text: "text-emerald-100", border: "border-emerald-400/50", icon: CheckCircle2 },
+  "cancelled": { label: "Cancelled", bg: "bg-zinc-900", text: "text-zinc-200", border: "border-zinc-500/50", icon: PackageX },
+  "refunded": { label: "Refunded", bg: "bg-fuchsia-950", text: "text-fuchsia-100", border: "border-fuchsia-400/50", icon: RefreshCcw },
+  "escalated": { label: "Escalated", bg: "bg-rose-950", text: "text-rose-100", border: "border-rose-400/60 shadow-[0_0_14px_rgba(225,29,72,0.24)]", icon: AlertTriangle },
 };
 
 function ClockIcon(props: React.SVGProps<SVGSVGElement>) { 
@@ -121,7 +121,7 @@ export default function AdminOrdersPage() {
   );
 
   return (
-    <div className="mx-auto max-w-400 animate-in space-y-6 fade-in slide-in-from-bottom-4 duration-500 min-w-0 pb-12">
+    <div className="mx-auto max-w-[100rem] animate-in space-y-6 fade-in slide-in-from-bottom-4 duration-500 min-w-0 pb-12">
       
       {/* 1. HEADER */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end shrink-0">
@@ -133,21 +133,21 @@ export default function AdminOrdersPage() {
 
       {/* 2. PREMIUM KPI BENTO GRID */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-zinc-900 to-zinc-800 p-6 shadow-lg">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-zinc-950 to-zinc-800 p-6 shadow-md shadow-zinc-900/20 transition-all hover:-translate-y-0.5 hover:shadow-lg">
           <div className="absolute -right-4 -top-4 opacity-10"><ShoppingCart className="h-24 w-24 text-white" /></div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Pipeline Value</p>
           <h3 className="mt-2 text-3xl font-black text-white">{formatCurrency(totalVolume)}</h3>
           <p className="mt-1 text-xs font-medium text-zinc-400">All active & past orders</p>
         </div>
         
-        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-rose-500 to-rose-700 p-6 shadow-lg">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-rose-600 to-rose-900 p-6 shadow-md shadow-rose-900/20 transition-all hover:-translate-y-0.5 hover:shadow-lg">
            <div className="absolute -right-4 -top-4 opacity-20"><ShieldAlert className="h-24 w-24 text-white" /></div>
            <p className="text-[10px] font-bold uppercase tracking-wider text-rose-200">Escalated Orders</p>
            <h3 className="mt-2 text-3xl font-black text-white">{escalatedCount} Requires Action</h3>
            <p className="mt-1 text-xs font-medium text-rose-200">Stuck deliveries or disputes</p>
         </div>
 
-        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-indigo-500 to-indigo-700 p-6 shadow-lg">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-indigo-600 to-sky-900 p-6 shadow-md shadow-indigo-900/20 transition-all hover:-translate-y-0.5 hover:shadow-lg">
            <div className="absolute -right-4 -top-4 opacity-20"><Truck className="h-24 w-24 text-white" /></div>
            <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Active Transit</p>
            <h3 className="mt-2 text-3xl font-black text-white">{inTransitCount} Packages</h3>
@@ -156,7 +156,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* 3. FILTERS TOOLBAR */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200/60 bg-white/80 p-4 shadow-sm backdrop-blur-md md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 rounded-3xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5 backdrop-blur-xl md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input 
@@ -184,16 +184,16 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* 4. PREMIUM DATA GRID */}
-      <div className="overflow-hidden rounded-3xl border border-zinc-200/60 bg-white shadow-md">
+      <div className="overflow-hidden rounded-3xl border border-white/70 bg-white/75 shadow-md shadow-zinc-900/5 backdrop-blur-xl">
         <div className="overflow-x-auto hide-scrollbar">
           <table className="w-full text-left text-sm min-w-250">
-            <thead className="border-b border-zinc-100 bg-zinc-50/80 backdrop-blur-sm">
+            <thead className="border-b border-zinc-100 bg-zinc-100/80 backdrop-blur-sm">
               <tr>
-                <th className="p-4 pl-6 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Order Details</th>
-                <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Logistics</th>
-                <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Status</th>
-                <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Amount</th>
-                <th className="p-4 pr-6 text-right text-[10px] font-bold uppercase tracking-wider text-zinc-500">Action</th>
+                <th className="rounded-tl-2xl p-4 pl-6 text-[10px] font-black uppercase tracking-wider text-zinc-500">Order Details</th>
+                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Logistics</th>
+                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Status</th>
+                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Amount</th>
+                <th className="rounded-tr-2xl p-4 pr-6 text-right text-[10px] font-black uppercase tracking-wider text-zinc-500">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
@@ -205,7 +205,7 @@ export default function AdminOrdersPage() {
                   const StatIcon = statUI.icon;
 
                   return (
-                    <tr key={order.id} className="group transition-colors hover:bg-zinc-50/80">
+                    <tr key={order.id} className="group transition-colors hover:bg-indigo-50/35">
                       <td className="p-4 pl-6">
                         <div>
                           <p className="font-black text-zinc-900 group-hover:text-indigo-600 transition-colors">{order.id}</p>
@@ -252,15 +252,15 @@ export default function AdminOrdersPage() {
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedOrder(null)} aria-hidden="true" />
           
-          <div className="relative w-full max-w-md h-full bg-white shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
+          <div className="relative h-full w-full max-w-md border-l border-white/40 bg-white/90 shadow-2xl shadow-zinc-950/30 backdrop-blur-2xl animate-in slide-in-from-right duration-300 flex flex-col">
             
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-5 bg-zinc-50/50">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-5 bg-zinc-950 text-white">
               <div>
-                <h2 className="text-lg font-black text-zinc-900">{selectedOrder.id}</h2>
-                <p className="text-xs font-bold text-zinc-500">Placed on {formatDate(selectedOrder.placedAt)}</p>
+                <h2 className="text-lg font-black text-white">{selectedOrder.id}</h2>
+                <p className="text-xs font-bold text-zinc-400">Placed on {formatDate(selectedOrder.placedAt)}</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(null)} className="h-8 w-8 rounded-full text-zinc-400 hover:bg-zinc-200">
+              <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(null)} aria-label="Close order details" className="h-8 w-8 rounded-full text-zinc-400 hover:bg-white/10 hover:text-white">
                 <X className="h-5 w-5" />
               </Button>
             </div>
@@ -269,24 +269,24 @@ export default function AdminOrdersPage() {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               
               {/* Status Banner */}
-              <div className={cn("rounded-2xl border p-4", STATUS_UI[selectedOrder.status].bg, STATUS_UI[selectedOrder.status].border)}>
+              <div className={cn("rounded-3xl border p-4 shadow-md", STATUS_UI[selectedOrder.status].bg, STATUS_UI[selectedOrder.status].border)}>
                 <div className="flex items-center gap-2 mb-1">
                   {(() => { const Icon = STATUS_UI[selectedOrder.status].icon; return <Icon className={cn("h-4 w-4", STATUS_UI[selectedOrder.status].text)} />; })()}
                   <span className={cn("text-xs font-black uppercase tracking-wider", STATUS_UI[selectedOrder.status].text)}>Current Status: {STATUS_UI[selectedOrder.status].label}</span>
                 </div>
                 {selectedOrder.escalationReason && (
-                  <p className="mt-2 text-xs font-bold text-rose-700 bg-rose-50 p-2 rounded-lg border border-rose-100">{selectedOrder.escalationReason}</p>
+                  <p className="mt-2 text-xs font-bold text-rose-100 bg-rose-900/60 p-2 rounded-lg border border-rose-400/30">{selectedOrder.escalationReason}</p>
                 )}
               </div>
 
               {/* Entities */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-zinc-200 p-4 shadow-sm">
+                <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Buyer</p>
                   <p className="mt-1 text-sm font-black text-zinc-900">{selectedOrder.buyerName}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500 line-clamp-2">{selectedOrder.deliveryAddress}</p>
                 </div>
-                <div className="rounded-2xl border border-zinc-200 p-4 shadow-sm">
+                <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Seller</p>
                   <p className="mt-1 text-sm font-black text-zinc-900">{selectedOrder.sellerStoreName}</p>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 inline-block px-2 py-0.5 rounded-md mt-1">{selectedOrder.logisticsPartner}</p>
@@ -294,7 +294,7 @@ export default function AdminOrdersPage() {
               </div>
 
               {/* Financials */}
-              <div className="rounded-2xl border border-zinc-200 p-4 shadow-sm">
+              <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs font-bold text-zinc-500">Items ({selectedOrder.itemsCount})</span>
                   <span className="text-xs font-black text-zinc-900">Total: {formatCurrency(selectedOrder.totalAmount)}</span>
@@ -308,7 +308,7 @@ export default function AdminOrdersPage() {
 
               {/* RBAC Admin Overrides */}
               {canOverride && (
-                <div className="rounded-3xl border border-rose-200 bg-rose-50/50 p-5 mt-8">
+                <div className="rounded-3xl border border-rose-300/70 bg-linear-to-br from-rose-50 to-white p-5 mt-8 shadow-md shadow-rose-900/5">
                   <div className="flex items-center gap-2 mb-4">
                     <ShieldAlert className="h-4 w-4 text-rose-600" />
                     <h3 className="text-xs font-black uppercase tracking-wider text-rose-900">God-Mode Overrides</h3>

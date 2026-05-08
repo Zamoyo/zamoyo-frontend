@@ -23,9 +23,9 @@ function formatDate(isoString?: string) {
 }
 
 const STATUS_UI: Record<AdminStatus, { label: string; bg: string; text: string; border: string }> = {
-  "active": { label: "Active", bg: "bg-emerald-100/80", text: "text-emerald-800", border: "border-emerald-200" },
-  "invited": { label: "Pending Invite", bg: "bg-amber-100/80", text: "text-amber-800", border: "border-amber-200" },
-  "revoked": { label: "Access Revoked", bg: "bg-rose-100/80", text: "text-rose-800", border: "border-rose-200" },
+  "active": { label: "Active", bg: "bg-emerald-950", text: "text-emerald-100", border: "border-emerald-400/50" },
+  "invited": { label: "Pending Invite", bg: "bg-amber-950", text: "text-amber-100", border: "border-amber-400/50" },
+  "revoked": { label: "Access Revoked", bg: "bg-rose-950", text: "text-rose-100", border: "border-rose-400/50" },
 };
 
 const ROLE_UI: Record<AdminRole, { label: string; color: string }> = {
@@ -124,6 +124,10 @@ export default function AdminAccessPage() {
     }
   };
 
+  const handleMemberOptions = (admin: AdminUserRecord) => {
+    toast.info(`Role editing and MFA reset for ${admin.name} will open here once the admin identity API is connected.`);
+  };
+
   // --- SYSTEM STATES ---
   if (!canManageAdmins) {
     return (
@@ -153,13 +157,13 @@ export default function AdminAccessPage() {
           <h1 className="text-2xl font-black tracking-tight text-zinc-900 md:text-3xl">Access Control</h1>
           <p className="mt-1 text-sm font-medium text-zinc-500">Manage internal team roles, permissions, and security overrides.</p>
         </div>
-        <Button onClick={() => setIsInviteModalOpen(true)} className="h-10 rounded-xl bg-zinc-900 px-4 font-bold text-white shadow-md hover:bg-zinc-800 md:w-auto transition-all active:scale-95">
+        <Button onClick={() => setIsInviteModalOpen(true)} className="h-10 rounded-xl bg-zinc-950 px-4 font-bold text-white shadow-md shadow-zinc-900/20 hover:bg-zinc-800 md:w-auto transition-all active:scale-95">
           <Plus className="mr-2 h-4 w-4" /> Invite Team Member
         </Button>
       </div>
 
       {/* 2. FILTERS TOOLBAR */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200/60 bg-white/80 p-4 shadow-sm backdrop-blur-md md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 rounded-3xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5 backdrop-blur-xl md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input 
@@ -179,21 +183,24 @@ export default function AdminAccessPage() {
           <option value="super_admin">Super Admin</option>
           <option value="executive_admin">Executive</option>
           <option value="ops_manager">Ops Manager</option>
+          <option value="finance_admin">Treasury</option>
+          <option value="support_admin">Support</option>
+          <option value="content_admin">Content</option>
           <option value="viewer">Investor / Viewer</option>
         </select>
       </div>
 
       {/* 3. PREMIUM DATA GRID */}
-      <div className="overflow-hidden rounded-3xl border border-zinc-200/60 bg-white shadow-md">
+      <div className="overflow-hidden rounded-3xl border border-white/70 bg-white/75 shadow-md shadow-zinc-900/5 backdrop-blur-xl">
         <div className="overflow-x-auto hide-scrollbar">
           <table className="w-full text-left text-sm min-w-250">
-            <thead className="border-b border-zinc-100 bg-zinc-50/80 backdrop-blur-sm">
+            <thead className="border-b border-zinc-100 bg-zinc-100/80 backdrop-blur-sm">
               <tr>
-                <th className="p-4 pl-6 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Team Member</th>
-                <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Security Role</th>
-                <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Status</th>
-                <th className="p-4 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Last Active</th>
-                <th className="p-4 pr-6 text-right text-[10px] font-bold uppercase tracking-wider text-zinc-500">Access Control</th>
+                <th className="rounded-tl-2xl p-4 pl-6 text-[10px] font-black uppercase tracking-wider text-zinc-500">Team Member</th>
+                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Security Role</th>
+                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Status</th>
+                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Last Active</th>
+                <th className="rounded-tr-2xl p-4 pr-6 text-right text-[10px] font-black uppercase tracking-wider text-zinc-500">Access Control</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
@@ -206,10 +213,10 @@ export default function AdminAccessPage() {
                   const isSelf = admin.id === MOCK_CURRENT_ADMIN.id;
 
                   return (
-                    <tr key={admin.id} className="group transition-colors hover:bg-zinc-50/80">
+                    <tr key={admin.id} className="group transition-colors hover:bg-indigo-50/35">
                       <td className="p-4 pl-6">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white font-black">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-950 text-emerald-300 font-black shadow-md shadow-zinc-900/10">
                             {admin.name.charAt(0)}
                           </div>
                           <div>
@@ -249,7 +256,7 @@ export default function AdminAccessPage() {
                             {admin.status === 'revoked' ? <RefreshCcw className="mr-1.5 h-3 w-3" /> : <Ban className="mr-1.5 h-3 w-3" />}
                             {admin.status === 'revoked' ? 'Restore' : 'Revoke'}
                           </Button>
-                          <Button variant="ghost" size="icon" aria-label="Edit member" className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900">
+                          <Button onClick={() => handleMemberOptions(admin)} variant="ghost" size="icon" aria-label={`More access actions for ${admin.name}`} className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </div>
@@ -268,7 +275,8 @@ export default function AdminAccessPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
           <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm transition-opacity" onClick={() => !isInviting && setIsInviteModalOpen(false)} aria-hidden="true" />
           
-          <div className="relative w-full max-w-lg animate-in zoom-in-95 fade-in rounded-3xl bg-white p-6 shadow-2xl overflow-hidden border border-zinc-200/50">
+          <div className="relative w-full max-w-lg animate-in zoom-in-95 fade-in rounded-3xl border border-white/50 bg-white/85 p-6 shadow-2xl shadow-zinc-950/20 backdrop-blur-2xl overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-emerald-400 via-amber-300 to-indigo-400" />
             <div className="absolute top-4 right-4">
               <Button variant="ghost" size="icon" disabled={isInviting} onClick={() => setIsInviteModalOpen(false)} aria-label="Close modal" className="h-8 w-8 rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900">
                 <X className="h-4 w-4" />
@@ -276,7 +284,7 @@ export default function AdminAccessPage() {
             </div>
             
             <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-900 border border-zinc-200 shadow-sm"><Key className="h-5 w-5" /></div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 text-emerald-300 border border-zinc-800 shadow-lg shadow-zinc-900/20"><Key className="h-5 w-5" /></div>
               <div>
                 <h2 className="text-xl font-black text-zinc-900 leading-tight">Invite Team Member</h2>
                 <p className="text-xs font-medium text-zinc-500">Grant secure access to the Zamoyo Admin Hub.</p>

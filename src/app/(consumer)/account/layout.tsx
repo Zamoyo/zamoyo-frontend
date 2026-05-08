@@ -9,9 +9,6 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { getAccountUserProfile, signOutAccount } from "@/services/account";
 
-// ============================================================================
-// 1. DATA CONTRACTS
-// ============================================================================
 type SidebarLink = {
   label: string;
   href: string;
@@ -26,21 +23,13 @@ const SIDEBAR_LINKS: SidebarLink[] = [
   { label: "Settings", href: "/account/settings", icon: Settings },
 ];
 
-// ============================================================================
-// 2. STATE LOGIC
-// ============================================================================
 function isActiveRoute(pathname: string, href: string) {
-  // FIX: Exact match for the base /account route so it doesn't stay lit up everywhere
   if (href === "/account") {
     return pathname === "/account";
   }
-  // For sub-routes (like /account/orders), check if it starts with the href
   return pathname.startsWith(href);
 }
 
-// ============================================================================
-// 3. MAIN LAYOUT EXPORT
-// ============================================================================
 export default function AccountLayout({
   children,
 }: {

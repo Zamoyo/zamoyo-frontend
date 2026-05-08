@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft, UploadCloud, CheckCircle2, Tag, Box, DollarSign,
   Image as ImageIcon, Percent, Palette, Truck, Barcode, ListPlus,
@@ -11,69 +13,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toaster, toast } from "sonner";
+import {
+  createSellerCatalogProduct,
+  getCategoryMetaByName,
+  getSubcategoryMeta,
+  SELLER_CATEGORY_TREE,
+  slugifySellerValue,
+  type CreateSellerProductInput,
+  type ProductCondition,
+  type SellerProductImage,
+  type SellerProductVariant,
+  type SellerProductStatus,
+} from "@/services/seller-catalog";
 
 // ============================================================================
 // 1. DATA CONTRACTS
 // ============================================================================
-type ProductStatus = "draft" | "review";
+type ProductStatus = Extract<SellerProductStatus, "draft" | "pending_review">;
 type ValidationErrors = Record<string, string>;
-
-export interface CreateProductPayload {
-  title: string;
-  brand: string;
-  condition: string;
-  description: string;
-  category: string;
-  subcategory: string;
-  status: ProductStatus;
-  price: number;
-  salePrice: number | null;
-  globalStock: number;
-  lowStockThreshold: number;
-  deliveryType: string;
-  logistics: {
-    weightKG: number;
-    dimensions: string;
-  };
-  variants: Array<{ title: string; sku?: string; stock?: number }> | { colors: string; sizes: string };
-  specifications: Array<{ name: string; value: string }>;
-  seo: {
-    metaTitle: string;
-    metaDescription: string;
-  };
-}
-
-// ============================================================================
-// 2. MOCK API SERVICE (The Engine)
-// ============================================================================
-async function submitNewProduct(payload: CreateProductPayload): Promise<{ success: boolean; id: string }> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Simulate 5% chance of network error
-      if (Math.random() < 0.05) {
-        reject(new Error("Network error: Failed to reach Zamoyo servers. Please try again."));
-      } else {
-        console.log("🚀 Payload successfully transmitted to backend:", payload);
-        resolve({ success: true, id: `ZM-P-${Math.floor(Math.random() * 1000)}` });
-      }
-    }, 1200); // 1.2s simulated latency
-  });
-}
 
 // ============================================================================
 // 3. UI CONFIGURATIONS & HELPERS
 // ============================================================================
-const CATEGORY_TREE: Record<string, string[]> = {
-  Electronics: ["Smartphones", "Laptops", "Tablets", "Audio & Headphones", "Wearables", "Gaming Consoles", "Cameras", "Accessories", "Home Appliances", "TVs & Entertainment"],
-  Fashion: ["Men's Clothing", "Women's Clothing", "Footwear", "Bags", "Watches", "Jewelry", "Beauty & Personal Care"],
-  Home: ["Furniture", "Kitchen & Dining", "Home Decor", "Bedding", "Cleaning Supplies"],
-  Groceries: ["Beverages", "Snacks", "Staples", "Frozen Foods"],
-  Health: ["Supplements", "Medical Supplies", "Personal Care"],
-  Kids: ["Baby Products", "Toys", "Kids Clothing", "School Supplies"],
-  Sports: ["Fitness Equipment", "Outdoor Gear", "Sportswear"],
-  Automotive: ["Car Accessories", "Motorbike Accessories", "Spare Parts"],
-};
-
 const getDefaultWeight = (subcategory: string) => {
   const weights: Record<string, number> = {
     Smartphones: 0.4, Laptops: 2.5, Tablets: 0.7, "Audio & Headphones": 0.5, Wearables: 0.2, "Gaming Consoles": 3.0, Cameras: 0.9, Accessories: 0.3, "Home Appliances": 15.0,
@@ -84,6 +45,45 @@ const getDefaultWeight = (subcategory: string) => {
   };
   return weights[subcategory] || 1.0;
 };
+
+function buildSku(subcategory: string, title: string) {
+  const prefix = slugifySellerValue(subcategory).slice(0, 3).toUpperCase() || "ZMY";
+  const suffix = slugifySellerValue(title).slice(0, 5).toUpperCase() || Date.now().toString().slice(-5);
+  return `ZM-${prefix}-${suffix}`;
+}
+
+function buildVariants(
+  hasVariants: boolean,
+  options: { colors: string; sizes: string },
+  sku: string,
+  stock: number,
+): SellerProductVariant[] {
+  if (!hasVariants) return [{ id: `${sku}-default`, label: "Option", value: "Default", sku, stock }];
+
+  const colors = options.colors.split(",").map((item) => item.trim()).filter(Boolean);
+  const sizes = options.sizes.split(",").map((item) => item.trim()).filter(Boolean);
+  const values = colors.length ? colors : sizes;
+
+  return (values.length ? values : ["Default"]).map((value, index) => ({
+    id: `${sku}-${slugifySellerValue(value) || index + 1}`,
+    label: colors.length ? "Color" : sizes.length ? "Size" : "Option",
+    value,
+    sku: `${sku}-${index + 1}`,
+    stock,
+    swatchClass: colors.length ? swatchClassForColor(value) : "bg-zinc-200 border-zinc-200",
+  }));
+}
+
+function swatchClassForColor(value: string) {
+  const color = value.toLowerCase();
+  if (color.includes("black")) return "bg-zinc-900 border-zinc-900";
+  if (color.includes("white")) return "bg-white border-zinc-200";
+  if (color.includes("blue")) return "bg-blue-500 border-blue-500";
+  if (color.includes("red")) return "bg-red-500 border-red-500";
+  if (color.includes("green")) return "bg-[#009E49] border-[#009E49]";
+  if (color.includes("orange")) return "bg-[#FF6B00] border-[#FF6B00]";
+  return "bg-zinc-300 border-zinc-300";
+}
 
 // ============================================================================
 // 4. SUBCOMPONENTS
@@ -98,14 +98,18 @@ const ToggleSwitch = ({ active, onClick }: { active: boolean; onClick: () => voi
 // 5. MAIN PAGE EXPORT
 // ============================================================================
 export default function AddProductPage() {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlsRef = useRef<string[]>([]);
 
   // Form State
   const [productName, setProductName] = useState("");
   const [brand, setBrand] = useState("");
-  const [condition, setCondition] = useState("new");
+  const [condition, setCondition] = useState<ProductCondition>("new");
   const [description, setDescription] = useState("");
+  const [images, setImages] = useState<SellerProductImage[]>([]);
 
   const [price, setPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
@@ -114,7 +118,7 @@ export default function AddProductPage() {
   const [lowStockThreshold, setLowStockThreshold] = useState("5");
 
   const [searchCategory, setSearchCategory] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Electronics");
+  const [selectedCategory, setSelectedCategory] = useState("Computing");
   const [selectedSubcategory, setSelectedSubcategory] = useState("Laptops");
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
@@ -131,10 +135,16 @@ export default function AddProductPage() {
   const [dimensions, setDimensions] = useState({ l: "", w: "", h: "" });
 
   const filteredSubcategories = useMemo(() => {
-    return (CATEGORY_TREE[selectedCategory] ?? []).filter((sub) =>
+    return (SELLER_CATEGORY_TREE[selectedCategory] ?? []).filter((sub) =>
       sub.toLowerCase().includes(searchCategory.toLowerCase())
     );
   }, [selectedCategory, searchCategory]);
+
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const addSpec = () => setSpecs([...specs, { name: "", value: "" }]);
   const removeSpec = (index: number) => setSpecs(specs.filter((_, i) => i !== index));
@@ -144,13 +154,47 @@ export default function AddProductPage() {
     setSpecs(next);
   };
 
-  const validateForm = () => {
+  const handleImageSelection = (files: FileList | null) => {
+    if (!files?.length) return;
+    const selectedFiles = Array.from(files).slice(0, Math.max(0, 6 - images.length));
+    const nextImages = selectedFiles.map<SellerProductImage>((file, index) => {
+      const url = URL.createObjectURL(file);
+      objectUrlsRef.current.push(url);
+      return {
+        id: `${file.name}-${Date.now()}-${index}`,
+        url,
+        name: file.name,
+        isPrimary: images.length === 0 && index === 0,
+      };
+    });
+    setImages((current) => [...current, ...nextImages]);
+  };
+
+  const removeImage = (imageId: string) => {
+    setImages((current) => {
+      const removed = current.find((image) => image.id === imageId);
+      if (removed?.url.startsWith("blob:")) URL.revokeObjectURL(removed.url);
+      objectUrlsRef.current = objectUrlsRef.current.filter((url) => url !== removed?.url);
+      const remaining = current.filter((image) => image.id !== imageId);
+      return remaining.map((image, index) => ({ ...image, isPrimary: index === 0 ? true : image.isPrimary }));
+    });
+  };
+
+  const setPrimaryImage = (imageId: string) => {
+    setImages((current) => current.map((image) => ({ ...image, isPrimary: image.id === imageId })));
+  };
+
+  const validateForm = (status: ProductStatus) => {
     const nextErrors: ValidationErrors = {};
     if (!productName.trim()) nextErrors.productName = "Product name required.";
+    if (status === "pending_review" && !description.trim()) nextErrors.description = "Description required before submission.";
+    if (status === "pending_review" && images.length === 0) nextErrors.images = "Add at least one product image.";
     if (!selectedCategory.trim()) nextErrors.category = "Category required.";
     if (!selectedSubcategory.trim()) nextErrors.subcategory = "Subcategory required.";
     if (!price || Number(price) <= 0) nextErrors.price = "Valid price required.";
     if (!stock || Number(stock) < 0) nextErrors.stock = "Valid stock required.";
+    if (Number(lowStockThreshold) < 0) nextErrors.lowStockThreshold = "Valid threshold required.";
+    if (hasVariants && !variantOptions.colors.trim() && !variantOptions.sizes.trim()) nextErrors.variants = "Add at least one color or size.";
     if (hasDiscount) {
       if (!salePrice || Number(salePrice) <= 0) nextErrors.salePrice = "Valid sale price required.";
       else if (Number(salePrice) >= Number(price || 0)) nextErrors.salePrice = "Must be lower than regular price.";
@@ -161,34 +205,40 @@ export default function AddProductPage() {
 
   const handleSave = async (e: React.FormEvent | React.MouseEvent, status: ProductStatus) => {
     e.preventDefault();
-    if (!validateForm()) {
+    if (!validateForm(status)) {
       toast.error("Please fix the highlighted fields.");
       return;
     }
 
     setIsSubmitting(true);
 
-    const finalSKU = sku.trim() || `ZM-${selectedSubcategory.substring(0, 3).toUpperCase()}-${Math.floor(Math.random() * 10000)}`;
+    const categoryMeta = getCategoryMetaByName(selectedCategory);
+    const subcategoryMeta = getSubcategoryMeta(selectedCategory, selectedSubcategory);
+    const finalSKU = sku.trim() || buildSku(selectedSubcategory, productName);
     const finalWeight = packageWeight ? Number(packageWeight) : getDefaultWeight(selectedSubcategory);
 
-    const payload: CreateProductPayload = {
+    const payload: CreateSellerProductInput = {
       title: productName.trim(),
       brand: brand.trim(),
       condition,
       description: description.trim(),
-      category: selectedCategory,
-      subcategory: selectedSubcategory,
+      categoryName: categoryMeta.name,
+      categorySlug: categoryMeta.slug,
+      subcategoryName: subcategoryMeta.name,
+      subcategorySlug: subcategoryMeta.slug,
       status,
       price: Number(price),
       salePrice: hasDiscount ? Number(salePrice) : null,
-      globalStock: Number(stock),
+      stock: Number(stock),
       lowStockThreshold: Number(lowStockThreshold),
-      deliveryType,
+      sku: finalSKU,
+      images,
+      deliveryType: deliveryType as "standard" | "express",
       logistics: {
         weightKG: finalWeight,
         dimensions: showAdvanced && dimensions.l ? `${dimensions.l}x${dimensions.w}x${dimensions.h}` : "Standard Box",
       },
-      variants: hasVariants ? { colors: variantOptions.colors, sizes: variantOptions.sizes } : [{ title: "Default", sku: finalSKU, stock: Number(stock) }],
+      variants: buildVariants(hasVariants, variantOptions, finalSKU, Number(stock)),
       specifications: specs.filter((s) => s.name.trim() && s.value.trim()),
       seo: {
         metaTitle: seo.title.trim() || `${productName.trim()} | Zamoyo`,
@@ -197,17 +247,15 @@ export default function AddProductPage() {
     };
 
     try {
-      // Send data to our mock API
-      await submitNewProduct(payload);
+      await createSellerCatalogProduct(payload);
       
       toast.success(status === "draft" ? "Draft saved successfully!" : "Product submitted for review!", {
-        description: status === "draft" ? "Your draft is ready for editing later." : "Your product is waiting for admin approval.",
+        description: status === "draft" ? "Your draft is ready for editing later." : "Your product is waiting for admin moderation.",
         icon: <CheckCircle2 className="h-4 w-4 text-[#009E49]" />,
         style: { borderRadius: "14px", border: "1px solid #e4e7ec" },
       });
       
-      // Note: In a real app, you might want to redirect to /seller/products here
-      // using router.push('/seller/products')
+      router.push("/seller/products");
       
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save product");
@@ -223,7 +271,7 @@ export default function AddProductPage() {
     <div className="mx-auto max-w-250 animate-in fade-in pb-24 duration-500 md:pb-12">
       <Toaster position="top-center" />
 
-      <form noValidate onSubmit={(e) => handleSave(e, "review")}>
+      <form noValidate onSubmit={(e) => handleSave(e, "pending_review")}>
         
         {/* HEADER */}
         <div className="sticky top-18 md:top-0 z-20 mb-6 -mx-4 flex items-center justify-between border-b border-zinc-200/50 bg-[#f4fbf6]/80 px-4 py-4 backdrop-blur-md md:mx-0 md:border-none md:px-0">
@@ -242,7 +290,7 @@ export default function AddProductPage() {
               Save Draft
             </Button>
             <Button type="submit" disabled={isSubmitting} className="h-10 rounded-xl bg-[#009E49] px-6 font-bold text-white shadow-[0_4px_15px_rgba(0,158,73,0.2)] transition-all active:scale-95 hover:bg-[#00853d]">
-              {isSubmitting ? "Submitting..." : "Submit"}
+              {isSubmitting ? "Submitting..." : "Submit for Review"}
             </Button>
           </div>
         </div>
@@ -274,7 +322,7 @@ export default function AddProductPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Condition</label>
-                    <select value={condition} onChange={(e) => setCondition(e.target.value)} className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-medium text-zinc-900 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]">
+                    <select value={condition} onChange={(e) => setCondition(e.target.value as ProductCondition)} className="h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-medium text-zinc-900 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]">
                       <option value="new">Brand New</option>
                       <option value="used-like-new">Used - Like New</option>
                       <option value="used-good">Used - Good</option>
@@ -285,7 +333,8 @@ export default function AddProductPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Description</label>
-                  <textarea placeholder="Describe your product's features and benefits..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-32 w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm font-medium shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]" />
+                  <textarea placeholder="Describe your product's features and benefits..." value={description} onChange={(e) => setDescription(e.target.value)} className={`min-h-32 w-full resize-y rounded-xl border bg-zinc-50 p-4 text-sm font-medium shadow-inner outline-none focus-visible:ring-2 ${inputErrorClass(errors.description)}`} />
+                  {fieldError(errors.description)}
                 </div>
               </div>
             </div>
@@ -293,13 +342,48 @@ export default function AddProductPage() {
             {/* MEDIA */}
             <div className="rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm md:p-7">
               <h2 className="mb-5 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-zinc-900"><ImageIcon className="h-4 w-4 text-zinc-400" /> Product Media</h2>
-              <div className="cursor-pointer rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 p-8 text-center transition-colors hover:bg-zinc-100 group">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className={`w-full cursor-pointer rounded-2xl border-2 border-dashed bg-zinc-50 p-8 text-center transition-colors hover:bg-zinc-100 group ${errors.images ? "border-red-300" : "border-zinc-200"}`}
+              >
                 <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition-transform group-hover:scale-110">
                   <UploadCloud className="h-6 w-6 text-[#009E49]" />
                 </div>
                 <p className="text-sm font-bold text-zinc-900">Click to upload images</p>
                 <p className="mt-1 text-xs text-zinc-500">JPEG, PNG or WEBP (Max 5MB each)</p>
-              </div>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={(event) => handleImageSelection(event.target.files)}
+              />
+              {fieldError(errors.images)}
+              {images.length > 0 ? (
+                <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {images.map((image) => (
+                    <div key={image.id} className="group relative aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50">
+                      <Image src={image.url} alt={image.name} fill sizes="120px" unoptimized className="object-cover" />
+                      {image.isPrimary ? (
+                        <span className="absolute left-2 top-2 rounded-md bg-[#009E49] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-white">
+                          Primary
+                        </span>
+                      ) : null}
+                      <div className="absolute inset-x-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button type="button" onClick={() => setPrimaryImage(image.id)} className="flex-1 rounded-lg bg-white/90 px-2 py-1 text-[10px] font-bold text-zinc-700 shadow-sm">
+                          Set
+                        </button>
+                        <button type="button" onClick={() => removeImage(image.id)} className="rounded-lg bg-red-500 px-2 py-1 text-[10px] font-bold text-white shadow-sm">
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             {/* SPECS */}
@@ -341,6 +425,7 @@ export default function AddProductPage() {
                       <Input placeholder="e.g. S, M, L or 40, 41, 42" value={variantOptions.sizes} onChange={(e) => setVariantOptions({...variantOptions, sizes: e.target.value})} className="h-11 rounded-xl border-zinc-200 bg-zinc-50 text-sm shadow-inner focus-visible:ring-[#009E49]" />
                     </div>
                   </div>
+                  {fieldError(errors.variants)}
                 </div>
               )}
             </div>
@@ -416,8 +501,8 @@ export default function AddProductPage() {
                   <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Category</label>
                   {/* HORIZONTAL GRID: Category Buttons */}
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.keys(CATEGORY_TREE).slice(0,4).map((category) => (
-                      <button key={category} type="button" onClick={() => { setSelectedCategory(category); setSelectedSubcategory(CATEGORY_TREE[category][0]); setSearchCategory(""); setIsCategoryOpen(false); }} className={`rounded-xl border px-2 py-2 text-xs font-bold transition-all ${selectedCategory === category ? "border-[#009E49] bg-[#009E49]/10 text-[#009E49]" : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100"}`}>
+                    {Object.keys(SELLER_CATEGORY_TREE).map((category) => (
+                      <button key={category} type="button" onClick={() => { setSelectedCategory(category); setSelectedSubcategory(SELLER_CATEGORY_TREE[category][0]); setSearchCategory(""); setIsCategoryOpen(false); }} className={`rounded-xl border px-2 py-2 text-xs font-bold transition-all ${selectedCategory === category ? "border-[#009E49] bg-[#009E49]/10 text-[#009E49]" : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100"}`}>
                         {category}
                       </button>
                     ))}
@@ -519,8 +604,8 @@ export default function AddProductPage() {
           <Button type="button" variant="outline" onClick={(e) => handleSave(e, "draft")} disabled={isSubmitting} className="h-12 rounded-xl border-zinc-200 bg-white font-bold text-zinc-700">
             Save Draft
           </Button>
-          <Button type="button" onClick={(e) => handleSave(e, "review")} disabled={isSubmitting} className="h-12 rounded-xl bg-[#009E49] font-extrabold text-white shadow-[0_4px_15px_rgba(0,158,73,0.3)] transition-all active:scale-95 hover:bg-[#00853d]">
-            {isSubmitting ? "Submitting..." : "Submit"}
+          <Button type="button" onClick={(e) => handleSave(e, "pending_review")} disabled={isSubmitting} className="h-12 rounded-xl bg-[#009E49] font-extrabold text-white shadow-[0_4px_15px_rgba(0,158,73,0.3)] transition-all active:scale-95 hover:bg-[#00853d]">
+            {isSubmitting ? "Submitting..." : "Submit for Review"}
           </Button>
         </div>
       </div>
