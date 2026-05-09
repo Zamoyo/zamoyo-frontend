@@ -32,184 +32,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
-
-type TimeRange = "24h" | "7d" | "30d" | "12m";
-type CategoryFilter = "all" | "electronics" | "fashion" | "home-appliances";
-
-interface TrendPoint {
-  label: string;
-  revenue: number;
-  orders: number;
-}
-
-interface ProductPerformance {
-  id: string;
-  name: string;
-  category: CategoryFilter extends "all" ? never : string;
-  sales: number;
-  revenue: number;
-  stock: number;
-}
-
-interface CategoryPerformance {
-  name: string;
-  slug: Exclude<CategoryFilter, "all">;
-  revenue: number;
-  sales: number;
-}
-
-interface LowPerformer {
-  id: string;
-  name: string;
-  category: Exclude<CategoryFilter, "all">;
-  issue: "zero-sales" | "low-sales" | "low-stock";
-  stock: number;
-}
-
-interface ActivityEvent {
-  id: string;
-  type: "order" | "refund" | "payout" | "stock";
-  message: string;
-  amount?: number;
-  time: string;
-}
-
-interface AnalyticsData {
-  summary: {
-    totalRevenue: number;
-    revenueGrowth: number;
-    totalOrders: number;
-    orderGrowth: number;
-    totalCustomers: number;
-    customerGrowth: number;
-    avgOrderValue: number;
-    refundRate: number;
-    conversionRate: number;
-  };
-  trends: TrendPoint[];
-  orderStats: {
-    total: number;
-    delivered: number;
-    processing: number;
-    cancelled: number;
-    refunded: number;
-  };
-  topProducts: ProductPerformance[];
-  categoryPerformance: CategoryPerformance[];
-  lowPerformers: LowPerformer[];
-  customerStats: {
-    total: number;
-    new: number;
-    returning: number;
-    returningRate: number;
-  };
-  recentActivity: ActivityEvent[];
-}
-
-const BASE_MOCK_30D: AnalyticsData = {
-  summary: {
-    totalRevenue: 145000,
-    revenueGrowth: 12.5,
-    totalOrders: 342,
-    orderGrowth: 8.2,
-    totalCustomers: 280,
-    customerGrowth: 15.0,
-    avgOrderValue: 423.97,
-    refundRate: 2.1,
-    conversionRate: 4.8,
-  },
-  trends: [
-    { label: "W1", revenue: 28000, orders: 75 },
-    { label: "W2", revenue: 35000, orders: 82 },
-    { label: "W3", revenue: 31000, orders: 78 },
-    { label: "W4", revenue: 51000, orders: 107 },
-  ],
-  orderStats: { total: 342, delivered: 290, processing: 35, cancelled: 12, refunded: 5 },
-  topProducts: [
-    { id: "ZM-P-101", name: "MacBook Air M2 - 256GB", category: "electronics", sales: 42, revenue: 74000, stock: 12 },
-    { id: "ZM-P-104", name: "JBL Flip 6 Portable Speaker", category: "electronics", sales: 38, revenue: 79800, stock: 45 },
-    { id: "ZM-P-103", name: "Apple AirPods Pro (2nd Gen)", category: "electronics", sales: 12, revenue: 50400, stock: 2 },
-  ],
-  categoryPerformance: [
-    { name: "Electronics", slug: "electronics", revenue: 112000, sales: 156 },
-    { name: "Fashion", slug: "fashion", revenue: 24000, sales: 112 },
-    { name: "Home Appliances", slug: "home-appliances", revenue: 9000, sales: 74 },
-  ],
-  lowPerformers: [
-    { id: "ZM-P-102", name: "Samsung 45W Charger", category: "electronics", issue: "low-stock", stock: 0 },
-    { id: "ZM-P-108", name: "Generic Phone Case", category: "fashion", issue: "zero-sales", stock: 150 },
-    { id: "ZM-P-109", name: "Bluetooth Mouse", category: "electronics", issue: "low-sales", stock: 45 },
-  ],
-  customerStats: { total: 280, new: 195, returning: 85, returningRate: 30.3 },
-  recentActivity: [
-    { id: "ACT-1", type: "order", message: "Large order placed by Chanda M.", amount: 18500, time: "10 mins ago" },
-    { id: "ACT-2", type: "refund", message: "Refund processed for ZM-P-104", amount: 2100, time: "2 hours ago" },
-    { id: "ACT-3", type: "stock", message: "Samsung 45W Charger out of stock", time: "5 hours ago" },
-    { id: "ACT-4", type: "payout", message: "Payout WD-8892 completed", amount: 4455, time: "Yesterday" },
-  ],
-};
-
-async function fetchAnalytics(range: TimeRange): Promise<AnalyticsData> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (Math.random() < 0.05) reject(new Error("Failed to load analytics data."));
-
-      const multiplier = range === "24h" ? 0.03 : range === "7d" ? 0.25 : range === "12m" ? 12 : 1;
-
-      resolve({
-        summary: {
-          totalRevenue: BASE_MOCK_30D.summary.totalRevenue * multiplier,
-          revenueGrowth: BASE_MOCK_30D.summary.revenueGrowth * (Math.random() > 0.5 ? 1 : -1),
-          totalOrders: Math.floor(BASE_MOCK_30D.summary.totalOrders * multiplier),
-          orderGrowth: BASE_MOCK_30D.summary.orderGrowth * (Math.random() > 0.5 ? 1 : -1),
-          totalCustomers: Math.floor(BASE_MOCK_30D.summary.totalCustomers * multiplier),
-          customerGrowth: BASE_MOCK_30D.summary.customerGrowth * (Math.random() > 0.5 ? 1 : -1),
-          avgOrderValue: BASE_MOCK_30D.summary.avgOrderValue * (1 + (Math.random() * 0.1 - 0.05)),
-          refundRate: Math.max(0.5, BASE_MOCK_30D.summary.refundRate * (Math.random() * 2)),
-          conversionRate: Math.max(1, BASE_MOCK_30D.summary.conversionRate * (Math.random() * 1.5)),
-        },
-        trends:
-          range === "24h"
-            ? [
-                { label: "00:00", revenue: 500, orders: 2 },
-                { label: "06:00", revenue: 1200, orders: 5 },
-                { label: "12:00", revenue: 3400, orders: 12 },
-                { label: "18:00", revenue: 2100, orders: 8 },
-              ]
-            : BASE_MOCK_30D.trends.map((t) => ({
-                ...t,
-                revenue: t.revenue * multiplier,
-                orders: Math.floor(t.orders * multiplier),
-              })),
-        orderStats: {
-          total: Math.floor(BASE_MOCK_30D.orderStats.total * multiplier),
-          delivered: Math.floor(BASE_MOCK_30D.orderStats.delivered * multiplier),
-          processing: Math.floor(BASE_MOCK_30D.orderStats.processing * multiplier),
-          cancelled: Math.floor(BASE_MOCK_30D.orderStats.cancelled * multiplier),
-          refunded: Math.floor(BASE_MOCK_30D.orderStats.refunded * multiplier),
-        },
-        topProducts: BASE_MOCK_30D.topProducts.map((p) => ({
-          ...p,
-          sales: Math.max(1, Math.floor(p.sales * multiplier)),
-          revenue: p.revenue * multiplier,
-        })),
-        categoryPerformance: BASE_MOCK_30D.categoryPerformance.map((c) => ({
-          ...c,
-          sales: Math.max(1, Math.floor(c.sales * multiplier)),
-          revenue: c.revenue * multiplier,
-        })),
-        lowPerformers: BASE_MOCK_30D.lowPerformers,
-        customerStats: {
-          total: Math.floor(BASE_MOCK_30D.customerStats.total * multiplier),
-          new: Math.floor(BASE_MOCK_30D.customerStats.new * multiplier),
-          returning: Math.floor(BASE_MOCK_30D.customerStats.returning * multiplier),
-          returningRate: BASE_MOCK_30D.customerStats.returningRate * (1 + (Math.random() * 0.2 - 0.1)),
-        },
-        recentActivity: BASE_MOCK_30D.recentActivity,
-      });
-    }, 800);
-  });
-}
+import {
+  fetchSellerAnalyticsData,
+  type SellerAnalyticsCategoryFilter,
+  type SellerAnalyticsData,
+  type SellerAnalyticsTimeRange,
+} from "@/services/seller-metrics";
 
 function formatCurrency(value: number) {
   return `K${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -306,19 +134,19 @@ function ProgressBar({
 }
 
 export default function SellerAnalyticsPage() {
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [data, setData] = useState<SellerAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [range, setRange] = useState<TimeRange>("30d");
+  const [range, setRange] = useState<SellerAnalyticsTimeRange>("30d");
   const [chartMetric, setChartMetric] = useState<"revenue" | "orders">("revenue");
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<SellerAnalyticsCategoryFilter>("all");
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await fetchAnalytics(range);
+      const result = await fetchSellerAnalyticsData(range);
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load analytics");
@@ -422,19 +250,21 @@ export default function SellerAnalyticsPage() {
             <Filter className="ml-2 h-4 w-4 text-zinc-400" />
             <select
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}
+              onChange={(e) => setCategoryFilter(e.target.value as SellerAnalyticsCategoryFilter)}
               className="h-8 cursor-pointer appearance-none bg-transparent px-3 text-xs font-bold text-zinc-700 outline-none"
               aria-label="Filter analytics by category"
             >
               <option value="all">All Categories</option>
-              <option value="electronics">Electronics</option>
-              <option value="fashion">Fashion</option>
-              <option value="home-appliances">Home Appliances</option>
+              {data.categoryPerformance.map((category) => (
+                <option key={category.slug} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
             </select>
           </div>
           <select
             value={range}
-            onChange={(e) => setRange(e.target.value as TimeRange)}
+            onChange={(e) => setRange(e.target.value as SellerAnalyticsTimeRange)}
             className="h-10 cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-white px-4 pr-8 text-sm font-bold text-zinc-700 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#009E49]"
             aria-label="Filter analytics by time range"
           >

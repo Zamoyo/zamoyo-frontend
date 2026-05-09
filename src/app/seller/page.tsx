@@ -12,121 +12,47 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
+import {
+  fetchSellerDashboardData,
+  type SellerActivityItem,
+  type SellerDashboardData,
+  type SellerDashboardRange,
+  type SellerOrderStatusPoint,
+  type SellerRecentOrder,
+} from "@/services/seller-metrics";
 
-// ============================================================================
-// 1. DATA CONTRACTS
-// ============================================================================
-type RangeKey = "7d" | "30d" | "12m";
-type RevenuePoint = { label: string; revenue: number };
-type OrderStatusPoint = { name: string; value: number; color: string };
-type LowStockItem = { id: number; name: string; stock: number; threshold: number };
-type RecentOrder = { id: string; customer: string; total: number; status: "new" | "processing" | "shipped" | "delivered" };
-type ActivityItem = { id: number; text: string; time: string; tone: "info" | "warning" | "success" };
-
-interface DashboardData {
-  revenueByRange: Record<RangeKey, RevenuePoint[]>;
-  orderStatusData: OrderStatusPoint[];
-  lowStockItems: LowStockItem[];
-  recentOrders: RecentOrder[];
-  recentActivity: ActivityItem[];
-  kpis: {
-    pendingOrders: number;
-    activeProducts: number;
-    payoutAvailable: number;
-    payoutPending: number;
-  };
-}
-
-// ============================================================================
-// 2. MOCK API SERVICE (The Engine)
-// ============================================================================
-const MOCK_DASHBOARD_DATA: DashboardData = {
-  revenueByRange: {
-    "7d": [
-      { label: "Mon", revenue: 4500 }, { label: "Tue", revenue: 5200 }, { label: "Wed", revenue: 3800 },
-      { label: "Thu", revenue: 6500 }, { label: "Fri", revenue: 8900 }, { label: "Sat", revenue: 12400 }, { label: "Sun", revenue: 10200 },
-    ],
-    "30d": [
-      { label: "W1", revenue: 28500 }, { label: "W2", revenue: 33200 }, { label: "W3", revenue: 30100 }, { label: "W4", revenue: 38900 },
-    ],
-    "12m": [
-      { label: "Jan", revenue: 92000 }, { label: "Feb", revenue: 104000 }, { label: "Mar", revenue: 98000 },
-      { label: "Apr", revenue: 112000 }, { label: "May", revenue: 125000 }, { label: "Jun", revenue: 119000 },
-    ],
-  },
-  orderStatusData: [
-    { name: "Processing", value: 12, color: "#F59E0B" },
-    { name: "Shipped", value: 24, color: "#3B82F6" },
-    { name: "Delivered", value: 45, color: "#009E49" },
-    { name: "Cancelled", value: 3, color: "#EF4444" },
-  ],
-  lowStockItems: [
-    { id: 1, name: "Apple AirPods Pro (2nd Gen)", stock: 2, threshold: 5 },
-    { id: 2, name: "Samsung 45W Fast Charger", stock: 0, threshold: 10 },
-    { id: 3, name: "JBL Flip 6 Portable", stock: 4, threshold: 5 },
-  ],
-  recentOrders: [
-    { id: "ORD-9921", customer: "Chanda M.", total: 18500, status: "new" },
-    { id: "ORD-9920", customer: "Bupe K.", total: 450, status: "processing" },
-    { id: "ORD-9918", customer: "Emmanuel B.", total: 4200, status: "shipped" },
-    { id: "ORD-9910", customer: "David L.", total: 1450, status: "delivered" },
-  ],
-  recentActivity: [
-    { id: 1, text: "New order received from Chanda M.", time: "10 mins ago", tone: "info" },
-    { id: 2, text: "Samsung 45W Fast Charger is out of stock", time: "35 mins ago", tone: "warning" },
-    { id: 3, text: "Product listing approved by admin", time: "2 hours ago", tone: "success" },
-  ],
-  kpis: {
-    pendingOrders: 12,
-    activeProducts: 84,
-    payoutAvailable: 8450,
-    payoutPending: 2300,
-  }
-};
-
-async function fetchDashboardData(): Promise<DashboardData> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (Math.random() < 0.05) reject(new Error("Failed to load dashboard metrics."));
-      else resolve(MOCK_DASHBOARD_DATA);
-    }, 600);
-  });
-}
-
-// ============================================================================
-// 3. LOGIC HELPERS
-// ============================================================================
 function formatCurrency(value: number) {
   return `K${value.toLocaleString()}`;
 }
 
 function getTodayLabel() {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date());
+  return new Intl.DateTimeFormat("en-ZM", { month: "short", day: "numeric", year: "numeric" }).format(new Date());
 }
 
-function getStatusPillClass(status: RecentOrder["status"]) {
+function getStatusPillClass(status: SellerRecentOrder["status"]) {
   if (status === "new") return "bg-blue-50 text-blue-600 border-blue-200";
   if (status === "processing") return "bg-amber-50 text-amber-700 border-amber-200";
   if (status === "shipped") return "bg-purple-50 text-purple-700 border-purple-200";
-  return "bg-[#009E49]/10 text-[#009E49] border-[#009E49]/20";
+  if (status === "delivered") return "bg-[#009E49]/10 text-[#009E49] border-[#009E49]/20";
+  if (status === "refund") return "bg-orange-50 text-orange-700 border-orange-200";
+  return "bg-red-50 text-red-700 border-red-200";
 }
 
-function getActivityDotClass(tone: ActivityItem["tone"]) {
+function getActivityDotClass(tone: SellerActivityItem["tone"]) {
   if (tone === "warning") return "bg-[#FF6B00]";
   if (tone === "success") return "bg-[#009E49]";
   return "bg-blue-500";
 }
 
-function getOrderStatusDotClass(name: OrderStatusPoint["name"]) {
+function getOrderStatusDotClass(name: SellerOrderStatusPoint["name"]) {
+  if (name === "New") return "bg-blue-500";
   if (name === "Processing") return "bg-amber-500";
-  if (name === "Shipped") return "bg-blue-500";
+  if (name === "Shipped") return "bg-indigo-500";
   if (name === "Delivered") return "bg-[#009E49]";
+  if (name === "Refunded") return "bg-orange-500";
   return "bg-red-500";
 }
 
-// ============================================================================
-// 4. SUBCOMPONENTS
-// ============================================================================
 function QuickActionCard({ href, icon: Icon, title, description }: { href: string; icon: React.ComponentType<{ className?: string }>; title: string; description: string }) {
   return (
     <Link href={href} className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -139,21 +65,18 @@ function QuickActionCard({ href, icon: Icon, title, description }: { href: strin
   );
 }
 
-// ============================================================================
-// 5. MAIN PAGE EXPORT
-// ============================================================================
 export default function SellerDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] = useState<SellerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [range, setRange] = useState<RangeKey>("7d");
+  const [range, setRange] = useState<SellerDashboardRange>("7d");
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await fetchDashboardData();
+      const result = await fetchSellerDashboardData();
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -166,7 +89,6 @@ export default function SellerDashboard() {
     loadData();
   }, [loadData]);
 
-  // FIX: Wrapped revenueData in useMemo so the fallback [] doesn't break referential equality
   const revenueData = useMemo(() => {
     return data?.revenueByRange[range] || [];
   }, [data, range]);
@@ -285,8 +207,9 @@ export default function SellerDashboard() {
             </div>
             
             <select
+              aria-label="Dashboard date range"
               value={range}
-              onChange={(e) => setRange(e.target.value as RangeKey)}
+              onChange={(e) => setRange(e.target.value as SellerDashboardRange)}
               className="h-10 rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-xs font-bold text-zinc-700 outline-none focus-visible:ring-2 focus-visible:ring-[#009E49] w-full sm:w-auto appearance-none cursor-pointer"
             >
               <option value="7d">Last 7 Days</option>

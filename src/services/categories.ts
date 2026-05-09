@@ -125,7 +125,7 @@ const HERO_BANNERS: HeroBanner[] = [
     subtitle: "Welcome to Zamoyo. Shop across all categories with massive discounts.",
     image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=2070&q=80",
     ctaLabel: "Start Shopping",
-    ctaHref: "/categories",
+    ctaHref: "/products",
     overlayClass: "from-[#009E49]/95 via-[#009E49]/70 to-transparent",
     badge: "Welcome",
   },

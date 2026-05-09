@@ -40,7 +40,7 @@ type NotificationTypeMeta = {
 };
 
 // ============================================================================
-// 2. MOCK API SERVICE (The Engine)
+// 2. FRONTEND FIXTURE SERVICE
 // ============================================================================
 const now = new Date();
 const today1 = new Date(now.getTime() - 15 * 60000).toISOString();
@@ -58,10 +58,9 @@ const MOCK_NOTIFICATIONS: SellerNotification[] = [
 
 const notificationsApi = {
   async fetchAll(): Promise<SellerNotification[]> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       setTimeout(() => {
-        if (Math.random() < 0.05) reject(new Error("Failed to load notifications."));
-        else resolve([...MOCK_NOTIFICATIONS]);
+        resolve(MOCK_NOTIFICATIONS.map((notification) => ({ ...notification, meta: notification.meta ? { ...notification.meta } : undefined })));
       }, 600);
     });
   },
@@ -226,7 +225,7 @@ export default function SellerNotificationsPage() {
           <Button variant="outline" onClick={handleMarkAllAsRead} disabled={unreadCount === 0} className="h-10 rounded-xl border-zinc-200 bg-white px-4 text-xs font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 md:text-sm">
             <Check className="mr-2 h-4 w-4" /> Mark all read
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleClearAll} disabled={notifications.length === 0} className="h-10 w-10 rounded-xl text-zinc-400 hover:bg-red-50 hover:text-red-600">
+          <Button aria-label="Clear all notifications" variant="ghost" size="icon" onClick={handleClearAll} disabled={notifications.length === 0} className="h-10 w-10 rounded-xl text-zinc-400 hover:bg-red-50 hover:text-red-600">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>

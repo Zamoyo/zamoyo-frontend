@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Box, Filter, Image as ImageIcon, MoreVertical, Package, Plus, Search, AlertCircle,
@@ -8,58 +9,53 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  ActionMenu,
+  ActionMenuContent,
+  ActionMenuItem,
+  ActionMenuNote,
+  ActionMenuSeparator,
+  ActionMenuTrigger,
+} from "@/components/ui/action-menu";
 import { toast } from "sonner";
 import { SellerPageLoading } from "@/components/seller/SellerPageLoading";
+import {
+  duplicateSellerProduct,
+  fetchSellerCatalogProducts,
+  removeSellerProduct,
+  updateSellerProductStatus,
+  type SellerProductListing,
+  type SellerProductStatus,
+} from "@/services/seller-catalog";
+import { getProductModerationStatusLabel } from "@/services/product-moderation";
 
 // ============================================================================
 // 1. DATA CONTRACTS
 // ============================================================================
-type ProductStatus = "active" | "draft" | "review" | "rejected";
-type ProductTab = "all" | "active" | "draft" | "review" | "rejected" | "low-stock" | "out-of-stock";
-
-type SellerProduct = {
-  id: string;
-  name: string;
-  brand: string;
-  category: string;
-  subcategory: string;
-  price: number;
-  stock: number;
-  lowStockThreshold: number;
-  status: ProductStatus;
-  image?: string | null;
-};
-
-// ============================================================================
-// 2. MOCK API SERVICE (The Engine)
-// ============================================================================
-const MOCK_PRODUCTS: SellerProduct[] = [
-  { id: "ZM-P-101", name: "MacBook Air M2 - 256GB Midnight", brand: "Apple", category: "Electronics", subcategory: "Laptops", price: 18500, stock: 12, lowStockThreshold: 5, status: "active", image: null },
-  { id: "ZM-P-102", name: "Samsung 45W Fast Charger Type-C", brand: "Samsung", category: "Electronics", subcategory: "Accessories", price: 450, stock: 0, lowStockThreshold: 10, status: "active", image: null },
-  { id: "ZM-P-103", name: "Apple AirPods Pro (2nd Generation)", brand: "Apple", category: "Electronics", subcategory: "Audio & Headphones", price: 4200, stock: 2, lowStockThreshold: 5, status: "active", image: null },
-  { id: "ZM-P-104", name: "JBL Flip 6 Portable Bluetooth Speaker", brand: "JBL", category: "Electronics", subcategory: "Audio & Headphones", price: 2100, stock: 45, lowStockThreshold: 5, status: "review", image: null },
-  { id: "ZM-P-105", name: "PlayStation 5 DualSense Controller", brand: "Sony", category: "Electronics", subcategory: "Gaming Consoles", price: 1450, stock: 8, lowStockThreshold: 4, status: "draft", image: null },
-  { id: "ZM-P-106", name: "Nike Air Max 270", brand: "Nike", category: "Fashion", subcategory: "Footwear", price: 1850, stock: 3, lowStockThreshold: 6, status: "rejected", image: null },
-];
+type ProductTab =
+  | "all"
+  | "published"
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "needs_changes"
+  | "rejected"
+  | "suspended"
+  | "low-stock"
+  | "out-of-stock";
 
 const PRODUCT_TABS: Array<{ id: ProductTab; label: string }> = [
   { id: "all", label: "All" },
-  { id: "active", label: "Active" },
+  { id: "published", label: "Published" },
   { id: "draft", label: "Draft" },
-  { id: "review", label: "Under Review" },
+  { id: "pending_review", label: "Pending Review" },
+  { id: "approved", label: "Approved" },
+  { id: "needs_changes", label: "Needs Changes" },
   { id: "rejected", label: "Rejected" },
+  { id: "suspended", label: "Suspended" },
   { id: "low-stock", label: "Low Stock" },
   { id: "out-of-stock", label: "Out of Stock" },
 ];
-
-async function fetchSellerProducts(): Promise<SellerProduct[]> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (Math.random() < 0.05) reject(new Error("Failed to load products."));
-      else resolve(MOCK_PRODUCTS);
-    }, 800);
-  });
-}
 
 // ============================================================================
 // 3. LOGIC HELPERS
@@ -68,7 +64,7 @@ function formatCurrency(value: number) {
   return `K${value.toLocaleString()}`;
 }
 
-function getStockState(product: SellerProduct) {
+function getStockState(product: SellerProductListing) {
   if (product.stock === 0) return "out-of-stock";
   if (product.stock <= product.lowStockThreshold) return "low-stock";
   return "in-stock";
@@ -77,29 +73,25 @@ function getStockState(product: SellerProduct) {
 // ============================================================================
 // 4. SUBCOMPONENTS
 // ============================================================================
-function ListingStatusBadge({ status }: { status: ProductStatus }) {
-  const styles: Record<ProductStatus, string> = {
-    active: "bg-[#009E49]/10 text-[#009E49] border-[#009E49]/20",
+function ListingStatusBadge({ status }: { status: SellerProductStatus }) {
+  const styles: Record<SellerProductStatus, string> = {
+    published: "bg-[#009E49]/10 text-[#009E49] border-[#009E49]/20",
     draft: "bg-zinc-100 text-zinc-700 border-zinc-200",
-    review: "bg-blue-50 text-blue-700 border-blue-200",
+    pending_review: "bg-blue-50 text-blue-700 border-blue-200",
+    approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    needs_changes: "bg-orange-50 text-orange-700 border-orange-200",
     rejected: "bg-red-50 text-red-600 border-red-200",
-  };
-
-  const labels: Record<ProductStatus, string> = {
-    active: "Active",
-    draft: "Draft",
-    review: "Under Review",
-    rejected: "Rejected",
+    suspended: "bg-red-100 text-red-700 border-red-200",
   };
 
   return (
     <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${styles[status]}`}>
-      {labels[status]}
+      {getProductModerationStatusLabel(status)}
     </span>
   );
 }
 
-function StockBadge({ product }: { product: SellerProduct }) {
+function StockBadge({ product }: { product: SellerProductListing }) {
   const stockState = getStockState(product);
 
   if (stockState === "out-of-stock") {
@@ -174,85 +166,61 @@ function CategoryDropdown({ value, onChange, categories }: { value: string; onCh
 function ProductActionMenu({
   product,
   onDuplicate,
-  onToggleDraft,
-  onActivate,
+  onSubmitForReview,
   onRemove,
 }: {
-  product: SellerProduct;
-  onDuplicate: (product: SellerProduct) => void;
-  onToggleDraft: (productId: string) => void;
-  onActivate: (productId: string) => void;
+  product: SellerProductListing;
+  onDuplicate: (product: SellerProductListing) => void;
+  onSubmitForReview: (productId: string) => void;
   onRemove: (productId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setOpen((prev) => !prev)}
-        className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
-      >
-        <MoreVertical className="h-4 w-4" />
-      </Button>
-      {open ? (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-            aria-label="Close menu"
-          />
-          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
-            <button
-              type="button"
-              onClick={() => {
-                onDuplicate(product);
-                setOpen(false);
-              }}
-              className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-            >
-              Duplicate Listing
-            </button>
-            {product.status === "active" ? (
-              <button
-                type="button"
-                onClick={() => {
-                  onToggleDraft(product.id);
-                  setOpen(false);
-                }}
-                className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-              >
-                Move to Draft
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  onActivate(product.id);
-                  setOpen(false);
-                }}
-                className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-100"
-              >
-                Publish Listing
-              </button>
-            )}
-            <div className="my-1 h-px bg-zinc-100" />
-            <button
-              type="button"
-              onClick={() => {
-                onRemove(product.id);
-                setOpen(false);
-              }}
-              className="flex w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
-            >
-              Remove Listing
-            </button>
-          </div>
-        </>
-      ) : null}
-    </div>
+    <ActionMenu open={open} onOpenChange={setOpen}>
+      <ActionMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Open product actions for ${product.title}`}
+          className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </ActionMenuTrigger>
+      <ActionMenuContent>
+        <ActionMenuItem
+          onClick={() => {
+            onDuplicate(product);
+            setOpen(false);
+          }}
+        >
+          Duplicate Listing
+        </ActionMenuItem>
+        {product.status === "draft" || product.status === "needs_changes" || product.status === "rejected" ? (
+          <ActionMenuItem
+            onClick={() => {
+              onSubmitForReview(product.id);
+              setOpen(false);
+            }}
+          >
+            {product.status === "draft" ? "Submit for Review" : "Resubmit for Review"}
+          </ActionMenuItem>
+        ) : (
+          <ActionMenuNote>Status controlled by moderation flow</ActionMenuNote>
+        )}
+        <ActionMenuSeparator />
+        <ActionMenuItem
+          onClick={() => {
+            onRemove(product.id);
+            setOpen(false);
+          }}
+          className="text-red-600 hover:bg-red-50 focus-visible:ring-red-200"
+        >
+          Remove Listing
+        </ActionMenuItem>
+      </ActionMenuContent>
+    </ActionMenu>
   );
 }
 
@@ -260,7 +228,7 @@ function ProductActionMenu({
 // 5. MAIN PAGE EXPORT
 // ============================================================================
 export default function SellerProductsPage() {
-  const [products, setProducts] = useState<SellerProduct[]>([]);
+  const [products, setProducts] = useState<SellerProductListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -268,40 +236,41 @@ export default function SellerProductsPage() {
   const [activeTab, setActiveTab] = useState<ProductTab>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  const duplicateProduct = useCallback((product: SellerProduct) => {
-    const duplicateId = `${product.id}-copy-${Date.now()}`;
-    setProducts((prev) => [{ ...product, id: duplicateId, status: "draft" }, ...prev]);
-    toast.success(`${product.name} duplicated as draft.`);
+  const duplicateProduct = useCallback(async (product: SellerProductListing) => {
+    try {
+      const duplicate = await duplicateSellerProduct(product.id);
+      setProducts((prev) => [duplicate, ...prev]);
+      toast.success(`${product.title} duplicated as draft.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate product.");
+    }
   }, []);
 
-  const moveProductToDraft = useCallback((productId: string) => {
-    setProducts((prev) =>
-      prev.map((product) =>
-        product.id === productId ? { ...product, status: "draft" } : product,
-      ),
-    );
-    toast.success("Product moved to draft.");
+  const submitProductForReview = useCallback(async (productId: string) => {
+    try {
+      const updated = await updateSellerProductStatus(productId, "pending_review");
+      setProducts((prev) => prev.map((product) => (product.id === productId ? updated : product)));
+      toast.success("Product submitted for review.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update product.");
+    }
   }, []);
 
-  const publishProduct = useCallback((productId: string) => {
-    setProducts((prev) =>
-      prev.map((product) =>
-        product.id === productId ? { ...product, status: "active" } : product,
-      ),
-    );
-    toast.success("Product is now live.");
-  }, []);
-
-  const removeProduct = useCallback((productId: string) => {
-    setProducts((prev) => prev.filter((product) => product.id !== productId));
-    toast.success("Product removed from this list.");
+  const removeProduct = useCallback(async (productId: string) => {
+    try {
+      await removeSellerProduct(productId);
+      setProducts((prev) => prev.filter((product) => product.id !== productId));
+      toast.success("Product removed from this list.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove product.");
+    }
   }, []);
 
   const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchSellerProducts();
+      const data = await fetchSellerCatalogProducts();
       setProducts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -314,13 +283,14 @@ export default function SellerProductsPage() {
     loadProducts();
   }, [loadProducts]);
 
-  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))).sort(), [products]);
+  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.categoryName))).sort(), [products]);
 
   const summary = useMemo(() => {
     return {
       total: products.length,
-      active: products.filter((p) => p.status === "active").length,
+      published: products.filter((p) => p.status === "published").length,
       draft: products.filter((p) => p.status === "draft").length,
+      pendingReview: products.filter((p) => p.status === "pending_review").length,
       lowStock: products.filter((p) => getStockState(p) === "low-stock").length,
       outOfStock: products.filter((p) => getStockState(p) === "out-of-stock").length,
     };
@@ -329,8 +299,8 @@ export default function SellerProductsPage() {
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return products.filter((product) => {
-      const matchesSearch = !query || product.name.toLowerCase().includes(query) || product.id.toLowerCase().includes(query) || product.brand.toLowerCase().includes(query);
-      const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+      const matchesSearch = !query || product.title.toLowerCase().includes(query) || product.id.toLowerCase().includes(query) || product.brand.toLowerCase().includes(query);
+      const matchesCategory = categoryFilter === "all" || product.categoryName === categoryFilter;
       const stockState = getStockState(product);
       const matchesTab = activeTab === "all" || (activeTab === "low-stock" && stockState === "low-stock") || (activeTab === "out-of-stock" && stockState === "out-of-stock") || product.status === activeTab;
       
@@ -397,22 +367,22 @@ export default function SellerProductsPage() {
         
         <div className="relative overflow-hidden rounded-2xl border border-[#009E49]/20 bg-[#009E49]/5 p-4 shadow-sm transition-all hover:shadow-md">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#009E49]">Active</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#009E49]">Published</p>
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#009E49]/10 text-[#009E49]">
               <CheckCircle2 className="h-3.5 w-3.5" />
             </div>
           </div>
-          <p className="text-2xl font-black text-zinc-900">{summary.active}</p>
+          <p className="text-2xl font-black text-zinc-900">{summary.published}</p>
         </div>
         
-        <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm transition-all hover:shadow-md">
+        <div className="relative overflow-hidden rounded-2xl border border-blue-100 bg-blue-50/60 p-4 shadow-sm transition-all hover:shadow-md">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Draft</p>
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200/50 text-zinc-600">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Pending Review</p>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-100 text-blue-700">
               <FileEdit className="h-3.5 w-3.5" />
             </div>
           </div>
-          <p className="text-2xl font-black text-zinc-900">{summary.draft}</p>
+          <p className="text-2xl font-black text-zinc-900">{summary.pendingReview}</p>
         </div>
         
         <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/80 p-4 shadow-sm transition-all hover:shadow-md">
@@ -495,22 +465,31 @@ export default function SellerProductsPage() {
             {filteredProducts.map((product) => (
               <div key={product.id} className="grid grid-cols-1 gap-4 p-4 transition-colors hover:bg-zinc-50/50 md:grid-cols-[72px_minmax(0,1fr)_120px_120px_120px_52px] md:items-center">
                 
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 md:h-12 md:w-12 shrink-0">
-                  <ImageIcon className="h-5 w-5 text-zinc-300" />
+                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 md:h-12 md:w-12">
+                  {product.images[0]?.url ? (
+                    <Image src={product.images[0].url} alt={product.title} fill sizes="64px" unoptimized className="object-cover" />
+                  ) : (
+                    <ImageIcon className="h-5 w-5 text-zinc-300" />
+                  )}
                 </div>
 
                 <div className="min-w-0">
-                  <h3 className="truncate text-sm font-bold text-zinc-900">{product.name}</h3>
+                  <h3 className="truncate text-sm font-bold text-zinc-900">{product.title}</h3>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{product.id}</span>
                     <span className="h-1 w-1 rounded-full bg-zinc-300" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{product.brand}</span>
                     <span className="h-1 w-1 rounded-full bg-zinc-300" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{product.category}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{product.categoryName}</span>
                   </div>
+                  {product.moderation?.moderationNotes && (product.status === "needs_changes" || product.status === "rejected") ? (
+                    <p className="mt-2 truncate text-[11px] font-medium text-orange-700">
+                      {product.moderation.moderationNotes}
+                    </p>
+                  ) : null}
                 </div>
 
-                <div className="hidden text-sm font-black text-zinc-900 md:block">{formatCurrency(product.price)}</div>
+                <div className="hidden text-sm font-black text-zinc-900 md:block">{formatCurrency(product.salePrice ?? product.price)}</div>
                 <div className="hidden justify-center md:flex"><StockBadge product={product} /></div>
                 <div className="hidden justify-center md:flex"><ListingStatusBadge status={product.status} /></div>
 
@@ -518,23 +497,21 @@ export default function SellerProductsPage() {
                   <ProductActionMenu
                     product={product}
                     onDuplicate={duplicateProduct}
-                    onToggleDraft={moveProductToDraft}
-                    onActivate={publishProduct}
+                    onSubmitForReview={submitProductForReview}
                     onRemove={removeProduct}
                   />
                 </div>
 
                 {/* Mobile View Additions */}
                 <div className="flex items-center justify-between border-t border-zinc-100 pt-3 mt-1 md:hidden">
-                  <div className="text-sm font-black text-zinc-900">{formatCurrency(product.price)}</div>
+                  <div className="text-sm font-black text-zinc-900">{formatCurrency(product.salePrice ?? product.price)}</div>
                   <div className="flex items-center gap-2">
                     <StockBadge product={product} />
                     <ListingStatusBadge status={product.status} />
                     <ProductActionMenu
                       product={product}
                       onDuplicate={duplicateProduct}
-                      onToggleDraft={moveProductToDraft}
-                      onActivate={publishProduct}
+                      onSubmitForReview={submitProductForReview}
                       onRemove={removeProduct}
                     />
                   </div>

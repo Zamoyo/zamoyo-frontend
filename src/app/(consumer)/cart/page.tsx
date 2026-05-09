@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PurchaseProgress } from "@/components/checkout/PurchaseProgress";
 import { useCart, type CartItemIdentity } from "@/hooks/use-cart";
 
 function formatCurrency(value: number) {
@@ -43,6 +44,7 @@ export default function CartPage() {
           <h1 className="text-3xl font-black tracking-tight text-zinc-900 md:text-4xl">Your Cart</h1>
           <p className="mt-2 text-sm font-medium text-zinc-500">Review your items before checkout.</p>
         </div>
+        <PurchaseProgress currentStep="cart" className="mb-5" />
 
         {items.length ? (
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">

@@ -2,9 +2,14 @@ import { normalizeProduct } from "@/lib/normalizers/product";
 import type {
   CategoryFilterOption,
   CategoryPageData,
+  ProductPaginationMeta,
   CategorySortOption,
 } from "@/types/category";
 import type { Product, ProductDetail } from "@/types/product";
+import {
+  getSellerConsumerCatalogProducts,
+  getSellerConsumerProductDetailBySlug,
+} from "@/services/seller-catalog";
 
 const TRENDING_PRODUCTS: Product[] = [
   normalizeProduct({
@@ -217,32 +222,208 @@ const FLASH_SALE_PRODUCTS: Product[] = [
   }),
 ];
 
-const CATEGORY_PRODUCTS: Product[] = Array.from({ length: 12 }).map((_, index) => {
-  const subcategoryPool = [
-    { categoryName: "Fashion", subcategoryName: "Footwear" },
-    { categoryName: "Fashion", subcategoryName: "Men's Fashion" },
-    { categoryName: "Fashion", subcategoryName: "Women's Fashion" },
-    { categoryName: "Electronics", subcategoryName: "Audio" },
-    { categoryName: "Computing", subcategoryName: "Laptops" },
-    { categoryName: "Phones & Tablets", subcategoryName: "Smartphones" },
-  ];
-
-  const selected = subcategoryPool[index % subcategoryPool.length];
-
-  return normalizeProduct({
-    id: `product-${index + 1}`,
-    slug: `premium-product-model-${index + 1}`,
-    name: `Premium Product Model ${index + 1}`,
-    categoryName: selected.categoryName,
-    subcategoryName: selected.subcategoryName,
-    price: 1500 + index * 250,
-    originalPrice: 2000 + index * 300,
-    rating: index % 3 === 0 ? 4.5 : 4.8,
-    reviews: 120 + index,
-    badge: index % 4 === 0 ? "NEW" : null,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
-  });
-});
+const CATEGORY_PRODUCTS: Product[] = [
+  normalizeProduct({
+    id: "fashion-ankara-midi-dress",
+    slug: "ankara-midi-dress",
+    name: "Ankara Midi Dress",
+    categoryName: "Fashion",
+    subcategoryName: "Women's Fashion",
+    price: 620,
+    originalPrice: 780,
+    rating: 4.7,
+    reviews: 76,
+    badge: "New",
+    image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "fashion-leather-office-loafers",
+    slug: "leather-office-loafers",
+    name: "Leather Office Loafers",
+    categoryName: "Fashion",
+    subcategoryName: "Footwear",
+    price: 890,
+    originalPrice: 1050,
+    rating: 4.6,
+    reviews: 91,
+    image: "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "electronics-bluetooth-party-speaker",
+    slug: "bluetooth-party-speaker",
+    name: "Bluetooth Party Speaker",
+    categoryName: "Electronics",
+    subcategoryName: "Audio",
+    price: 1750,
+    originalPrice: 2150,
+    rating: 4.8,
+    reviews: 144,
+    badge: "Hot",
+    image: "https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "electronics-43-inch-smart-tv",
+    slug: "43-inch-smart-tv",
+    name: '43" Smart LED TV',
+    categoryName: "Electronics",
+    subcategoryName: "TVs & Entertainment",
+    price: 6500,
+    originalPrice: 7200,
+    rating: 4.7,
+    reviews: 62,
+    image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "computing-hp-elitebook-840",
+    slug: "hp-elitebook-840-g8",
+    name: "HP EliteBook 840 G8",
+    categoryName: "Computing",
+    subcategoryName: "Laptops",
+    price: 11800,
+    originalPrice: 13200,
+    rating: 4.6,
+    reviews: 108,
+    badge: "Top Rated",
+    image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "computing-wireless-keyboard-mouse",
+    slug: "wireless-keyboard-mouse-combo",
+    name: "Wireless Keyboard & Mouse Combo",
+    categoryName: "Computing",
+    subcategoryName: "Accessories",
+    price: 420,
+    originalPrice: 520,
+    rating: 4.5,
+    reviews: 73,
+    image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "phones-infinix-note-40-pro",
+    slug: "infinix-note-40-pro",
+    name: "Infinix Note 40 Pro",
+    categoryName: "Phones & Tablets",
+    subcategoryName: "Smartphones",
+    price: 5400,
+    originalPrice: 6100,
+    rating: 4.6,
+    reviews: 203,
+    badge: "Popular",
+    image: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "phones-tablet-android-10-inch",
+    slug: "android-10-inch-tablet",
+    name: 'Android 10" Learning Tablet',
+    categoryName: "Phones & Tablets",
+    subcategoryName: "Tablets",
+    price: 2850,
+    originalPrice: 3400,
+    rating: 4.4,
+    reviews: 58,
+    image: "https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "supermarket-breakfast-bundle",
+    slug: "breakfast-pantry-bundle",
+    name: "Breakfast Pantry Bundle",
+    categoryName: "Supermarket",
+    subcategoryName: "Pantry",
+    price: 410,
+    originalPrice: 490,
+    rating: 4.8,
+    reviews: 188,
+    badge: "Best Seller",
+    image: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "supermarket-cooking-oil-5l",
+    slug: "pure-vegetable-cooking-oil-5l",
+    name: "Pure Vegetable Cooking Oil 5L",
+    categoryName: "Supermarket",
+    subcategoryName: "Household Essentials",
+    price: 265,
+    originalPrice: 310,
+    rating: 4.7,
+    reviews: 221,
+    image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "health-vitamin-c-zinc",
+    slug: "vitamin-c-zinc-tablets",
+    name: "Vitamin C + Zinc Tablets",
+    categoryName: "Health & Beauty",
+    subcategoryName: "Wellness",
+    price: 185,
+    originalPrice: 240,
+    rating: 4.6,
+    reviews: 84,
+    image: "https://images.unsplash.com/photo-1550572017-edd951aa8f72?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "health-shea-body-lotion",
+    slug: "shea-body-lotion",
+    name: "Shea Body Lotion",
+    categoryName: "Health & Beauty",
+    subcategoryName: "Skincare",
+    price: 145,
+    originalPrice: 190,
+    rating: 4.7,
+    reviews: 117,
+    badge: "New",
+    image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "sports-adjustable-dumbbells",
+    slug: "adjustable-dumbbell-set",
+    name: "Adjustable Dumbbell Set",
+    categoryName: "Sports & Outdoors",
+    subcategoryName: "Fitness",
+    price: 1350,
+    originalPrice: 1650,
+    rating: 4.8,
+    reviews: 96,
+    badge: "Hot",
+    image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "sports-camping-chair",
+    slug: "folding-camping-chair",
+    name: "Folding Camping Chair",
+    categoryName: "Sports & Outdoors",
+    subcategoryName: "Outdoor Gear",
+    price: 380,
+    originalPrice: 460,
+    rating: 4.5,
+    reviews: 52,
+    image: "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "home-ceramic-dinner-set",
+    slug: "ceramic-dinner-set-16-piece",
+    name: "Ceramic Dinner Set 16 Piece",
+    categoryName: "Home & Living",
+    subcategoryName: "Kitchen",
+    price: 720,
+    originalPrice: 860,
+    rating: 4.6,
+    reviews: 69,
+    image: "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=800&q=80",
+  }),
+  normalizeProduct({
+    id: "home-modern-floor-lamp",
+    slug: "modern-floor-lamp",
+    name: "Modern Floor Lamp",
+    categoryName: "Home & Living",
+    subcategoryName: "Decor",
+    price: 980,
+    originalPrice: 1180,
+    rating: 4.7,
+    reviews: 48,
+    badge: "New",
+    image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80",
+  }),
+];
 
 const PRODUCT_DETAIL_MOCK: ProductDetail = {
   id: 1,
@@ -270,8 +451,8 @@ const PRODUCT_DETAIL_MOCK: ProductDetail = {
   images: [
     "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1531297172867-4d4ce2e226d9?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1537498425277-c283d32ef9db?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=1200&q=80",
   ],
   variants: [
     { id: "midnight", label: "Color", value: "Midnight", swatchClass: "bg-zinc-800 border-[#FF6B00]" },
@@ -305,7 +486,7 @@ const SELLER_PRODUCTS: Product[] = [
     badge: "Hot",
     rating: 4.9,
     reviews: 320,
-    image: "https://images.unsplash.com/photo-1606220588913-b3aecb492b45?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=800&q=80",
   }),
   normalizeProduct({
     id: 102,
@@ -337,7 +518,7 @@ const SELLER_PRODUCTS: Product[] = [
     badge: "Sale",
     rating: 4.5,
     reviews: 67,
-    image: "https://images.unsplash.com/photo-1531297172867-4d4ce2e226d9?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1603313011101-320f26a4f6f6?auto=format&fit=crop&w=800&q=80",
   }),
 ];
 
@@ -430,6 +611,46 @@ const CATEGORY_META: Record<string, CategoryPageData["meta"]> = {
       { id: "cameras", slug: "cameras", name: "Cameras" },
     ],
   },
+  supermarket: {
+    title: "Supermarket",
+    description: "Shop pantry staples, drinks, household essentials, and daily supplies with fast local delivery.",
+    subcategories: [
+      { id: "all", slug: "all", name: "All" },
+      { id: "pantry", slug: "pantry", name: "Pantry" },
+      { id: "household-essentials", slug: "household-essentials", name: "Household" },
+      { id: "drinks", slug: "drinks", name: "Drinks" },
+    ],
+  },
+  "health-and-beauty": {
+    title: "Health & Beauty",
+    description: "Discover skincare, wellness, grooming, and beauty essentials from trusted Zamoyo sellers.",
+    subcategories: [
+      { id: "all", slug: "all", name: "All" },
+      { id: "skincare", slug: "skincare", name: "Skincare" },
+      { id: "wellness", slug: "wellness", name: "Wellness" },
+      { id: "grooming", slug: "grooming", name: "Grooming" },
+    ],
+  },
+  "sports-and-outdoors": {
+    title: "Sports & Outdoors",
+    description: "Find fitness gear, outdoor essentials, and active lifestyle products for everyday movement.",
+    subcategories: [
+      { id: "all", slug: "all", name: "All" },
+      { id: "fitness", slug: "fitness", name: "Fitness" },
+      { id: "outdoor-gear", slug: "outdoor-gear", name: "Outdoor Gear" },
+      { id: "team-sports", slug: "team-sports", name: "Team Sports" },
+    ],
+  },
+  "home-and-living": {
+    title: "Home & Living",
+    description: "Upgrade your home with kitchen, decor, storage, and everyday living essentials.",
+    subcategories: [
+      { id: "all", slug: "all", name: "All" },
+      { id: "kitchen", slug: "kitchen", name: "Kitchen" },
+      { id: "decor", slug: "decor", name: "Decor" },
+      { id: "storage", slug: "storage", name: "Storage" },
+    ],
+  },
 };
 
 function titleFromSlug(slug: string): string {
@@ -484,6 +705,71 @@ function dedupeProducts(products: Product[]): Product[] {
   });
 }
 
+function buildMarketplaceCatalogProducts(): Product[] {
+  const baseProducts = dedupeProducts([
+    ...TRENDING_PRODUCTS,
+    ...FLASH_SALE_PRODUCTS,
+    ...CATEGORY_PRODUCTS,
+    ...getSellerConsumerCatalogProducts(),
+    ...SELLER_PRODUCTS,
+    ...RELATED_PRODUCTS,
+  ]);
+  const editions = [
+    { slug: "lusaka-ready", label: "Lusaka Ready", priceMultiplier: 1.02, reviewBoost: 14, badge: "Fast Delivery" },
+    { slug: "value-pack", label: "Value Pack", priceMultiplier: 0.94, reviewBoost: 27, badge: "Deal" },
+    { slug: "premium-pick", label: "Premium Pick", priceMultiplier: 1.12, reviewBoost: 39, badge: "Top Rated" },
+  ];
+
+  return dedupeProducts([
+    ...baseProducts,
+    ...baseProducts.flatMap((product) => {
+      const title = product.title ?? product.name ?? titleFromSlug(product.slug);
+
+      return editions.map((edition, index) =>
+        normalizeProduct({
+          ...product,
+          id: `${product.id}-${edition.slug}`,
+          slug: `${product.slug}-${edition.slug}`,
+          title: `${title} ${edition.label}`,
+          name: `${title} ${edition.label}`,
+          price: Math.max(25, Math.round(product.price * edition.priceMultiplier)),
+          originalPrice: product.originalPrice
+            ? Math.round(product.originalPrice * edition.priceMultiplier)
+            : Math.round(product.price * edition.priceMultiplier * 1.15),
+          reviews: product.reviews + edition.reviewBoost + index,
+          rating: Math.min(5, Number((product.rating + index * 0.05).toFixed(1))),
+          badge: product.badge ?? edition.badge,
+        }),
+      );
+    }),
+  ]);
+}
+
+function paginateProducts(
+  products: Product[],
+  page: number,
+  pageSize: number,
+): { products: Product[]; pagination: ProductPaginationMeta } {
+  const total = products.length;
+  const safePageSize = Math.max(1, pageSize);
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = (safePage - 1) * safePageSize;
+  const endIndex = Math.min(startIndex + safePageSize, total);
+
+  return {
+    products: products.slice(startIndex, endIndex),
+    pagination: {
+      page: safePage,
+      pageSize: safePageSize,
+      total,
+      totalPages,
+      startItem: total ? startIndex + 1 : 0,
+      endItem: endIndex,
+    },
+  };
+}
+
 export async function getTrendingProducts(): Promise<Product[]> {
   return TRENDING_PRODUCTS;
 }
@@ -498,9 +784,11 @@ export async function getCategoryPageData(
     subcategory?: string;
     filter?: CategoryFilterOption;
     sort?: CategorySortOption;
+    page?: number;
+    pageSize?: number;
   } = {},
 ): Promise<CategoryPageData> {
-  const categoryProducts = CATEGORY_PRODUCTS.filter((product) => {
+  const categoryProducts = buildMarketplaceCatalogProducts().filter((product) => {
     const normalizedCategory =
       product.categoryName?.toLowerCase().replace(/ & /g, " and ").replace(/\s+/g, "-") ?? "";
     return normalizedCategory === slug;
@@ -509,6 +797,8 @@ export async function getCategoryPageData(
   const activeSubcategory = options.subcategory ?? "all";
   const activeFilter = options.filter ?? "all";
   const activeSort = options.sort ?? "recommended";
+  const activePage = options.page ?? 1;
+  const activePageSize = options.pageSize ?? 50;
 
   const subcategoryProducts =
     activeSubcategory === "all"
@@ -520,10 +810,14 @@ export async function getCategoryPageData(
           return normalizedSubcategory === activeSubcategory;
         });
 
+  const sortedProducts = applySort(applyPriceFilter(subcategoryProducts, activeFilter), activeSort);
+  const paginated = paginateProducts(sortedProducts, activePage, activePageSize);
+
   return {
     slug,
     meta: getCategoryMeta(slug),
-    products: applySort(applyPriceFilter(subcategoryProducts, activeFilter), activeSort),
+    products: paginated.products,
+    pagination: paginated.pagination,
   };
 }
 
@@ -545,14 +839,7 @@ function stableNumber(seed: string, min: number, max: number): number {
 }
 
 function getCatalogProducts(): Product[] {
-  // This keeps product-card flows and detail-route lookups on one shared catalog contract.
-  return dedupeProducts([
-    ...TRENDING_PRODUCTS,
-    ...FLASH_SALE_PRODUCTS,
-    ...CATEGORY_PRODUCTS,
-    ...SELLER_PRODUCTS,
-    ...RELATED_PRODUCTS,
-  ]);
+  return buildMarketplaceCatalogProducts();
 }
 
 function buildProductDetailFromProduct(product: Product, requestedSlug: string): ProductDetail {
@@ -617,6 +904,10 @@ function buildProductDetailFromProduct(product: Product, requestedSlug: string):
 
 export async function getProductDetailBySlug(slug: string): Promise<ProductDetail> {
   const normalizedSlug = decodeURIComponent(slug).trim().toLowerCase();
+  const sellerProductDetail = getSellerConsumerProductDetailBySlug(normalizedSlug);
+
+  if (sellerProductDetail) return sellerProductDetail;
+
   const product = getCatalogProducts().find((item) => item.slug.toLowerCase() === normalizedSlug);
 
   if (!product) {
@@ -661,4 +952,21 @@ export async function getRelatedProducts(
 
 export async function getSearchableProducts(): Promise<Product[]> {
   return getCatalogProducts();
+}
+
+export async function getAllProductsPageData(
+  options: {
+    filter?: CategoryFilterOption;
+    sort?: CategorySortOption;
+    page?: number;
+    pageSize?: number;
+  } = {},
+): Promise<{ products: Product[]; pagination: ProductPaginationMeta }> {
+  const activeFilter = options.filter ?? "all";
+  const activeSort = options.sort ?? "recommended";
+  const activePage = options.page ?? 1;
+  const activePageSize = options.pageSize ?? 50;
+  const products = applySort(applyPriceFilter(getCatalogProducts(), activeFilter), activeSort);
+
+  return paginateProducts(products, activePage, activePageSize);
 }

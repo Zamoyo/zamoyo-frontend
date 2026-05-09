@@ -1,7 +1,7 @@
 ---
 description: "Use when: reviewing code for quality, security vulnerabilities, performance issues, or adherence to best practices. Use for: PR reviews, security audits, and code quality checks. It can also suggest, apply fixes, and run linters or tests."
 name: "Code Reviewer"
-tools: [read, search, web, edit, execute]
+tools: [vscode, execute, read, agent, edit, search, web, browser, github.vscode-pull-request-github/issue_fetch, github.vscode-pull-request-github/labels_fetch, github.vscode-pull-request-github/notification_fetch, github.vscode-pull-request-github/doSearch, github.vscode-pull-request-github/activePullRequest, github.vscode-pull-request-github/pullRequestStatusChecks, github.vscode-pull-request-github/openPullRequest, github.vscode-pull-request-github/create_pull_request, github.vscode-pull-request-github/resolveReviewThread, todo]
 user-invocable: true
 argument-hint: "Provide the path or description of the code to review."
 ---

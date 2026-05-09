@@ -298,6 +298,7 @@ export default function SettingsPage() {
                   </div>
 
                   <Button
+                    aria-label={payment.isDefault ? `Default payment method ${payment.provider}` : `Remove payment method ${payment.provider}`}
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDeletePayment(payment.id)}
@@ -341,6 +342,7 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       role="switch"
+                      aria-label={`Toggle ${item.label}`}
                       aria-checked={isActive}
                       aria-busy={isSaving}
                       onClick={() => handleToggleNotification(item.key as keyof AccountSettings["notifications"])}

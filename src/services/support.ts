@@ -30,7 +30,7 @@ export interface SupportStats {
   avgResponseHrs: number;
 }
 
-// --- MOCK API DATA & ENGINE ---
+// --- FRONTEND FIXTURE DATA & SERVICE ---
 const now = new Date();
 const timeAgo = (hours: number) => new Date(now.getTime() - hours * 3600000).toISOString();
 
@@ -78,17 +78,16 @@ const MOCK_TICKETS: SupportTicket[] = [
 
 export const supportApi = {
   async fetchTickets(): Promise<SupportTicket[]> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       setTimeout(() => {
-        if (Math.random() < 0.05) reject(new Error("Network Error: Failed to load support tickets."));
-        resolve([...MOCK_TICKETS]);
+        resolve(MOCK_TICKETS.map(cloneTicket));
       }, 800);
     });
   },
   async createTicket(subject: string, category: TicketCategory, priority: TicketPriority, message: string): Promise<SupportTicket> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const newId = `TCK-${Math.floor(5000 + Math.random() * 4999)}`;
+        const newId = `TCK-${Date.now().toString().slice(-6)}`;
         const timestamp = new Date().toISOString();
         resolve({
           id: newId,
@@ -99,7 +98,7 @@ export const supportApi = {
           createdAt: timestamp,
           updatedAt: timestamp,
           messages: [
-            { id: `msg-${Math.floor(Math.random() * 10000)}`, senderType: "seller", senderName: "You", body: message, createdAt: timestamp }
+            { id: buildMessageId(), senderType: "seller", senderName: "You", body: message, createdAt: timestamp }
           ]
         });
       }, 600);
@@ -110,7 +109,7 @@ export const supportApi = {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
-          id: `msg-${Math.floor(Math.random() * 10000)}`,
+          id: buildMessageId(),
           senderType: "seller",
           senderName: "You",
           body: message,
@@ -124,3 +123,14 @@ export const supportApi = {
     return new Promise((resolve) => setTimeout(resolve, 400));
   }
 };
+
+function cloneTicket(ticket: SupportTicket): SupportTicket {
+  return {
+    ...ticket,
+    messages: ticket.messages.map((message) => ({ ...message })),
+  };
+}
+
+function buildMessageId(): string {
+  return `msg-${globalThis.crypto?.randomUUID?.() ?? Date.now().toString()}`;
+}

@@ -71,6 +71,7 @@ function SheetContent({
         {showCloseButton && (
           <SheetPrimitive.Close data-slot="sheet-close" asChild>
             <Button
+              aria-label="Close panel"
               variant="ghost"
               className="absolute top-4 right-4"
               size="icon-sm"

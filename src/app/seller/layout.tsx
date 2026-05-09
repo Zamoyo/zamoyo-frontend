@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import {
   Bell, CircleHelp, LayoutDashboard, LogOut, Package,
-  Plus, Settings, ShoppingCart, Store, TrendingUp, Wallet, Boxes, PanelLeftClose, PanelLeftOpen,
+  Plus, Settings, ShoppingCart, Store, TrendingUp, Wallet, Boxes, PanelLeftClose, PanelLeftOpen, MoreHorizontal, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,13 @@ const MOBILE_NAV_ITEMS = [
   { label: "Products", href: "/seller/products", icon: Package, match: "startsWith" as const },
   { label: "Orders", href: "/seller/orders", icon: ShoppingCart, match: "startsWith" as const },
   { label: "Payouts", href: "/seller/payouts", icon: Wallet, match: "startsWith" as const },
+];
+
+const MOBILE_MORE_ITEMS = [
+  { label: "Inventory", href: "/seller/inventory", icon: Boxes, match: "startsWith" as const },
+  { label: "Analytics", href: "/seller/analytics", icon: TrendingUp, match: "startsWith" as const },
+  { label: "Notifications", href: "/seller/notifications", icon: Bell, match: "startsWith" as const },
+  { label: "Support", href: "/seller/support", icon: CircleHelp, match: "startsWith" as const },
   { label: "Settings", href: "/seller/settings", icon: Settings, match: "startsWith" as const },
 ];
 
@@ -119,6 +126,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "";
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsed);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const pageTitle = getPageTitle(pathname);
 
   const handleSidebarToggle = () => {
@@ -152,11 +160,11 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/seller/products/new">
-            <Button size="icon" className="h-8 w-8 rounded-full bg-[#009E49] text-white hover:bg-[#00853d] shadow-sm">
+            <Button aria-label="Add product" size="icon" className="h-8 w-8 rounded-full bg-[#009E49] text-white hover:bg-[#00853d] shadow-sm">
               <Plus className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href="/seller/notifications" className="relative flex h-8 w-8 items-center justify-center rounded-full text-[#80b898] transition-colors hover:bg-white/5 hover:text-white">
+          <Link href="/seller/notifications" aria-label="Open notifications" className="relative flex h-8 w-8 items-center justify-center rounded-full text-[#80b898] transition-colors hover:bg-white/5 hover:text-white">
             <Bell className="h-5 w-5" />
             <span className="absolute right-1.5 top-1 h-2 w-2 rounded-full bg-[#FF6B00] border-2 border-[#0A1A10]" />
           </Link>
@@ -270,7 +278,7 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
 
             <div className="h-6 w-px bg-zinc-200"></div>
 
-            <Link href="/seller/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 shadow-sm">
+            <Link href="/seller/notifications" aria-label="Open notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 shadow-sm">
               <Bell className="h-4 w-4" />
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-[#FF6B00]" />
             </Link>
@@ -297,6 +305,46 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
       {/* =========================================
           4. MOBILE BOTTOM NAV
           ========================================= */}
+      {mobileMoreOpen ? (
+        <div className="fixed inset-0 z-40 bg-zinc-950/30 backdrop-blur-sm md:hidden" onClick={() => setMobileMoreOpen(false)}>
+          <div
+            className="absolute inset-x-3 bottom-24 rounded-3xl border border-zinc-200 bg-white p-3 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center justify-between px-1">
+              <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Seller Tools</p>
+              <button
+                type="button"
+                aria-label="Close seller tools"
+                onClick={() => setMobileMoreOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {MOBILE_MORE_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = isRouteActive(pathname, item.href, item.match);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMoreOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-2xl border p-3 text-sm font-bold transition-colors",
+                      active ? "border-[#009E49]/20 bg-[#009E49]/10 text-[#009E49]" : "border-zinc-100 bg-zinc-50 text-zinc-700",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="fixed bottom-0 left-0 z-40 flex w-full justify-between border-t border-zinc-200 bg-white px-2 pt-2 pb-6 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] md:hidden">
         {MOBILE_NAV_ITEMS.map((item) => (
           <MobileNavLink 
@@ -307,6 +355,17 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
             isActive={isRouteActive(pathname, item.href, item.match)} 
           />
         ))}
+        <button
+          type="button"
+          aria-label="Open more seller tools"
+          onClick={() => setMobileMoreOpen((open) => !open)}
+          className="flex h-14 flex-1 flex-col items-center justify-center"
+        >
+          <div className={`mb-1 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${mobileMoreOpen ? "bg-[#009E49]/10" : ""}`}>
+            <MoreHorizontal className={`h-5 w-5 ${mobileMoreOpen ? "text-[#009E49]" : "text-zinc-400"}`} />
+          </div>
+          <span className={`text-[9px] font-bold ${mobileMoreOpen ? "text-[#009E49]" : "text-zinc-500"}`}>More</span>
+        </button>
       </div>
 
     </div>

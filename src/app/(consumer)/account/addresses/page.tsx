@@ -13,15 +13,47 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { FeedbackState } from "@/components/states/FeedbackState";
 import { getSavedAddresses, saveAddresses } from "@/services/account";
-import type { Address } from "@/types/address";
+import type { Address, AddressType } from "@/types/address";
+
+interface AddressFormState {
+  name: string;
+  type: AddressType;
+  street: string;
+  area: string;
+  city: string;
+  phone: string;
+  isDefault: boolean;
+}
+
+const emptyAddressForm: AddressFormState = {
+  name: "",
+  type: "Home",
+  street: "",
+  area: "",
+  city: "Lusaka",
+  phone: "",
+  isDefault: false,
+};
 
 export default function AddressesPage() {
   const [addresses, setAddresses] = React.useState<Address[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [savingId, setSavingId] = React.useState<number | null>(null);
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editingAddressId, setEditingAddressId] = React.useState<number | null>(null);
+  const [addressForm, setAddressForm] = React.useState<AddressFormState>(emptyAddressForm);
 
   const loadAddresses = React.useCallback(async () => {
     try {
@@ -69,6 +101,75 @@ export default function AddressesPage() {
     }
   };
 
+  const openCreateDialog = () => {
+    setEditingAddressId(null);
+    setAddressForm({ ...emptyAddressForm, isDefault: addresses.length === 0 });
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (address: Address) => {
+    setEditingAddressId(address.id);
+    setAddressForm({
+      name: address.name,
+      type: address.type,
+      street: address.street,
+      area: address.area,
+      city: address.city,
+      phone: address.phone,
+      isDefault: address.isDefault,
+    });
+    setDialogOpen(true);
+  };
+
+  const updateAddressForm = (field: keyof AddressFormState) => (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const value = field === "isDefault" && event.target instanceof HTMLInputElement
+      ? event.target.checked
+      : event.target.value;
+    setAddressForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const formIsValid = Boolean(
+    addressForm.name.trim() &&
+      addressForm.street.trim() &&
+      addressForm.area.trim() &&
+      addressForm.city.trim() &&
+      addressForm.phone.trim(),
+  );
+
+  const handleSaveAddress = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!formIsValid) return;
+
+    const normalizedAddress: Address = {
+      id: editingAddressId ?? Date.now(),
+      name: addressForm.name.trim(),
+      type: addressForm.type,
+      street: addressForm.street.trim(),
+      area: addressForm.area.trim(),
+      city: addressForm.city.trim(),
+      phone: addressForm.phone.trim(),
+      isDefault: addressForm.isDefault || addresses.length === 0,
+    };
+
+    const nextAddresses = editingAddressId
+      ? addresses.map((address) => (address.id === editingAddressId ? normalizedAddress : address))
+      : [...addresses, normalizedAddress];
+    const normalizedList = normalizedAddress.isDefault
+      ? nextAddresses.map((address) => ({ ...address, isDefault: address.id === normalizedAddress.id }))
+      : nextAddresses;
+
+    try {
+      setSavingId(normalizedAddress.id);
+      const saved = await saveAddresses(normalizedList);
+      setAddresses(saved);
+      setDialogOpen(false);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -81,7 +182,7 @@ export default function AddressesPage() {
           </p>
         </div>
 
-        <Button className="flex h-11 items-center gap-2 rounded-xl bg-[#009E49] px-5 font-bold text-white shadow-md shadow-[#009E49]/20 hover:bg-[#00853d]">
+        <Button onClick={openCreateDialog} className="flex h-11 items-center gap-2 rounded-xl bg-[#009E49] px-5 font-bold text-white shadow-md shadow-[#009E49]/20 hover:bg-[#00853d]">
           <Plus className="h-4 w-4" />
           Add New Address
         </Button>
@@ -159,6 +260,7 @@ export default function AddressesPage() {
               <div className="mt-auto flex items-center gap-2 border-t border-zinc-100 pt-4">
                 <Button
                   variant="outline"
+                  onClick={() => openEditDialog(address)}
                   className="h-9 flex-1 rounded-xl border-zinc-200 text-xs font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 hover:text-zinc-900"
                 >
                   <Edit2 className="mr-1.5 h-3.5 w-3.5" />
@@ -194,6 +296,75 @@ export default function AddressesPage() {
           ))}
         </div>
       )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="rounded-3xl border-zinc-200 bg-white p-0 sm:max-w-lg">
+          <form onSubmit={handleSaveAddress} className="space-y-5 p-6">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-zinc-900">
+                {editingAddressId ? "Edit Address" : "Add Address"}
+              </DialogTitle>
+              <DialogDescription>
+                Save delivery details for faster Zamoyo checkout.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label className="space-y-1.5 md:col-span-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Recipient Name</span>
+                <Input value={addressForm.name} onChange={updateAddressForm("name")} className="h-11 rounded-xl border-zinc-200 bg-zinc-50 focus-visible:ring-[#009E49]" required />
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Type</span>
+                <select aria-label="Address type" value={addressForm.type} onChange={updateAddressForm("type")} className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-medium text-zinc-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#009E49]">
+                  <option value="Home">Home</option>
+                  <option value="Work">Work</option>
+                </select>
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Phone</span>
+                <Input value={addressForm.phone} onChange={updateAddressForm("phone")} className="h-11 rounded-xl border-zinc-200 bg-zinc-50 focus-visible:ring-[#009E49]" required />
+              </label>
+
+              <label className="space-y-1.5 md:col-span-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Street Address</span>
+                <Input value={addressForm.street} onChange={updateAddressForm("street")} className="h-11 rounded-xl border-zinc-200 bg-zinc-50 focus-visible:ring-[#009E49]" required />
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Area</span>
+                <Input value={addressForm.area} onChange={updateAddressForm("area")} className="h-11 rounded-xl border-zinc-200 bg-zinc-50 focus-visible:ring-[#009E49]" required />
+              </label>
+
+              <label className="space-y-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">City</span>
+                <Input value={addressForm.city} onChange={updateAddressForm("city")} className="h-11 rounded-xl border-zinc-200 bg-zinc-50 focus-visible:ring-[#009E49]" required />
+              </label>
+            </div>
+
+            <label className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm font-bold text-zinc-700">
+              <input
+                type="checkbox"
+                checked={addressForm.isDefault}
+                onChange={updateAddressForm("isDefault")}
+                className="h-4 w-4 accent-[#009E49]"
+              />
+              Make this my default delivery address
+            </label>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl border-zinc-200 font-bold">
+                Cancel
+              </Button>
+              <Button disabled={!formIsValid || savingId !== null} className="rounded-xl bg-[#009E49] font-bold text-white hover:bg-[#00853d] disabled:opacity-60">
+                {savingId !== null ? "Saving..." : "Save Address"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

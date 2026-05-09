@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDownWideNarrow, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/productCard";
+import { ProductPagination } from "@/components/product/ProductPagination";
 import {
   type CategoryFilterOption,
   type CategorySortOption,
@@ -63,6 +64,7 @@ export default async function CategoryPage({
     subcategory?: string;
     filter?: CategoryFilterOption;
     sort?: CategorySortOption;
+    page?: string;
   }>;
 }) {
   const { slug } = await params;
@@ -71,11 +73,14 @@ export default async function CategoryPage({
   const activeSubcategory = resolvedSearchParams?.subcategory ?? "all";
   const activeFilter = resolvedSearchParams?.filter ?? "all";
   const activeSort = resolvedSearchParams?.sort ?? "recommended";
+  const activePage = Number(resolvedSearchParams?.page ?? "1") || 1;
 
   const categoryData = await getCategoryPageData(slug, {
     subcategory: activeSubcategory,
     filter: activeFilter,
     sort: activeSort,
+    page: activePage,
+    pageSize: 50,
   });
 
   const buildUrl = (updates: {
@@ -177,17 +182,42 @@ export default async function CategoryPage({
         </div>
 
         {categoryData.products.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] md:gap-4">
-            {categoryData.products.map((product, index) => (
-              <div
-                key={product.id}
-                className="animate-in fade-in slide-in-from-bottom-8 fill-mode-both"
-                style={{ animationDelay: `${index * 50}ms`, animationDuration: "600ms" }}
-              >
-                <ProductCard product={product} />
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <p className="text-sm font-black text-zinc-900">
+                {categoryData.pagination.total.toLocaleString()} products found
+              </p>
+              <Link href="/products" className="text-xs font-black text-[#009E49] hover:underline">
+                Shop all products
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] md:gap-4">
+              {categoryData.products.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="animate-in fade-in slide-in-from-bottom-8 fill-mode-both"
+                  style={{ animationDelay: `${index * 24}ms`, animationDuration: "500ms" }}
+                >
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+
+            <ProductPagination
+              basePath={`/category/${slug}`}
+              page={categoryData.pagination.page}
+              totalPages={categoryData.pagination.totalPages}
+              total={categoryData.pagination.total}
+              startItem={categoryData.pagination.startItem}
+              endItem={categoryData.pagination.endItem}
+              searchParams={{
+                subcategory: activeSubcategory !== "all" ? activeSubcategory : undefined,
+                filter: activeFilter !== "all" ? activeFilter : undefined,
+                sort: activeSort !== "recommended" ? activeSort : undefined,
+              }}
+            />
+          </>
         ) : (
           <div className="rounded-3xl border border-zinc-200/70 bg-white px-6 py-16 text-center shadow-sm">
             <h2 className="text-xl font-black text-zinc-900">No products found</h2>

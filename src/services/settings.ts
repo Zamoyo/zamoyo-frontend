@@ -51,7 +51,7 @@ export interface StoreSettings {
   seo: SeoSettings;
 }
 
-// --- MOCK API DATA & ENGINE ---
+// --- FRONTEND FIXTURE DATA & SERVICE ---
 const MOCK_SETTINGS: StoreSettings = {
   profile: {
     name: "Zamoyo Official Store",
@@ -95,18 +95,16 @@ const MOCK_SETTINGS: StoreSettings = {
 
 export const settingsApi = {
   async fetchSettings(): Promise<StoreSettings> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       setTimeout(() => {
-        if (Math.random() < 0.05) reject(new Error("Network Error: Failed to load store settings."));
-        resolve(JSON.parse(JSON.stringify(MOCK_SETTINGS))); // Deep clone for safety
+        resolve(structuredClone(MOCK_SETTINGS));
       }, 800);
     });
   },
   async updateSettings(payload: StoreSettings): Promise<StoreSettings> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        console.log("[API MOCK] Settings Updated:", payload);
-        resolve(payload);
+        resolve(structuredClone(payload));
       }, 1000);
     });
   }

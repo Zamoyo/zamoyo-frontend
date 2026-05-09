@@ -61,7 +61,12 @@ export const useWishlist = create<WishlistStore>()(
       name: "zamoyo-wishlist-storage",
       partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (!state) return;
+
+        const restoredState = buildWishlistState(state.items);
+        state.items = restoredState.items;
+        state.itemCount = restoredState.itemCount;
+        state.setHasHydrated(true);
       },
     },
   ),
