@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef, useMemo, type ComponentType, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, useSyncExternalStore, type ComponentType, type ReactNode } from "react";
 import {
   ShoppingCart, User, MapPin, HelpCircle, Store, ChevronDown, Flame, Menu, X, Heart, Package, LogOut,
   Settings, FolderOpen, ChevronRight, ArrowLeft, Info,
@@ -16,7 +16,10 @@ import { useCart } from "@/hooks/use-cart";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { NavbarSearch } from "@/components/layout/NavbarSearch";
 import { buildCategorySubcategoryHref, getCategoryDirectory } from "@/services/categories";
+import { getStoredAuthSession, logout } from "@/services/auth";
+import { AUTH_SESSION_CHANGED_EVENT, getAuthSessionSnapshot } from "@/services/auth-session";
 import type { CategorySummary } from "@/types/category";
+import type { AuthUser } from "@/types/auth";
 
 type NavLink = { label: string; href: string };
 type CategoryChild = NavLink;
@@ -129,8 +132,52 @@ function useScrolled(threshold = 40, resetAt = 16) {
 }
 
 function useAuthState() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  return { isLoggedIn, toggleAuth: () => setIsLoggedIn((prev) => !prev) };
+  const [devUser, setDevUser] = useState<AuthUser | null>(null);
+  useSyncExternalStore(
+    (onStoreChange) => {
+      const handleStorage = (event: StorageEvent) => {
+        if (!event.key || event.key.startsWith("zamoyo_")) {
+          onStoreChange();
+        }
+      };
+
+      window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onStoreChange);
+      window.addEventListener("storage", handleStorage);
+      window.addEventListener("focus", onStoreChange);
+
+      return () => {
+        window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onStoreChange);
+        window.removeEventListener("storage", handleStorage);
+        window.removeEventListener("focus", onStoreChange);
+      };
+    },
+    getAuthSessionSnapshot,
+    () => "",
+  );
+
+  const user = getStoredAuthSession()?.user ?? devUser;
+
+  const signOut = async () => {
+    await logout();
+    setDevUser(null);
+  };
+
+  const toggleDevAuth = () => {
+    if (process.env.NODE_ENV !== "development") return;
+    setDevUser((current) =>
+      current
+        ? null
+        : {
+            id: "dev-user",
+            firstName: "John",
+            lastName: "Banda",
+            email: "john.banda@example.com",
+            role: "buyer",
+          },
+    );
+  };
+
+  return { isLoggedIn: Boolean(user), user, signOut, toggleDevAuth };
 }
 
 function useOutsideClick<T extends HTMLElement>(
@@ -223,12 +270,25 @@ function LoggedOutMenu({ onDevToggleAuth }: { onDevToggleAuth: () => void }) {
   );
 }
 
-function LoggedInMenu({ onDevToggleAuth }: { onDevToggleAuth: () => void }) {
+function getDisplayName(user: AuthUser) {
+  const name = `${user.firstName} ${user.lastName ?? ""}`.trim();
+  return name || user.email;
+}
+
+function LoggedInMenu({
+  user,
+  onSignOut,
+  onDevToggleAuth,
+}: {
+  user: AuthUser;
+  onSignOut: () => void;
+  onDevToggleAuth: () => void;
+}) {
   return (
     <>
       <div className="mb-1 px-3 py-2">
-        <p className="text-xs font-medium text-zinc-500">Account</p>
-        <p className="truncate text-sm font-bold text-zinc-900">john.banda@example.com</p>
+        <p className="truncate text-xs font-medium text-zinc-500">{getDisplayName(user)}</p>
+        <p className="truncate text-sm font-bold text-zinc-900">{user.email}</p>
       </div>
       <Divider />
       <Link href="/account" className={DROPDOWN_LINK}>
@@ -246,7 +306,7 @@ function LoggedInMenu({ onDevToggleAuth }: { onDevToggleAuth: () => void }) {
       <Divider />
       <button
         type="button"
-        onClick={onDevToggleAuth}
+        onClick={onSignOut}
         className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition-all hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 active:scale-[0.98]"
       >
         <LogOut className="h-4 w-4 text-red-500" /> Log Out
@@ -258,21 +318,25 @@ function LoggedInMenu({ onDevToggleAuth }: { onDevToggleAuth: () => void }) {
 
 type AccountDropdownProps = {
   isLoggedIn: boolean;
+  user: AuthUser | null;
   desktopOpen: boolean;
   mobileOpen: boolean;
   onDesktopOpen: () => void;
   onDesktopClose: () => void;
   onMobileToggle: () => void;
+  onSignOut: () => void;
   onDevToggleAuth: () => void;
 };
 
 function AccountDropdown({
   isLoggedIn,
+  user,
   desktopOpen,
   mobileOpen,
   onDesktopOpen,
   onDesktopClose,
   onMobileToggle,
+  onSignOut,
   onDevToggleAuth,
 }: AccountDropdownProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -324,8 +388,8 @@ function AccountDropdown({
               "border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,255,255,0.93))] shadow-[0_24px_48px_rgba(15,23,42,0.2)]",
           )}
         >
-          {isLoggedIn ? (
-            <LoggedInMenu onDevToggleAuth={onDevToggleAuth} />
+          {isLoggedIn && user ? (
+            <LoggedInMenu user={user} onSignOut={onSignOut} onDevToggleAuth={onDevToggleAuth} />
           ) : (
             <LoggedOutMenu onDevToggleAuth={onDevToggleAuth} />
           )}
@@ -764,7 +828,7 @@ function MobileDrawer({
 export default function Navbar() {
   const pathname = usePathname();
   const isScrolled = useScrolled();
-  const { isLoggedIn, toggleAuth } = useAuthState();
+  const { isLoggedIn, user, signOut, toggleDevAuth } = useAuthState();
   const { itemCount = 0, totalAmount = 0, hasHydrated = false } = useCart();
 
   const [categoryLinks, setCategoryLinks] = useState<CategoryLink[]>([]);
@@ -854,6 +918,7 @@ export default function Navbar() {
             <div className="flex shrink-0 items-center gap-2 md:gap-6">
               <AccountDropdown
                 isLoggedIn={isLoggedIn}
+                user={user}
                 desktopOpen={desktopAccountOpen}
                 mobileOpen={mobileAccountOpen}
                 onDesktopOpen={() => setDesktopAccountOpen(true)}
@@ -862,7 +927,8 @@ export default function Navbar() {
                   setMobileAccountOpen(false);
                 }}
                 onMobileToggle={() => setMobileAccountOpen((prev) => !prev)}
-                onDevToggleAuth={toggleAuth}
+                onSignOut={signOut}
+                onDevToggleAuth={toggleDevAuth}
               />
               <CartButton
                 itemCount={hasHydrated ? itemCount : 0}
