@@ -5,6 +5,7 @@ const REFRESH_TOKEN_KEY = "zamoyo_refresh_token";
 const AUTH_USER_KEY = "zamoyo_auth_user";
 const LAST_AUTH_EMAIL_KEY = "zamoyo_auth_last_email";
 const LEGACY_SELLER_TOKEN_KEY = "zamoyo_seller_token";
+export const AUTH_SESSION_CHANGED_EVENT = "zamoyo:auth-session-changed";
 
 function getStorage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -17,6 +18,11 @@ function readString(key: string): string | null {
 
   const value = storage.getItem(key);
   return value && value.trim().length > 0 ? value : null;
+}
+
+function notifyAuthSessionChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
 }
 
 export function getStoredAccessToken(): string | null {
@@ -79,6 +85,12 @@ export function getStoredAuthUser(): AuthUser | null {
   }
 }
 
+export function getAuthSessionSnapshot(): string {
+  const accessToken = getStoredAccessToken();
+  const user = readString(AUTH_USER_KEY);
+  return accessToken && user ? `${accessToken}:${user}` : "";
+}
+
 export function storeAuthSession(session: AuthSession): void {
   storeAccessToken(session.accessToken);
   if (session.refreshToken) {
@@ -88,6 +100,7 @@ export function storeAuthSession(session: AuthSession): void {
   }
   storeAuthUser(session.user);
   storeLastAuthEmail(session.user.email);
+  notifyAuthSessionChanged();
 }
 
 export function clearStoredAuthSession(): void {
@@ -98,4 +111,5 @@ export function clearStoredAuthSession(): void {
   storage.removeItem(REFRESH_TOKEN_KEY);
   storage.removeItem(AUTH_USER_KEY);
   storage.removeItem(LEGACY_SELLER_TOKEN_KEY);
+  notifyAuthSessionChanged();
 }
