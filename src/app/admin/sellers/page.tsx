@@ -7,12 +7,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // Architecture Imports
 import { adminSellersApi, AdminSellerRecord, SellerVerificationStatus, SellerOperationalStatus } from "@/services/admin/sellers";
-import { hasPermission, MOCK_CURRENT_ADMIN } from "@/services/rbac";
+import { recordAdminAudit } from "@/services/admin/audit";
+import { adminHasPermission, CURRENT_ADMIN_IDENTITY } from "@/services/admin/session";
 
 // ============================================================================
 // LOGIC HELPERS & UI MAPS
@@ -53,11 +55,17 @@ export default function AdminSellersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<SellerOperationalStatus | "all">("all");
   const [verificationFilter, setVerificationFilter] = useState<SellerVerificationStatus | "all">("all");
+  const [selectedSeller, setSelectedSeller] = useState<AdminSellerRecord | null>(null);
+  const [commissionDraft, setCommissionDraft] = useState("");
+  const [complianceNote, setComplianceNote] = useState("");
+  const [sellerNotes, setSellerNotes] = useState<Record<string, string[]>>({});
+  const [isDetailSaving, setIsDetailSaving] = useState(false);
 
   // RBAC Action-Level Guards
-  const canApprove = hasPermission(MOCK_CURRENT_ADMIN.role, "approve_sellers");
-  const canSuspend = hasPermission(MOCK_CURRENT_ADMIN.role, "suspend_sellers");
-  const canExport = hasPermission(MOCK_CURRENT_ADMIN.role, "export_reports");
+  const canApprove = adminHasPermission("approve_sellers");
+  const canSuspend = adminHasPermission("suspend_sellers");
+  const canExport = adminHasPermission("export_reports");
+  const canEditCommission = adminHasPermission("edit_commission");
 
   const loadSellers = useCallback(async () => {
     try {
@@ -87,6 +95,7 @@ export default function AdminSellersPage() {
     if (!canApprove) return toast.error("Unauthorized action.");
     try {
       await adminSellersApi.approveVerification(id);
+      await recordAdminAudit({ actorId: CURRENT_ADMIN_IDENTITY.id, action: "seller_verified", target: id });
       setSellers(prev => prev.map(s => s.id === id ? { ...s, verificationStatus: "approved", status: "active" } : s));
       toast.success("Seller verification approved.");
     } catch {
@@ -101,11 +110,15 @@ export default function AdminSellersPage() {
     try {
       if (isSuspending) {
         await adminSellersApi.suspendSeller(id, "Admin manual suspension");
+        await recordAdminAudit({ actorId: CURRENT_ADMIN_IDENTITY.id, action: "seller_suspended", target: id, severity: "critical", note: "Admin manual suspension" });
         setSellers(prev => prev.map(s => s.id === id ? { ...s, status: "suspended" } : s));
+        setSellerNotes(prev => ({ ...prev, [id]: ["Suspended: Admin manual suspension", ...(prev[id] ?? [])] }));
         toast.success("Seller suspended.");
       } else {
         await adminSellersApi.reactivateSeller(id);
+        await recordAdminAudit({ actorId: CURRENT_ADMIN_IDENTITY.id, action: "seller_reactivated", target: id, severity: "warning" });
         setSellers(prev => prev.map(s => s.id === id ? { ...s, status: "active" } : s));
+        setSellerNotes(prev => ({ ...prev, [id]: ["Reactivated after admin review.", ...(prev[id] ?? [])] }));
         toast.success("Seller reactivated.");
       }
     } catch {
@@ -114,11 +127,86 @@ export default function AdminSellersPage() {
   };
 
   const handleExport = () => {
-    toast.info(`Preparing seller CSV export for ${filteredSellers.length} visible records.`);
+    const header = ["id", "store", "owner", "email", "status", "verification", "commission_rate", "lifetime_gmv"];
+    const rows = filteredSellers.map((seller) => [
+      seller.id,
+      seller.storeName,
+      seller.ownerName,
+      seller.email,
+      seller.status,
+      seller.verificationStatus,
+      seller.commissionRate.toFixed(1),
+      String(seller.lifetimeGmv),
+    ]);
+    const csv = [header, ...rows].map((row) => row.map((value) => `"${value.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `zamoyo-sellers-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filteredSellers.length} seller records.`);
   };
 
   const handleMoreActions = (seller: AdminSellerRecord) => {
-    toast.info(`Audit trail, commission edits, and document review for ${seller.storeName} will open here when backend endpoints are live.`);
+    setSelectedSeller(seller);
+    setCommissionDraft(seller.commissionRate.toFixed(1));
+    setComplianceNote("");
+  };
+
+  const handleBulkApproveVisible = async () => {
+    if (!canApprove) return toast.error("Unauthorized action.");
+    const pending = filteredSellers.filter((seller) => seller.verificationStatus === "pending");
+    if (pending.length === 0) return toast.error("No visible pending sellers to approve.");
+
+    try {
+      await Promise.all(pending.map((seller) => adminSellersApi.approveVerification(seller.id)));
+      await recordAdminAudit({ actorId: CURRENT_ADMIN_IDENTITY.id, action: "seller_bulk_approved", target: `${pending.length} visible sellers`, severity: "warning" });
+      setSellers((current) => current.map((seller) => pending.some((pendingSeller) => pendingSeller.id === seller.id) ? { ...seller, verificationStatus: "approved", status: "active" } : seller));
+      toast.success(`${pending.length} visible pending sellers approved.`);
+    } catch {
+      toast.error("Failed to bulk approve sellers.");
+    }
+  };
+
+  const handleSaveCommission = async () => {
+    if (!selectedSeller || !canEditCommission) return toast.error("Unauthorized action.");
+    const nextRate = Number(commissionDraft);
+    if (!Number.isFinite(nextRate) || nextRate < 0 || nextRate > 30) return toast.error("Commission must be between 0 and 30%.");
+
+    try {
+      setIsDetailSaving(true);
+      await recordAdminAudit({
+        actorId: CURRENT_ADMIN_IDENTITY.id,
+        action: "seller_commission_updated",
+        target: selectedSeller.id,
+        severity: "critical",
+        note: `${selectedSeller.commissionRate.toFixed(1)}% -> ${nextRate.toFixed(1)}%`,
+      });
+      const updatedSeller = { ...selectedSeller, commissionRate: nextRate };
+      setSellers((current) => current.map((seller) => seller.id === selectedSeller.id ? updatedSeller : seller));
+      setSelectedSeller(updatedSeller);
+      toast.success("Seller commission updated.");
+    } finally {
+      setIsDetailSaving(false);
+    }
+  };
+
+  const handleSaveComplianceNote = async () => {
+    if (!selectedSeller || !complianceNote.trim()) return toast.error("Add a compliance note first.");
+
+    await recordAdminAudit({
+      actorId: CURRENT_ADMIN_IDENTITY.id,
+      action: "seller_compliance_note_added",
+      target: selectedSeller.id,
+      note: complianceNote.trim(),
+    });
+    setSellerNotes((current) => ({
+      ...current,
+      [selectedSeller.id]: [complianceNote.trim(), ...(current[selectedSeller.id] ?? [])],
+    }));
+    setComplianceNote("");
+    toast.success("Compliance note saved.");
   };
 
   if (loading) return (
@@ -141,6 +229,11 @@ export default function AdminSellersPage() {
         {canExport && (
           <Button onClick={handleExport} variant="outline" className="h-10 rounded-xl border-emerald-200/70 bg-white/80 px-4 font-bold text-emerald-800 shadow-md shadow-emerald-900/5 backdrop-blur-xl hover:bg-emerald-50 md:w-auto">
             <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+        )}
+        {canApprove && (
+          <Button onClick={handleBulkApproveVisible} className="h-10 rounded-xl bg-zinc-950 px-4 font-bold text-white shadow-md shadow-zinc-900/20 hover:bg-zinc-800 md:w-auto">
+            <CheckCircle2 className="mr-2 h-4 w-4" /> Approve Visible Pending
           </Button>
         )}
       </div>
@@ -264,6 +357,71 @@ export default function AdminSellersPage() {
           </table>
         </div>
       </div>
+
+      {selectedSeller && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm" onClick={() => setSelectedSeller(null)} aria-hidden="true" />
+          <div className="relative flex h-full w-full max-w-xl flex-col border-l border-white/40 bg-white/95 shadow-2xl shadow-zinc-950/30 backdrop-blur-2xl animate-in slide-in-from-right duration-300">
+            <div className="border-b border-zinc-100 bg-zinc-950 px-6 py-5 text-white">
+              <h2 className="text-lg font-black">{selectedSeller.storeName}</h2>
+              <p className="text-xs font-bold text-zinc-400">{selectedSeller.id} · {selectedSeller.ownerName}</p>
+            </div>
+            <div className="flex-1 space-y-6 overflow-y-auto p-6">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl bg-emerald-50 p-4">
+                  <p className="text-[10px] font-black uppercase text-emerald-700">Lifetime GMV</p>
+                  <p className="text-2xl font-black text-zinc-950">{formatCurrency(selectedSeller.lifetimeGmv)}</p>
+                </div>
+                <div className="rounded-2xl bg-amber-50 p-4">
+                  <p className="text-[10px] font-black uppercase text-amber-700">Risk flags</p>
+                  <p className="text-2xl font-black text-zinc-950">{selectedSeller.riskFlags}</p>
+                </div>
+              </div>
+
+              <section className="rounded-3xl border border-zinc-100 bg-white p-4">
+                <h3 className="text-sm font-black text-zinc-950">Verification document review</h3>
+                <div className="mt-3 grid gap-2">
+                  {["NRC or passport", "Business registration", "Payout account proof"].map((documentLabel) => (
+                    <div key={documentLabel} className="flex items-center justify-between rounded-2xl bg-zinc-50 p-3">
+                      <span className="text-sm font-bold text-zinc-700">{documentLabel}</span>
+                      <span className="rounded-lg border border-emerald-400/50 bg-emerald-950 px-2 py-1 text-[10px] font-black uppercase text-emerald-100">Review ready</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-zinc-100 bg-white p-4">
+                <h3 className="text-sm font-black text-zinc-950">Commission controls</h3>
+                <p className="mt-1 text-xs font-bold text-zinc-500">Current default rate can be replaced by backend commission contracts later.</p>
+                <div className="mt-3 flex gap-2">
+                  <Input value={commissionDraft} onChange={(event) => setCommissionDraft(event.target.value)} className="h-11 rounded-xl border-zinc-200" />
+                  <Button disabled={isDetailSaving || !canEditCommission} onClick={handleSaveCommission} className="rounded-xl bg-zinc-950 font-black text-white hover:bg-zinc-800">Save</Button>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-zinc-100 bg-white p-4">
+                <h3 className="text-sm font-black text-zinc-950">Compliance notes</h3>
+                <Textarea value={complianceNote} onChange={(event) => setComplianceNote(event.target.value)} placeholder="Add compliance note or suspension rationale..." className="mt-3 min-h-24 rounded-2xl border-zinc-200 bg-white" />
+                <Button onClick={handleSaveComplianceNote} className="mt-3 rounded-xl bg-emerald-600 font-black text-white hover:bg-emerald-700">Save note</Button>
+                <div className="mt-3 space-y-2">
+                  {(sellerNotes[selectedSeller.id] ?? ["No compliance notes recorded in this frontend session."]).map((note, index) => (
+                    <p key={`${selectedSeller.id}-note-${index}`} className="rounded-2xl bg-zinc-50 p-3 text-sm font-bold text-zinc-600">{note}</p>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-zinc-100 bg-white p-4">
+                <h3 className="text-sm font-black text-zinc-950">Seller timeline</h3>
+                <div className="mt-3 space-y-2 text-sm font-bold text-zinc-600">
+                  <p className="rounded-2xl bg-zinc-50 p-3">Joined Zamoyo on {formatDate(selectedSeller.joinedAt)}</p>
+                  <p className="rounded-2xl bg-zinc-50 p-3">Verification status: {VERIFICATION_UI[selectedSeller.verificationStatus].label}</p>
+                  <p className="rounded-2xl bg-zinc-50 p-3">Operational status: {STATUS_UI[selectedSeller.status].label}</p>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

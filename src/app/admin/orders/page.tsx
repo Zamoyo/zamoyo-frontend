@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
 import {
   Search, ShoppingCart, AlertTriangle, Truck, CheckCircle2, 
   PackageX, RefreshCcw, Eye, X, MapPin, ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // Architecture Imports
 import { adminOrdersApi, AdminOrderRecord, OrderStatus } from "@/services/admin/orders";
-import { hasPermission, MOCK_CURRENT_ADMIN } from "@/services/rbac";
+import { recordAdminAudit } from "@/services/admin/audit";
+import { adminHasPermission, CURRENT_ADMIN_IDENTITY } from "@/services/admin/session";
 
 // ============================================================================
 // LOGIC HELPERS & UI MAPS
@@ -50,9 +53,13 @@ export default function AdminOrdersPage() {
   // Functional Modal State
   const [selectedOrder, setSelectedOrder] = useState<AdminOrderRecord | null>(null);
   const [isProcessingOverride, setIsProcessingOverride] = useState(false);
+  const [adminNote, setAdminNote] = useState("");
+  const [orderNotes, setOrderNotes] = useState<Record<string, string[]>>({});
+  const [createdDisputes, setCreatedDisputes] = useState<Record<string, string>>({});
 
   // RBAC Action-Level Guards
-  const canOverride = hasPermission(MOCK_CURRENT_ADMIN.role, "override_orders");
+  const canOverride = adminHasPermission("override_orders");
+  const canCreateDispute = adminHasPermission("manage_disputes");
 
   const loadOrders = useCallback(async () => {
     try {
@@ -87,8 +94,16 @@ export default function AdminOrdersPage() {
     setIsProcessingOverride(true);
     try {
       await adminOrdersApi.overrideOrderStatus(selectedOrder.id, newStatus);
+      await recordAdminAudit({
+        actorId: CURRENT_ADMIN_IDENTITY.id,
+        action: "order_status_override",
+        target: selectedOrder.id,
+        severity: "critical",
+        note: `${selectedOrder.status} -> ${newStatus}`,
+      });
       setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: newStatus } : o));
       setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      setOrderNotes(prev => ({ ...prev, [selectedOrder.id]: [`Status override: ${selectedOrder.status} -> ${newStatus}`, ...(prev[selectedOrder.id] ?? [])] }));
       toast.success(`Order forcefully moved to ${newStatus}.`);
     } catch {
       toast.error("Failed to override order status.");
@@ -102,14 +117,53 @@ export default function AdminOrdersPage() {
     setIsProcessingOverride(true);
     try {
       await adminOrdersApi.processRefund(selectedOrder.id);
+      await recordAdminAudit({
+        actorId: CURRENT_ADMIN_IDENTITY.id,
+        action: "order_refund_forced",
+        target: selectedOrder.id,
+        severity: "critical",
+        note: adminNote.trim() || "Manual admin refund override.",
+      });
       setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: "refunded" } : o));
       setSelectedOrder(prev => prev ? { ...prev, status: "refunded" } : null);
+      setOrderNotes(prev => ({ ...prev, [selectedOrder.id]: [adminNote.trim() || "Refund processed by admin override.", ...(prev[selectedOrder.id] ?? [])] }));
+      setAdminNote("");
       toast.success("Refund processed and funds reversed to buyer.");
     } catch {
       toast.error("Failed to process refund.");
     } finally {
       setIsProcessingOverride(false);
     }
+  };
+
+  const handleSaveOrderNote = async () => {
+    if (!selectedOrder || !adminNote.trim()) return toast.error("Add an admin note first.");
+    await recordAdminAudit({
+      actorId: CURRENT_ADMIN_IDENTITY.id,
+      action: "order_admin_note_added",
+      target: selectedOrder.id,
+      note: adminNote.trim(),
+    });
+    setOrderNotes(prev => ({ ...prev, [selectedOrder.id]: [adminNote.trim(), ...(prev[selectedOrder.id] ?? [])] }));
+    setAdminNote("");
+    toast.success("Order note saved.");
+  };
+
+  const handleCreateDispute = async () => {
+    if (!selectedOrder) return;
+    if (!canCreateDispute) return toast.error("You do not have permission to create disputes.");
+    const disputeId = `DSP-${Math.floor(1000 + Math.random() * 9000)}`;
+    await recordAdminAudit({
+      actorId: CURRENT_ADMIN_IDENTITY.id,
+      action: "order_dispute_created",
+      target: selectedOrder.id,
+      severity: "warning",
+      note: disputeId,
+    });
+    setCreatedDisputes(prev => ({ ...prev, [selectedOrder.id]: disputeId }));
+    setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: "escalated", escalationReason: adminNote.trim() || "Dispute created from admin order review." } : o));
+    setSelectedOrder(prev => prev ? { ...prev, status: "escalated", escalationReason: adminNote.trim() || "Dispute created from admin order review." } : null);
+    toast.success(`Dispute ${disputeId} created from order.`);
   };
 
   if (loading) return (
@@ -285,11 +339,13 @@ export default function AdminOrdersPage() {
                   <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Buyer</p>
                   <p className="mt-1 text-sm font-black text-zinc-900">{selectedOrder.buyerName}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500 line-clamp-2">{selectedOrder.deliveryAddress}</p>
+                  <Button asChild variant="outline" size="sm" className="mt-3 h-8 rounded-lg text-xs font-bold"><Link href="/admin/buyers">Open buyers CRM</Link></Button>
                 </div>
                 <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Seller</p>
                   <p className="mt-1 text-sm font-black text-zinc-900">{selectedOrder.sellerStoreName}</p>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 inline-block px-2 py-0.5 rounded-md mt-1">{selectedOrder.logisticsPartner}</p>
+                  <Button asChild variant="outline" size="sm" className="mt-3 h-8 rounded-lg text-xs font-bold"><Link href="/admin/sellers">Open sellers CRM</Link></Button>
                 </div>
               </div>
 
@@ -306,6 +362,30 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
 
+              <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Timeline & audit trail</p>
+                <div className="mt-3 space-y-2 text-sm font-bold text-zinc-600">
+                  <p className="rounded-2xl bg-zinc-50 p-3">Order placed: {formatDate(selectedOrder.placedAt)}</p>
+                  <p className="rounded-2xl bg-zinc-50 p-3">Current status: {STATUS_UI[selectedOrder.status].label}</p>
+                  <p className="rounded-2xl bg-zinc-50 p-3">Fulfilment method: {selectedOrder.logisticsPartner}</p>
+                  {createdDisputes[selectedOrder.id] ? <p className="rounded-2xl bg-rose-50 p-3 text-rose-700">Linked dispute: {createdDisputes[selectedOrder.id]}</p> : null}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Admin notes</p>
+                <Textarea value={adminNote} onChange={(event) => setAdminNote(event.target.value)} placeholder="Add order note, shipment update context, or dispute rationale..." className="mt-3 min-h-24 rounded-2xl border-zinc-200 bg-white" />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button onClick={handleSaveOrderNote} className="rounded-xl bg-zinc-950 text-xs font-black text-white hover:bg-zinc-800">Save note</Button>
+                  <Button onClick={handleCreateDispute} disabled={!canCreateDispute} variant="outline" className="rounded-xl text-xs font-black">Create dispute</Button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {(orderNotes[selectedOrder.id] ?? ["No admin notes recorded in this frontend session."]).map((note, index) => (
+                    <p key={`${selectedOrder.id}-note-${index}`} className="rounded-2xl bg-zinc-50 p-3 text-sm font-bold text-zinc-600">{note}</p>
+                  ))}
+                </div>
+              </div>
+
               {/* RBAC Admin Overrides */}
               {canOverride && (
                 <div className="rounded-3xl border border-rose-300/70 bg-linear-to-br from-rose-50 to-white p-5 mt-8 shadow-md shadow-rose-900/5">
@@ -315,6 +395,12 @@ export default function AdminOrdersPage() {
                   </div>
                   
                   <div className="space-y-3">
+                    {(selectedOrder.status === "pending" || selectedOrder.status === "processing") && (
+                      <Button onClick={() => handleOverrideStatus("shipped")} disabled={isProcessingOverride} className="w-full h-10 rounded-xl bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 shadow-sm">
+                        <Truck className="mr-2 h-4 w-4" /> Update Shipment to In Transit
+                      </Button>
+                    )}
+
                     {selectedOrder.status !== "delivered" && selectedOrder.status !== "refunded" && selectedOrder.status !== "cancelled" && (
                       <Button onClick={() => handleOverrideStatus("delivered")} disabled={isProcessingOverride} className="w-full h-10 rounded-xl bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-700 shadow-sm">
                         <CheckCircle2 className="mr-2 h-4 w-4" /> Force Mark as Delivered

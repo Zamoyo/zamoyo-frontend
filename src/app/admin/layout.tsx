@@ -5,29 +5,33 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Users, Store, Package, ShoppingCart, AlertOctagon,
-  Wallet, LifeBuoy, Megaphone, Settings, ShieldAlert, LogOut, Menu, X, Sparkles,
+  Wallet, LifeBuoy, Megaphone, Settings, ShieldAlert, LogOut, Menu, X, Sparkles, BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { Permission } from "@/services/rbac";
+import {
+  adminHasPermission,
+  clearAdminSessionCookie,
+  CURRENT_ADMIN_IDENTITY,
+  getAdminInitials,
+} from "@/services/admin/session";
 
-// Import RBAC Engine
-import { hasPermission, MOCK_CURRENT_ADMIN, Permission } from "@/services/rbac";
-
-// Define the Navigation Architecture
-type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }>; permission: Permission; isLive: boolean; };
+type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }>; permission: Permission; };
 
 const NAV_ITEMS: NavItem[] = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, permission: "view_dashboard", isLive: true },
-  { name: "Finance & Treasury", href: "/admin/finance", icon: Wallet, permission: "view_treasury", isLive: true },
-  { name: "Sellers CRM", href: "/admin/sellers", icon: Store, permission: "view_sellers", isLive: true },
-  { name: "Buyers CRM", href: "/admin/buyers", icon: Users, permission: "view_buyers", isLive: false },
-  { name: "Master Catalog", href: "/admin/products", icon: Package, permission: "view_products", isLive: true },
-  { name: "Order Logistics", href: "/admin/orders", icon: ShoppingCart, permission: "view_orders", isLive: true },
-  { name: "Dispute Queue", href: "/admin/disputes", icon: AlertOctagon, permission: "manage_disputes", isLive: false },
-  { name: "Support Hub", href: "/admin/support", icon: LifeBuoy, permission: "manage_support", isLive: false },
-  { name: "Content & Promo", href: "/admin/content", icon: Megaphone, permission: "manage_content", isLive: false },
-  { name: "Platform Settings", href: "/admin/system", icon: Settings, permission: "configure_platform", isLive: false },
-  { name: "Access Control", href: "/admin/access", icon: ShieldAlert, permission: "manage_admins", isLive: true },
+  { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, permission: "view_dashboard" },
+  { name: "Reports", href: "/admin/reports", icon: BarChart3, permission: "view_financial_reports" },
+  { name: "Finance & Treasury", href: "/admin/finance", icon: Wallet, permission: "view_treasury" },
+  { name: "Sellers CRM", href: "/admin/sellers", icon: Store, permission: "view_sellers" },
+  { name: "Buyers CRM", href: "/admin/buyers", icon: Users, permission: "view_buyers" },
+  { name: "Master Catalog", href: "/admin/products", icon: Package, permission: "view_products" },
+  { name: "Order Logistics", href: "/admin/orders", icon: ShoppingCart, permission: "view_orders" },
+  { name: "Dispute Queue", href: "/admin/disputes", icon: AlertOctagon, permission: "manage_disputes" },
+  { name: "Support Hub", href: "/admin/support", icon: LifeBuoy, permission: "manage_support" },
+  { name: "Content & Promo", href: "/admin/content", icon: Megaphone, permission: "manage_content" },
+  { name: "Platform Settings", href: "/admin/system", icon: Settings, permission: "configure_platform" },
+  { name: "Access Control", href: "/admin/access", icon: ShieldAlert, permission: "manage_admins" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -35,24 +39,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Enforce RBAC filtering for the sidebar
-  const authorizedNavItems = NAV_ITEMS.filter(item => hasPermission(MOCK_CURRENT_ADMIN.role, item.permission));
+  const authorizedNavItems = NAV_ITEMS.filter(item => adminHasPermission(item.permission));
 
   const handleSignOut = () => {
-    document.cookie = "zamoyo_admin_session=; path=/; max-age=0; SameSite=Strict";
+    document.cookie = clearAdminSessionCookie();
     toast.success("Admin session ended.");
     router.replace("/admin/login");
-  };
-
-  const handlePlannedModule = (moduleName: string) => {
-    setIsMobileMenuOpen(false);
-    toast.info(`${moduleName} is part of the next admin rollout. No broken route opened.`);
   };
 
   if (pathname === "/admin/login") return <>{children}</>;
 
   return (
-    <div className="flex min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(0,158,73,0.12),transparent_32rem),linear-gradient(135deg,#f8fafc_0%,#e4e4e7_45%,#f4f4f5_100%)]">
+    <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(0,158,73,0.12),transparent_32rem),linear-gradient(135deg,#f8fafc_0%,#e4e4e7_45%,#f4f4f5_100%)]">
       
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
@@ -61,7 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar Architecture */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 flex-col border-r border-white/10 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/30 transition-transform duration-300 lg:static lg:flex lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 h-screen w-72 flex-col overflow-hidden border-r border-white/10 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/30 transition-transform duration-300 lg:static lg:flex lg:translate-x-0",
         isMobileMenuOpen ? "flex translate-x-0" : "-translate-x-full"
       )}>
         {/* Branding & Environment Badge */}
@@ -74,27 +72,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Navigation Map */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 hide-scrollbar">
+        <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-4 py-6 hide-scrollbar">
           {authorizedNavItems.map((item) => {
             const isActive = pathname === item.href;
             const navClasses = cn(
               "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-bold transition-all",
               isActive
                 ? "border border-emerald-300/30 bg-emerald-400/15 text-emerald-100 shadow-lg shadow-emerald-950/30"
-                : item.isLive
-                  ? "text-zinc-300 hover:bg-white/8 hover:text-white"
-                  : "text-zinc-500 hover:bg-white/6 hover:text-zinc-300"
+                : "text-zinc-300 hover:bg-white/8 hover:text-white"
             );
-
-            if (!item.isLive) {
-              return (
-                <button key={item.name} type="button" onClick={() => handlePlannedModule(item.name)} className={navClasses}>
-                  <item.icon className="h-4 w-4 shrink-0 text-zinc-500" />
-                  <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                  <span className="rounded-full border border-white/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-zinc-500">Soon</span>
-                </button>
-              );
-            }
 
             return (
               <Link 
@@ -119,11 +105,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-zinc-950 font-black shadow-md">
-              {MOCK_CURRENT_ADMIN.name.charAt(0)}
+              {getAdminInitials()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white">{MOCK_CURRENT_ADMIN.name}</p>
-              <p className="text-[10px] font-black uppercase tracking-wider text-emerald-300">{MOCK_CURRENT_ADMIN.role.replace('_', ' ')}</p>
+              <p className="truncate text-sm font-bold text-white">{CURRENT_ADMIN_IDENTITY.name}</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-emerald-300">{CURRENT_ADMIN_IDENTITY.claims.role.replace(/_/g, " ")}</p>
             </div>
             </div>
           </div>
@@ -131,7 +117,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Execution Area */}
-      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden">
+      <main className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
         {/* Topbar */}
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/60 bg-white/70 px-4 shadow-sm shadow-zinc-900/5 backdrop-blur-xl lg:px-8">
           <button aria-label="Open admin menu" className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 lg:hidden" onClick={() => setIsMobileMenuOpen(true)}>
@@ -149,7 +135,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Page Injection */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-8">
           {children}
         </div>
       </main>

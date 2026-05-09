@@ -1,0 +1,653 @@
+- generic [active] [ref=e1]:
+  - region "Notifications alt+T"
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - link "Sell on Zamoyo" [ref=e6] [cursor=pointer]:
+            - /url: /sell
+            - img [ref=e7]
+            - text: Sell on Zamoyo
+          - link "Deliver to Lusaka" [ref=e11] [cursor=pointer]:
+            - /url: /track
+            - img [ref=e12]
+            - text: Deliver to Lusaka
+          - generic [ref=e15]:
+            - img [ref=e16]
+            - text: New Sellers Get 50% Off Fees
+        - generic [ref=e18]:
+          - link "About Us" [ref=e19] [cursor=pointer]:
+            - /url: /about
+          - link "Track Order" [ref=e20] [cursor=pointer]:
+            - /url: /track-order
+          - link "Help & Support" [ref=e21] [cursor=pointer]:
+            - /url: /help
+            - img [ref=e22]
+            - text: Help & Support
+      - generic [ref=e26]:
+        - link "Z Zamoyo" [ref=e28] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e29]: Z
+          - generic [ref=e30]: Zamoyo
+        - generic [ref=e35]:
+          - img
+          - searchbox "Search products, brands and categories..." [ref=e36]
+          - button "Search" [ref=e37]:
+            - img [ref=e38]
+        - generic [ref=e41]:
+          - button "Sign In My Account" [ref=e43]:
+            - img [ref=e44]
+            - generic [ref=e47]:
+              - generic [ref=e48]: Sign In
+              - generic [ref=e49]:
+                - text: My Account
+                - img [ref=e50]
+          - button "Cart K0" [ref=e52]:
+            - img [ref=e54]
+            - generic [ref=e58]:
+              - generic [ref=e59]: Cart
+              - generic [ref=e60]: K0
+      - generic [ref=e62]:
+        - button "All Categories" [ref=e64]:
+          - img [ref=e65]
+          - text: All Categories
+          - img [ref=e66]
+        - navigation [ref=e68]:
+          - link "All Products" [ref=e69] [cursor=pointer]:
+            - /url: /products
+          - link "New Arrivals" [ref=e70] [cursor=pointer]:
+            - /url: /new-arrivals
+          - link "Hot Deals" [ref=e71] [cursor=pointer]:
+            - /url: /deals
+          - link "Best Sellers" [ref=e72] [cursor=pointer]:
+            - /url: /best-sellers
+          - link "Electronics" [ref=e73] [cursor=pointer]:
+            - /url: /category/electronics
+          - link "Fashion" [ref=e74] [cursor=pointer]:
+            - /url: /category/fashion
+          - link "Home & Living" [ref=e75] [cursor=pointer]:
+            - /url: /category/home-and-living
+          - link "Health & Beauty" [ref=e76] [cursor=pointer]:
+            - /url: /category/health-and-beauty
+    - main [ref=e77]:
+      - main [ref=e78]:
+        - generic [ref=e80]:
+          - region [ref=e82]:
+            - generic [ref=e83]:
+              - generic [ref=e84]:
+                - group [ref=e85]:
+                  - generic [ref=e86]:
+                    - generic [ref=e90]: Welcome
+                    - generic [ref=e91]:
+                      - heading "Grand Opening Sale" [level=2] [ref=e92]
+                      - paragraph [ref=e93]: Welcome to Zamoyo. Shop across all categories with massive discounts.
+                      - link "Start Shopping" [ref=e95] [cursor=pointer]:
+                        - /url: /products
+                        - button "Start Shopping" [ref=e96]
+                - group [ref=e97]:
+                  - generic [ref=e98]:
+                    - generic [ref=e102]: Featured
+                    - generic [ref=e103]:
+                      - heading "Black Friday Deals" [level=2] [ref=e104]
+                      - paragraph [ref=e105]: The biggest tech and electronics price drops of the entire year.
+                      - link "Shop Electronics" [ref=e107] [cursor=pointer]:
+                        - /url: /category/electronics
+                        - button "Shop Electronics" [ref=e108]
+                - group [ref=e109]:
+                  - generic [ref=e110]:
+                    - generic [ref=e114]: Promo
+                    - generic [ref=e115]:
+                      - heading "Up to 50% Off" [level=2] [ref=e116]
+                      - paragraph [ref=e117]: Refresh your wardrobe with half-price deals on top global brands.
+                      - link "Shop Fashion" [ref=e119] [cursor=pointer]:
+                        - /url: /category/fashion
+                        - button "Shop Fashion" [ref=e120]
+              - button "Previous slide" [ref=e121] [cursor=pointer]:
+                - img
+                - generic [ref=e122]: Previous slide
+              - button "Next slide" [ref=e123] [cursor=pointer]:
+                - img
+                - generic [ref=e124]: Next slide
+          - generic [ref=e125]:
+            - link "Promo Free Delivery On your first order in Lusaka." [ref=e126] [cursor=pointer]:
+              - /url: /deals
+              - generic [ref=e130]: Promo
+              - generic [ref=e131]:
+                - heading "Free Delivery" [level=3] [ref=e132]
+                - paragraph [ref=e133]: On your first order in Lusaka.
+            - link "Sale Audio Fest Headphones up to 20% off." [ref=e134] [cursor=pointer]:
+              - /url: /category/electronics
+              - generic [ref=e138]: Sale
+              - generic [ref=e139]:
+                - heading "Audio Fest" [level=3] [ref=e140]
+                - paragraph [ref=e141]: Headphones up to 20% off.
+        - generic [ref=e142]:
+          - generic [ref=e143]:
+            - heading "Shop by Category" [level=3] [ref=e144]
+            - link "View All" [ref=e145] [cursor=pointer]:
+              - /url: /categories
+          - generic [ref=e146]:
+            - link "Phones & Tablets" [ref=e147] [cursor=pointer]:
+              - /url: /category/phones-and-tablets
+              - img [ref=e149]
+              - generic [ref=e151]: Phones & Tablets
+            - link "Computing" [ref=e152] [cursor=pointer]:
+              - /url: /category/computing
+              - img [ref=e154]
+              - generic [ref=e156]: Computing
+            - link "Fashion" [ref=e157] [cursor=pointer]:
+              - /url: /category/fashion
+              - img [ref=e159]
+              - generic [ref=e161]: Fashion
+            - link "Supermarket" [ref=e162] [cursor=pointer]:
+              - /url: /category/supermarket
+              - img [ref=e164]
+              - generic [ref=e170]: Supermarket
+            - link "Electronics" [ref=e171] [cursor=pointer]:
+              - /url: /category/electronics
+              - img [ref=e173]
+              - generic [ref=e176]: Electronics
+            - link "Health & Beauty" [ref=e177] [cursor=pointer]:
+              - /url: /category/health-and-beauty
+              - img [ref=e179]
+              - generic [ref=e182]: Health & Beauty
+            - link "Sports & Outdoors" [ref=e183] [cursor=pointer]:
+              - /url: /category/sports-and-outdoors
+              - img [ref=e185]
+              - generic [ref=e191]: Sports & Outdoors
+            - link "Home & Living" [ref=e192] [cursor=pointer]:
+              - /url: /category/home-and-living
+              - img [ref=e194]
+              - generic [ref=e197]: Home & Living
+        - generic [ref=e198]:
+          - generic [ref=e199]:
+            - generic [ref=e200]:
+              - heading "⚡ Flash Sales" [level=3] [ref=e201]:
+                - generic [ref=e202]: ⚡
+                - text: Flash Sales
+              - generic [ref=e203]:
+                - img [ref=e204]
+                - generic [ref=e207]: "Ends in:"
+                - generic [ref=e208]:
+                  - generic [ref=e209]:
+                    - generic [ref=e210]: "12"
+                    - generic [ref=e211]: ":"
+                  - generic [ref=e212]:
+                    - generic [ref=e213]: "45"
+                    - generic [ref=e214]: ":"
+                  - generic [ref=e216]: "30"
+            - generic [ref=e217]:
+              - generic [ref=e218]: 6 deals live
+              - link "See all deals" [ref=e219] [cursor=pointer]:
+                - /url: /flash-sales
+                - text: See all deals
+                - img [ref=e220]
+          - generic [ref=e222]:
+            - generic [ref=e224]:
+              - generic [ref=e226]:
+                - generic [ref=e227]: "-12%"
+                - button "Add to wishlist" [ref=e228]:
+                  - img [ref=e229]
+                - link [ref=e231] [cursor=pointer]:
+                  - /url: /product/apple-iphone-15-pro-max-256gb
+              - generic [ref=e233]:
+                - generic [ref=e234]: Phones & Tablets
+                - link "Apple iPhone 15 Pro Max - 256GB" [ref=e235] [cursor=pointer]:
+                  - /url: /product/apple-iphone-15-pro-max-256gb
+                - generic [ref=e236]:
+                  - img [ref=e237]
+                  - generic [ref=e239]: "4.9"
+                  - generic [ref=e240]: (124)
+                - generic [ref=e241]:
+                  - generic [ref=e242]:
+                    - generic [ref=e243]: K24,500
+                    - generic [ref=e244]: K28,000
+                  - button [ref=e245] [cursor=pointer]:
+                    - img
+            - generic [ref=e247]:
+              - generic [ref=e249]:
+                - generic [ref=e250]: "-20%"
+                - button "Add to wishlist" [ref=e251]:
+                  - img [ref=e252]
+                - link [ref=e254] [cursor=pointer]:
+                  - /url: /product/sony-wh-1000xm5-wireless-headphones
+              - generic [ref=e256]:
+                - generic [ref=e257]: Electronics
+                - link "Sony WH-1000XM5 Wireless Headphones" [ref=e258] [cursor=pointer]:
+                  - /url: /product/sony-wh-1000xm5-wireless-headphones
+                - generic [ref=e259]:
+                  - img [ref=e260]
+                  - generic [ref=e262]: "4.8"
+                  - generic [ref=e263]: (89)
+                - generic [ref=e264]:
+                  - generic [ref=e265]:
+                    - generic [ref=e266]: K6,800
+                    - generic [ref=e267]: K8,500
+                  - button [ref=e268] [cursor=pointer]:
+                    - img
+            - generic [ref=e270]:
+              - generic [ref=e272]:
+                - generic [ref=e273]: "-20%"
+                - button "Add to wishlist" [ref=e274]:
+                  - img [ref=e275]
+                - link [ref=e277] [cursor=pointer]:
+                  - /url: /product/samsung-55-smart-4k-uhd-tv
+              - generic [ref=e279]:
+                - generic [ref=e280]: Electronics
+                - link "Samsung 55\" Smart 4K UHD TV" [ref=e281] [cursor=pointer]:
+                  - /url: /product/samsung-55-smart-4k-uhd-tv
+                - generic [ref=e282]:
+                  - img [ref=e283]
+                  - generic [ref=e285]: "4.7"
+                  - generic [ref=e286]: (56)
+                - generic [ref=e287]:
+                  - generic [ref=e288]:
+                    - generic [ref=e289]: K11,200
+                    - generic [ref=e290]: K14,000
+                  - button [ref=e291] [cursor=pointer]:
+                    - img
+            - generic [ref=e293]:
+              - generic [ref=e295]:
+                - generic [ref=e296]: "-30%"
+                - button "Add to wishlist" [ref=e297]:
+                  - img [ref=e298]
+                - link [ref=e300] [cursor=pointer]:
+                  - /url: /product/nike-air-force-1-07
+              - generic [ref=e302]:
+                - generic [ref=e303]: Fashion
+                - link "Nike Air Force 1 '07" [ref=e304] [cursor=pointer]:
+                  - /url: /product/nike-air-force-1-07
+                - generic [ref=e305]:
+                  - img [ref=e306]
+                  - generic [ref=e308]: "4.9"
+                  - generic [ref=e309]: (210)
+                - generic [ref=e310]:
+                  - generic [ref=e311]:
+                    - generic [ref=e312]: K2,100
+                    - generic [ref=e313]: K3,000
+                  - button [ref=e314] [cursor=pointer]:
+                    - img
+            - generic [ref=e316]:
+              - generic [ref=e318]:
+                - generic [ref=e319]: "-15%"
+                - button "Add to wishlist" [ref=e320]:
+                  - img [ref=e321]
+                - link [ref=e323] [cursor=pointer]:
+                  - /url: /product/dell-xps-13-laptop-16gb-ram
+              - generic [ref=e325]:
+                - generic [ref=e326]: Computing
+                - link "Dell XPS 13 Laptop - 16GB RAM" [ref=e327] [cursor=pointer]:
+                  - /url: /product/dell-xps-13-laptop-16gb-ram
+                - generic [ref=e328]:
+                  - img [ref=e329]
+                  - generic [ref=e331]: "4.6"
+                  - generic [ref=e332]: (42)
+                - generic [ref=e333]:
+                  - generic [ref=e334]:
+                    - generic [ref=e335]: K22,000
+                    - generic [ref=e336]: K26,000
+                  - button [ref=e337] [cursor=pointer]:
+                    - img
+            - generic [ref=e339]:
+              - generic [ref=e341]:
+                - generic [ref=e342]: "-10%"
+                - button "Add to wishlist" [ref=e343]:
+                  - img [ref=e344]
+                - link [ref=e346] [cursor=pointer]:
+                  - /url: /product/playstation-5-console
+              - generic [ref=e348]:
+                - generic [ref=e349]: Electronics
+                - link "PlayStation 5 Console" [ref=e350] [cursor=pointer]:
+                  - /url: /product/playstation-5-console
+                - generic [ref=e351]:
+                  - img [ref=e352]
+                  - generic [ref=e354]: "4.9"
+                  - generic [ref=e355]: (312)
+                - generic [ref=e356]:
+                  - generic [ref=e357]:
+                    - generic [ref=e358]: K12,500
+                    - generic [ref=e359]: K14,000
+                  - button [ref=e360] [cursor=pointer]:
+                    - img
+        - generic [ref=e361]:
+          - generic [ref=e362]:
+            - generic [ref=e363]:
+              - heading "Trending Near You" [level=3] [ref=e364]
+              - generic [ref=e365]: Lusaka Region
+            - link "View all trending" [ref=e366] [cursor=pointer]:
+              - /url: /trending
+              - text: View all trending
+              - img [ref=e367]
+          - generic [ref=e369]:
+            - generic [ref=e370]:
+              - generic [ref=e372]:
+                - generic [ref=e373]: Hot
+                - button "Add to wishlist" [ref=e374]:
+                  - img [ref=e375]
+                - link [ref=e377] [cursor=pointer]:
+                  - /url: /product/macbook-air-m2-space-gray
+              - generic [ref=e379]:
+                - generic [ref=e380]: Computing
+                - link "MacBook Air M2 - Space Gray" [ref=e381] [cursor=pointer]:
+                  - /url: /product/macbook-air-m2-space-gray
+                - generic [ref=e382]:
+                  - img [ref=e383]
+                  - generic [ref=e385]: "4.9"
+                  - generic [ref=e386]: (342)
+                - generic [ref=e387]:
+                  - generic [ref=e389]: K26,500
+                  - button [ref=e390] [cursor=pointer]:
+                    - img
+            - generic [ref=e391]:
+              - generic [ref=e393]:
+                - button "Add to wishlist" [ref=e394]:
+                  - img [ref=e395]
+                - link [ref=e397] [cursor=pointer]:
+                  - /url: /product/classic-leather-crossbody-bag
+              - generic [ref=e399]:
+                - generic [ref=e400]: Fashion
+                - link "Classic Leather Crossbody Bag" [ref=e401] [cursor=pointer]:
+                  - /url: /product/classic-leather-crossbody-bag
+                - generic [ref=e402]:
+                  - img [ref=e403]
+                  - generic [ref=e405]: "4.7"
+                  - generic [ref=e406]: (128)
+                - generic [ref=e407]:
+                  - generic [ref=e409]: K850
+                  - button [ref=e410] [cursor=pointer]:
+                    - img
+            - generic [ref=e411]:
+              - generic [ref=e413]:
+                - generic [ref=e414]: New
+                - button "Add to wishlist" [ref=e415]:
+                  - img [ref=e416]
+                - link [ref=e418] [cursor=pointer]:
+                  - /url: /product/nespresso-vertuo-coffee-machine
+              - generic [ref=e420]:
+                - generic [ref=e421]: Appliances
+                - link "Nespresso Vertuo Coffee Machine" [ref=e422] [cursor=pointer]:
+                  - /url: /product/nespresso-vertuo-coffee-machine
+                - generic [ref=e423]:
+                  - img [ref=e424]
+                  - generic [ref=e426]: "4.8"
+                  - generic [ref=e427]: (85)
+                - generic [ref=e428]:
+                  - generic [ref=e430]: K4,200
+                  - button [ref=e431] [cursor=pointer]:
+                    - img
+            - generic [ref=e432]:
+              - generic [ref=e434]:
+                - generic [ref=e435]: Hot
+                - button "Add to wishlist" [ref=e436]:
+                  - img [ref=e437]
+                - link [ref=e439] [cursor=pointer]:
+                  - /url: /product/samsung-galaxy-s24-ultra
+              - generic [ref=e441]:
+                - generic [ref=e442]: Phones
+                - link "Samsung Galaxy S24 Ultra" [ref=e443] [cursor=pointer]:
+                  - /url: /product/samsung-galaxy-s24-ultra
+                - generic [ref=e444]:
+                  - img [ref=e445]
+                  - generic [ref=e447]: "5"
+                  - generic [ref=e448]: (412)
+                - generic [ref=e449]:
+                  - generic [ref=e451]: K29,000
+                  - button [ref=e452] [cursor=pointer]:
+                    - img
+            - generic [ref=e453]:
+              - generic [ref=e455]:
+                - button "Add to wishlist" [ref=e456]:
+                  - img [ref=e457]
+                - link [ref=e459] [cursor=pointer]:
+                  - /url: /product/premium-yoga-mat
+              - generic [ref=e461]:
+                - generic [ref=e462]: Sports
+                - link "Premium Yoga Mat" [ref=e463] [cursor=pointer]:
+                  - /url: /product/premium-yoga-mat
+                - generic [ref=e464]:
+                  - img [ref=e465]
+                  - generic [ref=e467]: "4.6"
+                  - generic [ref=e468]: (95)
+                - generic [ref=e469]:
+                  - generic [ref=e471]: K450
+                  - button [ref=e472] [cursor=pointer]:
+                    - img
+            - generic [ref=e473]:
+              - generic [ref=e475]:
+                - generic [ref=e476]: Trending
+                - button "Add to wishlist" [ref=e477]:
+                  - img [ref=e478]
+                - link [ref=e480] [cursor=pointer]:
+                  - /url: /product/dyson-supersonic-hair-dryer
+              - generic [ref=e482]:
+                - generic [ref=e483]: Health
+                - link "Dyson Supersonic Hair Dryer" [ref=e484] [cursor=pointer]:
+                  - /url: /product/dyson-supersonic-hair-dryer
+                - generic [ref=e485]:
+                  - img [ref=e486]
+                  - generic [ref=e488]: "4.9"
+                  - generic [ref=e489]: (215)
+                - generic [ref=e490]:
+                  - generic [ref=e492]: K9,500
+                  - button [ref=e493] [cursor=pointer]:
+                    - img
+            - generic [ref=e494]:
+              - generic [ref=e496]:
+                - generic [ref=e497]: Best Seller
+                - button "Add to wishlist" [ref=e498]:
+                  - img [ref=e499]
+                - link [ref=e501] [cursor=pointer]:
+                  - /url: /product/organic-arabica-coffee-beans
+              - generic [ref=e503]:
+                - generic [ref=e504]: Supermarket
+                - link "Organic Arabica Coffee Beans" [ref=e505] [cursor=pointer]:
+                  - /url: /product/organic-arabica-coffee-beans
+                - generic [ref=e506]:
+                  - img [ref=e507]
+                  - generic [ref=e509]: "4.8"
+                  - generic [ref=e510]: (512)
+                - generic [ref=e511]:
+                  - generic [ref=e513]: K320
+                  - button [ref=e514] [cursor=pointer]:
+                    - img
+            - generic [ref=e515]:
+              - generic [ref=e517]:
+                - button "Add to wishlist" [ref=e518]:
+                  - img [ref=e519]
+                - link [ref=e521] [cursor=pointer]:
+                  - /url: /product/minimalist-chronograph-watch
+              - generic [ref=e523]:
+                - generic [ref=e524]: Fashion
+                - link "Minimalist Chronograph Watch" [ref=e525] [cursor=pointer]:
+                  - /url: /product/minimalist-chronograph-watch
+                - generic [ref=e526]:
+                  - img [ref=e527]
+                  - generic [ref=e529]: "4.7"
+                  - generic [ref=e530]: (176)
+                - generic [ref=e531]:
+                  - generic [ref=e533]: K1,200
+                  - button [ref=e534] [cursor=pointer]:
+                    - img
+            - generic [ref=e535]:
+              - generic [ref=e537]:
+                - generic [ref=e538]: Hot
+                - button "Add to wishlist" [ref=e539]:
+                  - img [ref=e540]
+                - link [ref=e542] [cursor=pointer]:
+                  - /url: /product/sony-playstation-5-console
+              - generic [ref=e544]:
+                - generic [ref=e545]: Electronics
+                - link "Sony PlayStation 5 Console" [ref=e546] [cursor=pointer]:
+                  - /url: /product/sony-playstation-5-console
+                - generic [ref=e547]:
+                  - img [ref=e548]
+                  - generic [ref=e550]: "4.9"
+                  - generic [ref=e551]: (843)
+                - generic [ref=e552]:
+                  - generic [ref=e554]: K12,500
+                  - button [ref=e555] [cursor=pointer]:
+                    - img
+            - generic [ref=e556]:
+              - generic [ref=e558]:
+                - button "Add to wishlist" [ref=e559]:
+                  - img [ref=e560]
+                - link [ref=e562] [cursor=pointer]:
+                  - /url: /product/nike-air-max-270-sneakers
+              - generic [ref=e564]:
+                - generic [ref=e565]: Fashion
+                - link "Nike Air Max 270 Sneakers" [ref=e566] [cursor=pointer]:
+                  - /url: /product/nike-air-max-270-sneakers
+                - generic [ref=e567]:
+                  - img [ref=e568]
+                  - generic [ref=e570]: "4.8"
+                  - generic [ref=e571]: (320)
+                - generic [ref=e572]:
+                  - generic [ref=e574]: K2,800
+                  - button [ref=e575] [cursor=pointer]:
+                    - img
+            - generic [ref=e576]:
+              - generic [ref=e578]:
+                - button "Add to wishlist" [ref=e579]:
+                  - img [ref=e580]
+                - link [ref=e582] [cursor=pointer]:
+                  - /url: /product/waterpik-aquarius-flosser
+              - generic [ref=e584]:
+                - generic [ref=e585]: Health
+                - link "Waterpik Aquarius Flosser" [ref=e586] [cursor=pointer]:
+                  - /url: /product/waterpik-aquarius-flosser
+                - generic [ref=e587]:
+                  - img [ref=e588]
+                  - generic [ref=e590]: "4.8"
+                  - generic [ref=e591]: (215)
+                - generic [ref=e592]:
+                  - generic [ref=e594]: K1,800
+                  - button [ref=e595] [cursor=pointer]:
+                    - img
+            - generic [ref=e596]:
+              - generic [ref=e598]:
+                - generic [ref=e599]: Top Rated
+                - button "Add to wishlist" [ref=e600]:
+                  - img [ref=e601]
+                - link [ref=e603] [cursor=pointer]:
+                  - /url: /product/logitech-mx-master-3s-mouse
+              - generic [ref=e605]:
+                - generic [ref=e606]: Computing
+                - link "Logitech MX Master 3S Mouse" [ref=e607] [cursor=pointer]:
+                  - /url: /product/logitech-mx-master-3s-mouse
+                - generic [ref=e608]:
+                  - img [ref=e609]
+                  - generic [ref=e611]: "4.9"
+                  - generic [ref=e612]: (843)
+                - generic [ref=e613]:
+                  - generic [ref=e615]: K2,200
+                  - button [ref=e616] [cursor=pointer]:
+                    - img
+        - generic [ref=e619]:
+          - generic [ref=e620]:
+            - img [ref=e622]
+            - generic [ref=e627]:
+              - heading "Fast Delivery" [level=4] [ref=e628]
+              - paragraph [ref=e629]: Across Lusaka within 24 hours
+          - generic [ref=e630]:
+            - img [ref=e632]
+            - generic [ref=e635]:
+              - heading "Secure Payments" [level=4] [ref=e636]
+              - paragraph [ref=e637]: 100% protected transactions
+          - generic [ref=e638]:
+            - img [ref=e640]
+            - generic [ref=e642]:
+              - heading "Flexible Options" [level=4] [ref=e643]
+              - paragraph [ref=e644]: Mobile Money & Cards accepted
+          - generic [ref=e645]:
+            - img [ref=e647]
+            - generic [ref=e649]:
+              - heading "24/7 Local Support" [level=4] [ref=e650]
+              - paragraph [ref=e651]: Dedicated customer service
+    - contentinfo [ref=e652]:
+      - generic [ref=e653]:
+        - generic [ref=e654]:
+          - generic [ref=e655]:
+            - link "ZAMOYO." [ref=e656] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e657]: ZAMOYO.
+            - paragraph [ref=e658]: Zambia's premier shopping marketplace. Connecting trusted sellers with buyers across Lusaka.
+            - generic [ref=e659]:
+              - link "Seller" [ref=e660] [cursor=pointer]:
+                - /url: /sell
+                - img [ref=e661]
+                - text: Seller
+              - link "Track" [ref=e665] [cursor=pointer]:
+                - /url: /track-order
+                - img [ref=e666]
+                - text: Track
+              - link "Help" [ref=e670] [cursor=pointer]:
+                - /url: /help
+                - img [ref=e671]
+                - text: Help
+          - generic [ref=e674]:
+            - generic [ref=e675]:
+              - heading "Company" [level=4] [ref=e676]
+              - list [ref=e677]:
+                - listitem [ref=e678]:
+                  - link "About Zamoyo" [ref=e679] [cursor=pointer]:
+                    - /url: /about
+                - listitem [ref=e680]:
+                  - link "Careers" [ref=e681] [cursor=pointer]:
+                    - /url: /careers
+                - listitem [ref=e682]:
+                  - link "Become a Seller" [ref=e683] [cursor=pointer]:
+                    - /url: /sell
+                - listitem [ref=e684]:
+                  - link "Terms & Conditions" [ref=e685] [cursor=pointer]:
+                    - /url: /terms
+            - generic [ref=e686]:
+              - heading "Support" [level=4] [ref=e687]
+              - list [ref=e688]:
+                - listitem [ref=e689]:
+                  - link "Help Center" [ref=e690] [cursor=pointer]:
+                    - /url: /help
+                - listitem [ref=e691]:
+                  - link "Track Order" [ref=e692] [cursor=pointer]:
+                    - /url: /track-order
+                - listitem [ref=e693]:
+                  - link "Returns Policy" [ref=e694] [cursor=pointer]:
+                    - /url: /returns
+                - listitem [ref=e695]:
+                  - link "Privacy Policy" [ref=e696] [cursor=pointer]:
+                    - /url: /privacy
+            - generic [ref=e697]:
+              - heading "Categories" [level=4] [ref=e698]
+              - list [ref=e699]:
+                - listitem [ref=e700]:
+                  - link "Phones & Tablets" [ref=e701] [cursor=pointer]:
+                    - /url: /category/phones-and-tablets
+                - listitem [ref=e702]:
+                  - link "Computing" [ref=e703] [cursor=pointer]:
+                    - /url: /category/computing
+                - listitem [ref=e704]:
+                  - link "Fashion" [ref=e705] [cursor=pointer]:
+                    - /url: /category/fashion
+                - listitem [ref=e706]:
+                  - link "Supermarket" [ref=e707] [cursor=pointer]:
+                    - /url: /category/supermarket
+          - generic [ref=e708]:
+            - heading "Stay in the Loop" [level=4] [ref=e709]
+            - paragraph [ref=e710]: Exclusive deals straight to your inbox.
+            - generic [ref=e712]:
+              - textbox "Enter email" [ref=e713]
+              - button "Subscribe to newsletter" [ref=e714] [cursor=pointer]:
+                - img
+        - generic [ref=e715]:
+          - paragraph [ref=e716]: © 2026 Zamoyo. All rights reserved.
+          - generic [ref=e717]:
+            - generic [ref=e718]:
+              - img [ref=e719]
+              - text: 100% Secure
+            - generic [ref=e722]:
+              - generic "Mobile Money (MTN, Airtel)" [ref=e723]:
+                - img [ref=e724]
+              - generic "Visa / Mastercard" [ref=e726]:
+                - img [ref=e727]
+  - button "Open Next.js Dev Tools" [ref=e734] [cursor=pointer]:
+    - img [ref=e735]
+  - alert [ref=e738]
