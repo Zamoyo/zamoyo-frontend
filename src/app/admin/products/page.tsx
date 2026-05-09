@@ -12,7 +12,8 @@ import {
   adminProductsApi,
   type AdminProductRecord,
 } from "@/services/admin/products";
-import { hasPermission, MOCK_CURRENT_ADMIN } from "@/services/rbac";
+import { recordAdminAudit } from "@/services/admin/audit";
+import { adminHasPermission, CURRENT_ADMIN_IDENTITY } from "@/services/admin/session";
 import {
   getProductModerationStatusLabel,
   type ProductModerationAction,
@@ -49,8 +50,10 @@ export default function AdminProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<AdminProductRecord | null>(null);
   const [moderationNote, setModerationNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [categoryOverrides, setCategoryOverrides] = useState<Record<string, string>>({});
 
-  const canModerate = hasPermission(MOCK_CURRENT_ADMIN.role, "moderate_products");
+  const canModerate = adminHasPermission("moderate_products");
 
   useEffect(() => {
     let ignore = false;
@@ -108,6 +111,13 @@ export default function AdminProductsPage() {
         action,
         note: moderationNote,
       });
+      await recordAdminAudit({
+        actorId: CURRENT_ADMIN_IDENTITY.id,
+        action: `product_${action}`,
+        target: selectedProduct.sellerProductId,
+        severity: action === "approve" ? "info" : "warning",
+        note: moderationNote,
+      });
 
       setProducts((current) =>
         current.map((product) => (product.sellerProductId === updated.sellerProductId ? updated : product)),
@@ -131,6 +141,61 @@ export default function AdminProductsPage() {
   function openReview(product: AdminProductRecord) {
     setSelectedProduct(product);
     setModerationNote(product.moderationNotes ?? "");
+  }
+
+  function toggleProductSelection(productId: string) {
+    setSelectedProductIds((current) => current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId]);
+  }
+
+  async function handleBulkModeration(action: ProductModerationAction) {
+    if (!canModerate) return toast.error("Unauthorized.");
+    if (selectedProductIds.length === 0) return toast.error("Select products before running a bulk action.");
+
+    try {
+      setIsSubmitting(true);
+      const selectedProducts = products.filter((product) => selectedProductIds.includes(product.sellerProductId));
+      const updatedProducts = await Promise.all(selectedProducts.map((product) => adminProductsApi.reviewProduct(product.sellerProductId, {
+        action,
+        note: moderationNote || `Bulk ${action} action.`,
+      })));
+      await recordAdminAudit({
+        actorId: CURRENT_ADMIN_IDENTITY.id,
+        action: `product_bulk_${action}`,
+        target: `${selectedProducts.length} products`,
+        severity: "warning",
+        note: moderationNote || `Bulk ${action} action.`,
+      });
+      setProducts((current) => current.map((product) => updatedProducts.find((updated) => updated.sellerProductId === product.sellerProductId) ?? product));
+      setSelectedProductIds([]);
+      toast.success(`${selectedProducts.length} products updated.`);
+    } catch {
+      toast.error("Failed to run bulk moderation.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleCategoryOverride(product: AdminProductRecord, value: string) {
+    setCategoryOverrides((current) => ({ ...current, [product.sellerProductId]: value }));
+    await recordAdminAudit({
+      actorId: CURRENT_ADMIN_IDENTITY.id,
+      action: "product_category_override_drafted",
+      target: product.sellerProductId,
+      note: value,
+    });
+    toast.success("Category override draft saved.");
+  }
+
+  async function handlePublishState(product: AdminProductRecord, status: ProductModerationStatus) {
+    if (!canModerate) return toast.error("Unauthorized.");
+    await recordAdminAudit({
+      actorId: CURRENT_ADMIN_IDENTITY.id,
+      action: `product_${status}`,
+      target: product.sellerProductId,
+      severity: status === "suspended" ? "critical" : "warning",
+    });
+    setProducts((current) => current.map((item) => item.sellerProductId === product.sellerProductId ? { ...item, status } : item));
+    toast.success(`Product moved to ${getProductModerationStatusLabel(status)}.`);
   }
 
   if (loading) {
@@ -180,7 +245,8 @@ export default function AdminProductsPage() {
       </div>
 
       <div className="rounded-3xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5 backdrop-blur-xl">
-        <div className="relative max-w-md">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input
             value={search}
@@ -189,6 +255,13 @@ export default function AdminProductsPage() {
             className="h-11 rounded-xl border-zinc-200 bg-zinc-50 pl-9 text-sm font-medium shadow-inner focus-visible:ring-zinc-900"
           />
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-xl bg-zinc-100 px-3 py-2 text-xs font-black text-zinc-600">{selectedProductIds.length} selected</span>
+          <Button disabled={isSubmitting || selectedProductIds.length === 0} onClick={() => handleBulkModeration("approve")} className="rounded-xl bg-emerald-600 font-black text-white hover:bg-emerald-700">Bulk approve</Button>
+          <Button disabled={isSubmitting || selectedProductIds.length === 0} onClick={() => handleBulkModeration("request_changes")} variant="outline" className="rounded-xl font-black">Bulk changes</Button>
+          <Button disabled={isSubmitting || selectedProductIds.length === 0} onClick={() => handleBulkModeration("reject")} variant="destructive" className="rounded-xl font-black">Bulk reject</Button>
+        </div>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-3xl border border-white/70 bg-white/75 shadow-md shadow-zinc-900/5 backdrop-blur-xl">
@@ -196,7 +269,8 @@ export default function AdminProductsPage() {
           <table className="min-w-[1080px] w-full text-left text-sm">
             <thead className="border-b border-zinc-100 bg-zinc-100/80 backdrop-blur-sm">
               <tr>
-                <th className="rounded-tl-2xl p-4 pl-6 text-[10px] font-black uppercase tracking-wider text-zinc-500">Product & Seller</th>
+                <th className="rounded-tl-2xl p-4 pl-6 text-[10px] font-black uppercase tracking-wider text-zinc-500">Select</th>
+                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Product & Seller</th>
                 <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Status</th>
                 <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Category</th>
                 <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Submitted</th>
@@ -207,7 +281,7 @@ export default function AdminProductsPage() {
             <tbody className="divide-y divide-zinc-50">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center">
+                  <td colSpan={7} className="p-12 text-center">
                     <p className="text-sm font-bold text-zinc-500">No products match your search.</p>
                   </td>
                 </tr>
@@ -217,6 +291,15 @@ export default function AdminProductsPage() {
                   return (
                     <tr key={product.sellerProductId} className="group transition-colors hover:bg-amber-50/35">
                       <td className="p-4 pl-6">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${product.name}`}
+                          checked={selectedProductIds.includes(product.sellerProductId)}
+                          onChange={() => toggleProductSelection(product.sellerProductId)}
+                          className="h-4 w-4 rounded border-zinc-300 accent-[#009E49]"
+                        />
+                      </td>
+                      <td className="p-4">
                         <p className="font-bold text-zinc-900 transition-colors group-hover:text-amber-700">{product.name}</p>
                         <p className="mt-1 flex items-center text-[10px] font-bold text-zinc-500">
                           <Store className="mr-1 h-3 w-3" /> {product.sellerStore} • {product.id}
@@ -235,6 +318,17 @@ export default function AdminProductsPage() {
                       <td className="p-4">
                         <p className="font-bold text-zinc-900">{product.categoryName}</p>
                         <p className="text-[10px] font-medium text-zinc-500">{product.subcategoryName}</p>
+                        <select
+                          value={categoryOverrides[product.sellerProductId] ?? product.categoryName}
+                          onChange={(event) => handleCategoryOverride(product, event.target.value)}
+                          className="mt-2 h-8 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-[10px] font-bold text-zinc-700"
+                        >
+                          <option value={product.categoryName}>{product.categoryName}</option>
+                          <option value="Electronics">Electronics</option>
+                          <option value="Fashion">Fashion</option>
+                          <option value="Home & Living">Home & Living</option>
+                          <option value="Healthcare & Beauty">Healthcare & Beauty</option>
+                        </select>
                       </td>
                       <td className="p-4 text-xs font-bold text-zinc-600">{formatDate(product.submittedAt)}</td>
                       <td className="p-4">
@@ -250,6 +344,12 @@ export default function AdminProductsPage() {
                         >
                           {product.status === "pending_review" ? "Review" : "View"}
                         </Button>
+                        {product.status === "approved" ? (
+                          <Button onClick={() => handlePublishState(product, "published")} size="sm" className="ml-2 h-9 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-700">Publish</Button>
+                        ) : null}
+                        {product.status === "published" ? (
+                          <Button onClick={() => handlePublishState(product, "suspended")} size="sm" variant="destructive" className="ml-2 h-9 rounded-xl font-bold">Suspend</Button>
+                        ) : null}
                       </td>
                     </tr>
                   );

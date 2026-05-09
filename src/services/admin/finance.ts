@@ -47,6 +47,7 @@ const MOCK_LEDGER: LedgerEntry[] = [
   { id: "TXN-9021", orderId: "ORD-9921", type: "escrow_deposit", description: "Payment held for ORD-9921", amount: 45000, balanceAfter: 840000, timestamp: new Date(Date.now() - 3600000).toISOString() },
   { id: "TXN-9020", orderId: "ORD-9919", type: "commission_fee", description: "Commission cut (5%) on ORD-9919", amount: 425, balanceAfter: 795000, timestamp: new Date(Date.now() - 7200000).toISOString() },
   { id: "TXN-9019", type: "payout_release", description: "Payout released to Lusaka Electronics", amount: -12300, balanceAfter: 794575, timestamp: new Date(Date.now() - 86400000).toISOString() },
+  { id: "TXN-9018", orderId: "ORD-9917", type: "refund_debit", description: "Refund queued for disputed cancelled order", amount: -12400, balanceAfter: 806875, timestamp: new Date(Date.now() - 93600000).toISOString() },
 ];
 
 export const adminFinanceApi = {

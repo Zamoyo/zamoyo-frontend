@@ -7,12 +7,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // Architecture Imports
-import { adminFinanceApi, PayoutRequest, LedgerEntry, TreasuryMetrics } from "@/services/admin/finance";
-import { hasPermission, MOCK_CURRENT_ADMIN } from "@/services/rbac";
+import { adminFinanceApi, PayoutRequest, LedgerEntry, TreasuryMetrics, TransactionType } from "@/services/admin/finance";
+import { recordAdminAudit } from "@/services/admin/audit";
+import { adminHasPermission, CURRENT_ADMIN_IDENTITY } from "@/services/admin/session";
 
 // ============================================================================
 // LOGIC HELPERS & UI MAPS
@@ -37,7 +39,7 @@ const TXN_TYPE_UI: Record<string, { label: string; color: string; sign: string }
   "refund_debit": { label: "Refund Debit", color: "text-rose-600", sign: "-" },
 };
 
-type ViewTab = "payouts" | "ledger";
+type ViewTab = "payouts" | "ledger" | "refunds" | "reconciliation";
 
 // ============================================================================
 // MAIN PAGE EXPORT
@@ -51,14 +53,19 @@ export default function AdminFinancePage() {
   // UI State
   const [activeTab, setActiveTab] = useState<ViewTab>("payouts");
   const [searchQuery, setSearchQuery] = useState("");
+  const [ledgerTypeFilter, setLedgerTypeFilter] = useState<TransactionType | "all">("all");
 
   // Modal State
   const [selectedPayout, setSelectedPayout] = useState<PayoutRequest | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [payoutNote, setPayoutNote] = useState("");
+  const [payoutNotes, setPayoutNotes] = useState<Record<string, string[]>>({});
+  const [reviewedRefunds, setReviewedRefunds] = useState<string[]>([]);
 
   // RBAC Guards
-  const canApprovePayouts = hasPermission(MOCK_CURRENT_ADMIN.role, "approve_payouts");
-  const canExport = hasPermission(MOCK_CURRENT_ADMIN.role, "export_reports");
+  const canApprovePayouts = adminHasPermission("approve_payouts");
+  const canExport = adminHasPermission("export_reports");
+  const canManageRefunds = adminHasPermission("manage_refunds");
 
   const loadTreasury = useCallback(async () => {
     try {
@@ -82,8 +89,16 @@ export default function AdminFinancePage() {
   }, [payouts, searchQuery]);
 
   const filteredLedger = useMemo(() => {
-    return ledger.filter(l => !searchQuery || l.description.toLowerCase().includes(searchQuery.toLowerCase()) || l.id.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [ledger, searchQuery]);
+    return ledger.filter(l => {
+      const matchesSearch = !searchQuery || l.description.toLowerCase().includes(searchQuery.toLowerCase()) || l.id.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = ledgerTypeFilter === "all" || l.type === ledgerTypeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [ledger, ledgerTypeFilter, searchQuery]);
+
+  const refundQueue = useMemo(() => {
+    return ledger.filter((entry) => entry.type === "refund_debit");
+  }, [ledger]);
 
   // --- MUTATION HANDLERS ---
   const handleProcessPayout = async (newStatus: "completed" | "rejected") => {
@@ -91,8 +106,17 @@ export default function AdminFinancePage() {
     setIsProcessing(true);
     try {
       await adminFinanceApi.updatePayoutStatus(selectedPayout.id, newStatus);
+      await recordAdminAudit({
+        actorId: CURRENT_ADMIN_IDENTITY.id,
+        action: `payout_${newStatus}`,
+        target: selectedPayout.id,
+        severity: "critical",
+        note: payoutNote.trim() || "Payout reviewed by treasury admin.",
+      });
       setPayouts(prev => prev.map(p => p.id === selectedPayout.id ? { ...p, status: newStatus } : p));
       setSelectedPayout(prev => prev ? { ...prev, status: newStatus } : null);
+      setPayoutNotes(prev => ({ ...prev, [selectedPayout.id]: [payoutNote.trim() || `Payout ${newStatus}.`, ...(prev[selectedPayout.id] ?? [])] }));
+      setPayoutNote("");
       toast.success(newStatus === "completed" ? "Funds released successfully." : "Payout rejected.");
     } catch {
       toast.error("Failed to process payout.");
@@ -102,7 +126,57 @@ export default function AdminFinancePage() {
   };
 
   const handleExport = () => {
-    toast.info("Generating CSV export. This will be downloaded shortly.");
+    if (!canExport) return toast.error("Unauthorized export.");
+    const rows = activeTab === "payouts"
+      ? filteredPayouts.map((payout) => [payout.id, payout.sellerId, payout.storeName, payout.status, String(payout.amount), payout.method, payout.requestedAt])
+      : filteredLedger.map((entry) => [entry.id, entry.orderId ?? "", entry.type, entry.description, String(entry.amount), String(entry.balanceAfter), entry.timestamp]);
+    const header = activeTab === "payouts"
+      ? ["id", "seller_id", "store", "status", "amount", "method", "requested_at"]
+      : ["id", "order_id", "type", "description", "amount", "balance_after", "timestamp"];
+    const csv = [header, ...rows].map((row) => row.map((value) => `"${value.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `zamoyo-finance-${activeTab}-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${activeTab === "payouts" ? "Payout" : "Ledger"} CSV exported.`);
+  };
+
+  const handleBatchApproveVisible = async () => {
+    if (!canApprovePayouts) return toast.error("Unauthorized action.");
+    const pendingPayouts = filteredPayouts.filter((payout) => payout.status === "pending");
+    if (pendingPayouts.length === 0) return toast.error("No visible pending payouts to approve.");
+
+    try {
+      setIsProcessing(true);
+      await Promise.all(pendingPayouts.map((payout) => adminFinanceApi.updatePayoutStatus(payout.id, "completed", "Batch release")));
+      await recordAdminAudit({
+        actorId: CURRENT_ADMIN_IDENTITY.id,
+        action: "payout_batch_completed",
+        target: `${pendingPayouts.length} visible payouts`,
+        severity: "critical",
+      });
+      setPayouts((current) => current.map((payout) => pendingPayouts.some((pending) => pending.id === payout.id) ? { ...payout, status: "completed" } : payout));
+      toast.success(`${pendingPayouts.length} visible payouts released.`);
+    } catch {
+      toast.error("Failed to batch approve payouts.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReviewRefund = async (entry: LedgerEntry) => {
+    if (!canManageRefunds) return toast.error("You do not have permission to manage refunds.");
+    await recordAdminAudit({
+      actorId: CURRENT_ADMIN_IDENTITY.id,
+      action: "refund_queue_reviewed",
+      target: entry.id,
+      severity: "warning",
+      note: entry.orderId ?? "Manual refund debit",
+    });
+    setReviewedRefunds((current) => current.includes(entry.id) ? current : [entry.id, ...current]);
+    toast.success("Refund queue item marked reviewed.");
   };
 
   if (loading || !metrics) return (
@@ -125,6 +199,11 @@ export default function AdminFinancePage() {
         {canExport && (
           <Button onClick={handleExport} variant="outline" className="h-10 rounded-xl border-emerald-200/70 bg-white/80 px-4 font-bold text-emerald-800 shadow-md shadow-emerald-900/5 backdrop-blur-xl hover:bg-emerald-50 md:w-auto">
             <Download className="mr-2 h-4 w-4" /> Export Ledger
+          </Button>
+        )}
+        {canApprovePayouts && (
+          <Button onClick={handleBatchApproveVisible} className="h-10 rounded-xl bg-zinc-950 px-4 font-bold text-white shadow-md shadow-zinc-900/20 hover:bg-zinc-800 md:w-auto">
+            Batch Release Visible
           </Button>
         )}
       </div>
@@ -169,11 +248,23 @@ export default function AdminFinancePage() {
           >
             Payout Queue
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab("ledger")}
             className={cn("px-6 py-3 text-sm font-bold border-b-2 transition-colors", activeTab === "ledger" ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-500 hover:text-zinc-700")}
           >
             Master Ledger
+          </button>
+          <button
+            onClick={() => setActiveTab("refunds")}
+            className={cn("px-6 py-3 text-sm font-bold border-b-2 transition-colors", activeTab === "refunds" ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-500 hover:text-zinc-700")}
+          >
+            Refund Queue
+          </button>
+          <button
+            onClick={() => setActiveTab("reconciliation")}
+            className={cn("px-6 py-3 text-sm font-bold border-b-2 transition-colors", activeTab === "reconciliation" ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-500 hover:text-zinc-700")}
+          >
+            Reconciliation
           </button>
         </div>
 
@@ -188,6 +279,15 @@ export default function AdminFinancePage() {
               className="h-10 w-full rounded-xl border-zinc-200 bg-zinc-50 pl-9 text-sm font-medium focus-visible:ring-zinc-900 shadow-inner" 
             />
           </div>
+          {activeTab === "ledger" && (
+            <select value={ledgerTypeFilter} onChange={(event) => setLedgerTypeFilter(event.target.value as TransactionType | "all")} className="mt-3 h-10 rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-bold text-zinc-700 shadow-inner">
+              <option value="all">All ledger types</option>
+              <option value="escrow_deposit">Escrow deposits</option>
+              <option value="commission_fee">Commission fees</option>
+              <option value="payout_release">Payout releases</option>
+              <option value="refund_debit">Refund debits</option>
+            </select>
+          )}
         </div>
 
         {/* 4. TABBED DATA VIEWS */}
@@ -292,6 +392,54 @@ export default function AdminFinancePage() {
               </tbody>
             </table>
           )}
+
+          {activeTab === "refunds" && (
+            <table className="w-full text-left text-sm min-w-250">
+              <thead className="bg-white">
+                <tr>
+                  <th className="rounded-tl-2xl p-4 pl-6 text-[10px] font-black uppercase tracking-wider text-zinc-500">Refund</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Order</th>
+                  <th className="p-4 text-[10px] font-black uppercase tracking-wider text-zinc-500">Reason</th>
+                  <th className="p-4 text-right text-[10px] font-black uppercase tracking-wider text-zinc-500">Amount</th>
+                  <th className="rounded-tr-2xl p-4 pr-6 text-right text-[10px] font-black uppercase tracking-wider text-zinc-500">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {refundQueue.length === 0 ? (
+                  <tr><td colSpan={5} className="p-12 text-center"><p className="text-sm font-bold text-zinc-500">No refund queue entries found.</p></td></tr>
+                ) : refundQueue.map((entry) => (
+                  <tr key={entry.id} className="transition-colors hover:bg-rose-50/35">
+                    <td className="p-4 pl-6"><p className="font-black text-zinc-900">{entry.id}</p><p className="text-[10px] font-bold text-zinc-500">{formatDate(entry.timestamp)}</p></td>
+                    <td className="p-4 text-xs font-bold text-indigo-600">{entry.orderId ?? "Manual refund"}</td>
+                    <td className="p-4 text-xs font-bold text-zinc-700">{entry.description}</td>
+                    <td className="p-4 text-right font-black text-rose-600">{formatCurrency(Math.abs(entry.amount))}</td>
+                    <td className="p-4 pr-6 text-right">
+                      <Button disabled={!canManageRefunds || reviewedRefunds.includes(entry.id)} onClick={() => handleReviewRefund(entry)} variant="outline" size="sm" className="h-9 rounded-xl font-bold">
+                        {reviewedRefunds.includes(entry.id) ? "Reviewed" : "Review"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === "reconciliation" && (
+            <div className="grid gap-4 p-5 md:grid-cols-3">
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
+                <p className="text-[10px] font-black uppercase text-emerald-700">Ledger balance</p>
+                <p className="mt-2 text-2xl font-black text-zinc-950">{formatCurrency(ledger[0]?.balanceAfter ?? 0)}</p>
+              </div>
+              <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
+                <p className="text-[10px] font-black uppercase text-amber-700">Pending payouts</p>
+                <p className="mt-2 text-2xl font-black text-zinc-950">{formatCurrency(metrics.pendingPayouts)}</p>
+              </div>
+              <div className="rounded-3xl border border-indigo-200 bg-indigo-50 p-5">
+                <p className="text-[10px] font-black uppercase text-indigo-700">Processing fees</p>
+                <p className="mt-2 text-2xl font-black text-zinc-950">Backend-ready</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -344,6 +492,16 @@ export default function AdminFinancePage() {
                 <div className="mt-4 flex items-center gap-2 rounded-xl bg-blue-50 p-3 border border-blue-100">
                   <ShieldAlert className="h-4 w-4 text-blue-600 shrink-0" />
                   <p className="text-[10px] font-bold text-blue-800 leading-tight">Escrow cleared. Platform commissions have already been deducted from this balance.</p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/70 p-5 shadow-md shadow-zinc-900/5 bg-white/75">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">Payout notes / history</p>
+                <Textarea value={payoutNote} onChange={(event) => setPayoutNote(event.target.value)} placeholder="Add payout approval, rejection, or reconciliation note..." className="min-h-24 rounded-2xl border-zinc-200 bg-white" />
+                <div className="mt-3 space-y-2">
+                  {(payoutNotes[selectedPayout.id] ?? ["No payout notes recorded in this frontend session."]).map((note, index) => (
+                    <p key={`${selectedPayout.id}-note-${index}`} className="rounded-2xl bg-zinc-50 p-3 text-sm font-bold text-zinc-600">{note}</p>
+                  ))}
                 </div>
               </div>
 

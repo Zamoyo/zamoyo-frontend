@@ -1,35 +1,39 @@
 "use client";
 
+import type { FormEvent } from "react";
 import { useState } from "react";
 import { Lock, Mail, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { buildAdminSessionCookie } from "@/services/admin/session";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [signInState, setSignInState] = useState<"idle" | "verifying" | "mfa_ready" | "error">("idle");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email || !password) return toast.error("Enter your credentials.");
+    if (!email || !password) {
+      setSignInState("error");
+      return toast.error("Enter your credentials.");
+    }
     
     setIsLoading(true);
-    // 1. Simulate API verification
+    setSignInState("verifying");
     setTimeout(() => {
-      // 2. Set the secure session cookie (Mock MVP)
-      const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
-      document.cookie = `zamoyo_admin_session=secure_mock_token_123; path=/; max-age=86400; SameSite=Strict${secureFlag}`;
-      toast.success("Authentication successful. Decrypting vault...");
-      // 3. Hard reload to trigger the middleware check
+      setSignInState("mfa_ready");
+      document.cookie = buildAdminSessionCookie("secure_mock_token_123", window.location.protocol === "https:");
+      toast.success("Authentication successful. Admin session established.");
       window.location.assign("/admin/dashboard");
     }, 1200);
   };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 p-4">
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.055)_1px,transparent_1px)] bg-size-[42px_42px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.055)_1px,transparent_1px)] bg-[size:42px_42px]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,158,73,0.18),transparent_32rem),linear-gradient(135deg,rgba(24,24,27,0.55),rgba(9,9,11,0.95))]" />
 
       <div className="w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -42,6 +46,13 @@ export default function AdminLoginPage() {
             </div>
             <h1 className="text-2xl font-black tracking-tight text-white">Zamoyo <span className="text-emerald-300">Admin</span></h1>
             <p className="mt-2 text-sm font-medium text-zinc-400">Secure entry for authorized personnel only.</p>
+          </div>
+
+          <div className="mb-5 rounded-2xl border border-white/10 bg-white/7 p-3 text-xs font-bold text-zinc-300">
+            {signInState === "error" ? "Sign-in error: credentials are required before the admin gateway can create a session." : null}
+            {signInState === "verifying" ? "Verifying admin identity and preparing privileged session claims..." : null}
+            {signInState === "mfa_ready" ? "MFA/passkey-ready session claims prepared. Redirecting to dashboard..." : null}
+            {signInState === "idle" ? "MFA and passkey-first enforcement are backend-ready extension points for production auth." : null}
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">

@@ -1,27 +1,104 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   TrendingUp, Users, Store, Activity, AlertCircle, 
   ArrowUpRight, ArrowDownRight, Wallet, ShieldCheck, Clock
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
-import { hasPermission, MOCK_CURRENT_ADMIN } from "@/services/rbac";
+import { Button } from "@/components/ui/button";
+import { adminHasPermission } from "@/services/admin/session";
 
 // ============================================================================
 // 1. DATA CONTRACTS & MOCK API
 // ============================================================================
-const MOCK_DATA = {
-  kpis: { gmv: 4250000, gmvGrowth: 18.2, revenue: 127500, revenueGrowth: 15.4, activeSellers: 342, sellerGrowth: 5.1, activeBuyers: 12450, buyerGrowth: 22.4 },
-  trends: [
-    { label: "W1", gmv: 850000 }, { label: "W2", gmv: 920000 }, { label: "W3", gmv: 1100000 }, { label: "W4", gmv: 1380000 }
-  ],
-  systemHealth: { escrowPending: 840000, disputesOpen: 14, unverifiedSellers: 28 },
-  recentAlerts: [
-    { id: "1", type: "warning", message: "Spike in refunds requested for category 'Electronics'." },
-    { id: "2", type: "info", message: "Escrow release batch #8942 processed successfully." }
-  ]
+type DashboardRange = "last_7_days" | "last_30_days" | "month_to_date" | "quarter_to_date";
+
+type DashboardAlert = { id: string; type: "warning" | "info"; message: string };
+
+type DashboardData = {
+  kpis: {
+    gmv: number;
+    gmvGrowth: number;
+    revenue: number;
+    revenueGrowth: number;
+    activeSellers: number;
+    sellerGrowth: number;
+    activeBuyers: number;
+    buyerGrowth: number;
+  };
+  trends: { label: string; gmv: number }[];
+  systemHealth: { escrowPending: number; disputesOpen: number; unverifiedSellers: number };
+  recentAlerts: DashboardAlert[];
+  marketplace: {
+    averageOrderValue: number;
+    takeRate: number;
+    conversionRate: number;
+    repeatPurchaseRate: number;
+    deliverySla: number;
+    refundRate: number;
+    topCategories: { name: string; gmv: number; share: number }[];
+  };
+};
+
+const DASHBOARD_DATA_BY_RANGE: Record<DashboardRange, DashboardData> = {
+  last_7_days: {
+    kpis: { gmv: 920000, gmvGrowth: 9.4, revenue: 28600, revenueGrowth: 7.8, activeSellers: 126, sellerGrowth: 2.2, activeBuyers: 3860, buyerGrowth: 11.6 },
+    trends: [
+      { label: "Mon", gmv: 98000 }, { label: "Tue", gmv: 112000 }, { label: "Wed", gmv: 121000 }, { label: "Thu", gmv: 138000 }, { label: "Fri", gmv: 151000 }, { label: "Sat", gmv: 164000 }, { label: "Sun", gmv: 136000 },
+    ],
+    systemHealth: { escrowPending: 214000, disputesOpen: 5, unverifiedSellers: 9 },
+    recentAlerts: [
+      { id: "7d-1", type: "warning", message: "Three high-value orders are still awaiting seller dispatch confirmation." },
+      { id: "7d-2", type: "info", message: "Pickup station confirmations improved by 6.2% this week." },
+    ],
+    marketplace: { averageOrderValue: 238, takeRate: 6.8, conversionRate: 3.4, repeatPurchaseRate: 18.2, deliverySla: 91.4, refundRate: 1.8, topCategories: [{ name: "Electronics", gmv: 322000, share: 35 }, { name: "Home & Living", gmv: 214000, share: 23 }, { name: "Fashion", gmv: 171000, share: 19 }] },
+  },
+  last_30_days: {
+    kpis: { gmv: 4250000, gmvGrowth: 18.2, revenue: 127500, revenueGrowth: 15.4, activeSellers: 342, sellerGrowth: 5.1, activeBuyers: 12450, buyerGrowth: 22.4 },
+    trends: [
+      { label: "W1", gmv: 850000 }, { label: "W2", gmv: 920000 }, { label: "W3", gmv: 1100000 }, { label: "W4", gmv: 1380000 },
+    ],
+    systemHealth: { escrowPending: 840000, disputesOpen: 14, unverifiedSellers: 28 },
+    recentAlerts: [
+      { id: "30d-1", type: "warning", message: "Spike in refunds requested for category 'Electronics'." },
+      { id: "30d-2", type: "info", message: "Escrow release batch #8942 processed successfully." },
+    ],
+    marketplace: { averageOrderValue: 342, takeRate: 7.1, conversionRate: 3.9, repeatPurchaseRate: 21.7, deliverySla: 88.6, refundRate: 2.4, topCategories: [{ name: "Electronics", gmv: 1410000, share: 33 }, { name: "Fashion", gmv: 862000, share: 20 }, { name: "Home & Living", gmv: 744000, share: 18 }] },
+  },
+  month_to_date: {
+    kpis: { gmv: 1615000, gmvGrowth: 12.7, revenue: 51200, revenueGrowth: 10.1, activeSellers: 218, sellerGrowth: 3.8, activeBuyers: 6180, buyerGrowth: 14.5 },
+    trends: [
+      { label: "1-3", gmv: 308000 }, { label: "4-6", gmv: 421000 }, { label: "7-9", gmv: 486000 }, { label: "10+", gmv: 400000 },
+    ],
+    systemHealth: { escrowPending: 362000, disputesOpen: 8, unverifiedSellers: 16 },
+    recentAlerts: [
+      { id: "mtd-1", type: "warning", message: "Seller approval SLA is drifting on new Lusaka onboarding requests." },
+      { id: "mtd-2", type: "info", message: "Mobile Money checkout completion is above the previous month-to-date baseline." },
+    ],
+    marketplace: { averageOrderValue: 298, takeRate: 7.3, conversionRate: 4.1, repeatPurchaseRate: 19.6, deliverySla: 89.9, refundRate: 2.1, topCategories: [{ name: "Electronics", gmv: 522000, share: 32 }, { name: "Beauty & Health", gmv: 341000, share: 21 }, { name: "Fashion", gmv: 266000, share: 16 }] },
+  },
+  quarter_to_date: {
+    kpis: { gmv: 11880000, gmvGrowth: 24.9, revenue: 381400, revenueGrowth: 21.2, activeSellers: 518, sellerGrowth: 12.4, activeBuyers: 28700, buyerGrowth: 31.8 },
+    trends: [
+      { label: "Apr", gmv: 3630000 }, { label: "May", gmv: 4250000 }, { label: "Jun", gmv: 4000000 },
+    ],
+    systemHealth: { escrowPending: 1320000, disputesOpen: 31, unverifiedSellers: 44 },
+    recentAlerts: [
+      { id: "qtd-1", type: "warning", message: "Quarterly dispute rate is concentrated in seller-arranged delivery." },
+      { id: "qtd-2", type: "info", message: "Verified seller GMV share is trending up across the quarter." },
+    ],
+    marketplace: { averageOrderValue: 414, takeRate: 7.6, conversionRate: 4.4, repeatPurchaseRate: 24.3, deliverySla: 86.2, refundRate: 2.9, topCategories: [{ name: "Electronics", gmv: 3960000, share: 33 }, { name: "Home & Living", gmv: 2280000, share: 19 }, { name: "Fashion", gmv: 2140000, share: 18 }] },
+  },
+};
+
+const rangeLabels: Record<DashboardRange, string> = {
+  last_7_days: "Last 7 days",
+  last_30_days: "Last 30 days",
+  month_to_date: "Month to date",
+  quarter_to_date: "Quarter to date",
 };
 
 // ============================================================================
@@ -56,7 +133,7 @@ const KPI_TONES: Record<KpiTone, { card: string; icon: string; glow: string; acc
   },
 };
 
-function KPICard({ title, value, growth, icon: Icon, isCurrency = false, tone = "zinc" }: { title: string; value: number; growth: number; icon: React.ComponentType<{ className?: string }>; isCurrency?: boolean; tone?: KpiTone }) {
+function KPICard({ title, value, growth, icon: Icon, isCurrency = false, tone = "zinc", comparisonLabel }: { title: string; value: number; growth: number; icon: React.ComponentType<{ className?: string }>; isCurrency?: boolean; tone?: KpiTone; comparisonLabel: string }) {
   const isPositive = growth > 0;
   const toneClasses = KPI_TONES[tone];
   return (
@@ -74,7 +151,7 @@ function KPICard({ title, value, growth, icon: Icon, isCurrency = false, tone = 
           {isPositive ? <ArrowUpRight className="mr-0.5 h-3 w-3" /> : <ArrowDownRight className="mr-0.5 h-3 w-3" />}
           {Math.abs(growth)}%
         </span>
-        <span className="text-[9px] font-bold text-zinc-500">vs prev. 30d</span>
+        <span className="text-[9px] font-bold text-zinc-500">{comparisonLabel}</span>
       </div>
     </div>
   );
@@ -85,7 +162,10 @@ function KPICard({ title, value, growth, icon: Icon, isCurrency = false, tone = 
 // ============================================================================
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
-  const data = MOCK_DATA;
+  const [dateRange, setDateRange] = useState<DashboardRange>("last_30_days");
+  const data = DASHBOARD_DATA_BY_RANGE[dateRange];
+  const dateRangeLabel = rangeLabels[dateRange];
+  const comparisonLabel = `vs previous ${dateRangeLabel.toLowerCase()}`;
 
   useEffect(() => {
     // Simulate API Load
@@ -93,7 +173,7 @@ export default function AdminDashboardPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const canSeeFinancials = hasPermission(MOCK_CURRENT_ADMIN.role, "view_financial_reports");
+  const canSeeFinancials = adminHasPermission("view_financial_reports");
 
   if (loading) return (
     <div className="animate-pulse space-y-6">
@@ -111,21 +191,42 @@ export default function AdminDashboardPage() {
         <h1 className="text-2xl font-black tracking-tight text-zinc-900 md:text-3xl">Platform Overview</h1>
         <p className="mt-1 text-sm font-medium text-zinc-500">Real-time marketplace performance and system health.</p>
       </div>
+      <div className="flex flex-col gap-3 rounded-3xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Executive range</p>
+          <p className="text-sm font-bold text-zinc-700">Selected period: {dateRangeLabel}. Backend metrics can bind to this range without changing page structure.</p>
+        </div>
+        <select value={dateRange} onChange={(event) => setDateRange(event.target.value as DashboardRange)} className="h-11 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-700 shadow-sm">
+          <option value="last_7_days">Last 7 days</option>
+          <option value="last_30_days">Last 30 days</option>
+          <option value="month_to_date">Month to date</option>
+          <option value="quarter_to_date">Quarter to date</option>
+        </select>
+      </div>
 
       {/* 2. KPI GRID */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {canSeeFinancials ? (
           <>
-            <KPICard title="Gross Merchandise Val" value={data.kpis.gmv} growth={data.kpis.gmvGrowth} icon={TrendingUp} isCurrency tone="emerald" />
-            <KPICard title="Platform Revenue (Net)" value={data.kpis.revenue} growth={data.kpis.revenueGrowth} icon={Wallet} isCurrency tone="emerald" />
+            <KPICard title="Gross Merchandise Value" value={data.kpis.gmv} growth={data.kpis.gmvGrowth} icon={TrendingUp} isCurrency tone="emerald" comparisonLabel={comparisonLabel} />
+            <KPICard title="Platform Revenue (Net)" value={data.kpis.revenue} growth={data.kpis.revenueGrowth} icon={Wallet} isCurrency tone="emerald" comparisonLabel={comparisonLabel} />
           </>
         ) : (
           <div className="col-span-2 flex items-center justify-center rounded-3xl border border-dashed border-zinc-300 bg-white/70 p-5 text-center shadow-md backdrop-blur-xl">
             <p className="text-xs font-bold text-zinc-500"><ShieldCheck className="mx-auto mb-2 h-5 w-5 opacity-50" /> Financial metrics restricted by your role.</p>
           </div>
         )}
-        <KPICard title="Active Sellers" value={data.kpis.activeSellers} growth={data.kpis.sellerGrowth} icon={Store} tone="amber" />
-        <KPICard title="Active Buyers" value={data.kpis.activeBuyers} growth={data.kpis.buyerGrowth} icon={Users} tone="indigo" />
+        <KPICard title="Active Sellers" value={data.kpis.activeSellers} growth={data.kpis.sellerGrowth} icon={Store} tone="amber" comparisonLabel={comparisonLabel} />
+        <KPICard title="Active Buyers" value={data.kpis.activeBuyers} growth={data.kpis.buyerGrowth} icon={Users} tone="indigo" comparisonLabel={comparisonLabel} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <MarketplaceSignal label="AOV" value={`K${data.marketplace.averageOrderValue.toLocaleString()}`} note="Average order value" tone="emerald" />
+        <MarketplaceSignal label="Take rate" value={`${data.marketplace.takeRate}%`} note="Commission capture" tone="indigo" />
+        <MarketplaceSignal label="Conversion" value={`${data.marketplace.conversionRate}%`} note="Visit to order" tone="amber" />
+        <MarketplaceSignal label="Repeat rate" value={`${data.marketplace.repeatPurchaseRate}%`} note="Buyer retention" tone="sky" />
+        <MarketplaceSignal label="Delivery SLA" value={`${data.marketplace.deliverySla}%`} note="On-time fulfilment" tone="emerald" />
+        <MarketplaceSignal label="Refund rate" value={`${data.marketplace.refundRate}%`} note="Trust pressure" tone="rose" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -135,7 +236,7 @@ export default function AdminDashboardPage() {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-base font-black text-zinc-900">GMV Growth</h2>
-              <p className="mt-1 text-xs font-medium text-zinc-500">Trailing 30 Days</p>
+              <p className="mt-1 text-xs font-medium text-zinc-500">Selected range: {dateRangeLabel}</p>
             </div>
           </div>
           <div className="h-62.5 w-full flex-1">
@@ -190,9 +291,83 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           </div>
+          <div className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-md shadow-zinc-900/5 backdrop-blur-xl transition-all hover:shadow-lg md:p-6">
+            <h2 className="mb-4 text-sm font-black uppercase tracking-wider text-zinc-900">Alert Center</h2>
+            <div className="space-y-3">
+              {data.recentAlerts.map((alert) => (
+                <div key={alert.id} className={cn("rounded-2xl border p-3 text-xs font-bold", alert.type === "warning" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-indigo-200 bg-indigo-50 text-indigo-800")}>
+                  {alert.message}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
       </div>
+
+      <div className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-md shadow-zinc-900/5 backdrop-blur-xl">
+        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+          <div>
+            <h2 className="text-base font-black text-zinc-900">Marketplace mix</h2>
+            <p className="mt-1 text-xs font-bold text-zinc-500">Top categories for {dateRangeLabel.toLowerCase()}, capped to avoid endless dashboard growth.</p>
+          </div>
+          <Button asChild variant="outline" className="rounded-xl font-black"><Link href="/admin/reports">Open full category report</Link></Button>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {data.marketplace.topCategories.map((category) => (
+            <div key={`${dateRange}-${category.name}`} className="rounded-2xl border border-zinc-100 bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-black text-zinc-950">{category.name}</p>
+                <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">{category.share}%</span>
+              </div>
+              <p className="mt-2 text-2xl font-black text-zinc-950">K{(category.gmv / 1000).toFixed(1)}k</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-md shadow-zinc-900/5 backdrop-blur-xl">
+        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+          <div>
+            <h2 className="text-base font-black text-zinc-900">Quick actions and drilldowns</h2>
+            <p className="mt-1 text-xs font-bold text-zinc-500">Directly open launch-critical operating queues from the executive dashboard.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" className="rounded-xl font-black"><Link href="/admin/orders">Review orders</Link></Button>
+            <Button asChild variant="outline" className="rounded-xl font-black"><Link href="/admin/sellers">Seller approvals</Link></Button>
+            <Button asChild variant="outline" className="rounded-xl font-black"><Link href="/admin/disputes">Open disputes</Link></Button>
+            {canSeeFinancials ? <Button asChild className="rounded-xl bg-zinc-950 font-black text-white hover:bg-zinc-800"><Link href="/admin/reports">Executive reports</Link></Button> : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceSignal({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  tone: "emerald" | "amber" | "indigo" | "rose" | "sky";
+}) {
+  const toneClasses: Record<typeof tone, string> = {
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    amber: "border-amber-200 bg-amber-50 text-amber-800",
+    indigo: "border-indigo-200 bg-indigo-50 text-indigo-800",
+    rose: "border-rose-200 bg-rose-50 text-rose-800",
+    sky: "border-sky-200 bg-sky-50 text-sky-800",
+  };
+
+  return (
+    <div className={cn("rounded-3xl border p-4 shadow-md shadow-zinc-900/5", toneClasses[tone])}>
+      <p className="text-[10px] font-black uppercase tracking-wider opacity-75">{label}</p>
+      <p className="mt-2 text-2xl font-black text-zinc-950">{value}</p>
+      <p className="mt-1 text-xs font-bold">{note}</p>
     </div>
   );
 }

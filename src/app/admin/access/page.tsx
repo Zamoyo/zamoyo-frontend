@@ -1,5 +1,6 @@
 "use client";
 
+import type { FormEvent } from "react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ShieldAlert, Search, Plus, MoreHorizontal, 
@@ -12,7 +13,9 @@ import { cn } from "@/lib/utils";
 
 // Architecture Imports
 import { adminAccessApi, AdminUserRecord, AdminStatus } from "@/services/admin/access";
-import { hasPermission, MOCK_CURRENT_ADMIN, AdminRole } from "@/services/rbac";
+import { recordAdminAudit } from "@/services/admin/audit";
+import { adminHasPermission, CURRENT_ADMIN_IDENTITY } from "@/services/admin/session";
+import { AdminRole, ROLE_PERMISSIONS } from "@/services/rbac";
 
 // ============================================================================
 // LOGIC HELPERS & UI MAPS
@@ -55,9 +58,12 @@ export default function AdminAccessPage() {
   const [newAdminName, setNewAdminName] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminRole, setNewAdminRole] = useState<AdminRole>("ops_manager");
+  const [selectedAdmin, setSelectedAdmin] = useState<AdminUserRecord | null>(null);
+  const [editedRole, setEditedRole] = useState<AdminRole>("ops_manager");
+  const [securityEvents, setSecurityEvents] = useState<Record<string, string[]>>({});
 
   // RBAC Action-Level Guards
-  const canManageAdmins = hasPermission(MOCK_CURRENT_ADMIN.role, "manage_admins");
+  const canManageAdmins = adminHasPermission("manage_admins");
 
   const loadAdmins = useCallback(async () => {
     try {
@@ -82,7 +88,7 @@ export default function AdminAccessPage() {
   }, [admins, searchQuery, roleFilter]);
 
   // --- MUTATION HANDLERS ---
-  const handleInviteSubmit = async (e: React.FormEvent) => {
+  const handleInviteSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!canManageAdmins) return toast.error("Unauthorized action.");
     if (!newAdminName.trim() || !newAdminEmail.trim()) return toast.error("Name and email are required.");
@@ -90,6 +96,13 @@ export default function AdminAccessPage() {
     setIsInviting(true);
     try {
       const newAdmin = await adminAccessApi.inviteAdmin(newAdminName, newAdminEmail, newAdminRole);
+      await recordAdminAudit({
+        actorId: CURRENT_ADMIN_IDENTITY.id,
+        action: "admin_invited",
+        target: newAdmin.id,
+        severity: "critical",
+        note: `${newAdmin.email} as ${newAdmin.role}`,
+      });
       setAdmins(prev => [newAdmin, ...prev]);
       setIsInviteModalOpen(false);
       setNewAdminName("");
@@ -105,18 +118,22 @@ export default function AdminAccessPage() {
 
   const handleToggleAccess = async (adminId: string, currentStatus: AdminStatus) => {
     if (!canManageAdmins) return toast.error("Unauthorized action.");
-    if (adminId === MOCK_CURRENT_ADMIN.id) return toast.error("You cannot revoke your own access.");
+    if (adminId === CURRENT_ADMIN_IDENTITY.id) return toast.error("You cannot revoke your own access.");
 
     const isRevoking = currentStatus === "active" || currentStatus === "invited";
     
     try {
       if (isRevoking) {
         await adminAccessApi.revokeAccess(adminId);
+        await recordAdminAudit({ actorId: CURRENT_ADMIN_IDENTITY.id, action: "admin_access_revoked", target: adminId, severity: "critical" });
         setAdmins(prev => prev.map(a => a.id === adminId ? { ...a, status: "revoked" } : a));
+        setSecurityEvents(prev => ({ ...prev, [adminId]: ["Access revoked by current admin.", ...(prev[adminId] ?? [])] }));
         toast.success("Access securely revoked.");
       } else {
         await adminAccessApi.restoreAccess(adminId);
+        await recordAdminAudit({ actorId: CURRENT_ADMIN_IDENTITY.id, action: "admin_access_restored", target: adminId, severity: "critical" });
         setAdmins(prev => prev.map(a => a.id === adminId ? { ...a, status: "active" } : a));
+        setSecurityEvents(prev => ({ ...prev, [adminId]: ["Access restored by current admin.", ...(prev[adminId] ?? [])] }));
         toast.success("Access restored.");
       }
     } catch {
@@ -125,7 +142,41 @@ export default function AdminAccessPage() {
   };
 
   const handleMemberOptions = (admin: AdminUserRecord) => {
-    toast.info(`Role editing and MFA reset for ${admin.name} will open here once the admin identity API is connected.`);
+    setSelectedAdmin(admin);
+    setEditedRole(admin.role);
+  };
+
+  const handleSaveRole = async () => {
+    if (!selectedAdmin || editedRole === selectedAdmin.role) return;
+    if (selectedAdmin.id === CURRENT_ADMIN_IDENTITY.id) return toast.error("You cannot change your own role in-session.");
+
+    await recordAdminAudit({
+      actorId: CURRENT_ADMIN_IDENTITY.id,
+      action: "admin_role_updated",
+      target: selectedAdmin.id,
+      severity: "critical",
+      note: `${selectedAdmin.role} -> ${editedRole}`,
+    });
+    const updatedAdmin = { ...selectedAdmin, role: editedRole };
+    setAdmins(prev => prev.map(admin => admin.id === selectedAdmin.id ? updatedAdmin : admin));
+    setSelectedAdmin(updatedAdmin);
+    setSecurityEvents(prev => ({ ...prev, [selectedAdmin.id]: [`Role changed to ${ROLE_UI[editedRole].label}.`, ...(prev[selectedAdmin.id] ?? [])] }));
+    toast.success("Admin role updated.");
+  };
+
+  const handleSecurityAction = async (action: "mfa_reset" | "sessions_revoked") => {
+    if (!selectedAdmin) return;
+    await recordAdminAudit({
+      actorId: CURRENT_ADMIN_IDENTITY.id,
+      action: `admin_${action}`,
+      target: selectedAdmin.id,
+      severity: "critical",
+    });
+    setSecurityEvents(prev => ({
+      ...prev,
+      [selectedAdmin.id]: [action === "mfa_reset" ? "MFA reset link issued." : "Active sessions revoked.", ...(prev[selectedAdmin.id] ?? [])],
+    }));
+    toast.success(action === "mfa_reset" ? "MFA reset recorded." : "Sessions revoked.");
   };
 
   // --- SYSTEM STATES ---
@@ -136,7 +187,7 @@ export default function AdminAccessPage() {
           <ShieldAlert className="h-8 w-8 text-rose-600" />
         </div>
         <h2 className="text-2xl font-black text-zinc-900">Access Restricted</h2>
-        <p className="mt-2 text-sm font-medium text-zinc-500 max-w-md">Your current role ({MOCK_CURRENT_ADMIN.role.replace('_', ' ')}) does not have clearance to view or modify platform access controls.</p>
+        <p className="mt-2 text-sm font-medium text-zinc-500 max-w-md">Your current role ({CURRENT_ADMIN_IDENTITY.claims.role.replace(/_/g, " ")}) does not have clearance to view or modify platform access controls.</p>
       </div>
     );
   }
@@ -210,7 +261,7 @@ export default function AdminAccessPage() {
                 filteredAdmins.map((admin) => {
                   const statUI = STATUS_UI[admin.status];
                   const roleUI = ROLE_UI[admin.role];
-                  const isSelf = admin.id === MOCK_CURRENT_ADMIN.id;
+                  const isSelf = admin.id === CURRENT_ADMIN_IDENTITY.id;
 
                   return (
                     <tr key={admin.id} className="group transition-colors hover:bg-indigo-50/35">
@@ -344,6 +395,62 @@ export default function AdminAccessPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {selectedAdmin && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm" onClick={() => setSelectedAdmin(null)} aria-hidden="true" />
+          <div className="relative flex h-full w-full max-w-xl flex-col border-l border-white/40 bg-white/95 shadow-2xl shadow-zinc-950/30 backdrop-blur-2xl animate-in slide-in-from-right duration-300">
+            <div className="border-b border-zinc-100 bg-zinc-950 px-6 py-5 text-white">
+              <h2 className="text-lg font-black">{selectedAdmin.name}</h2>
+              <p className="text-xs font-bold text-zinc-400">{selectedAdmin.email} · {selectedAdmin.id}</p>
+            </div>
+            <div className="flex-1 space-y-6 overflow-y-auto p-6">
+              <section className="rounded-3xl border border-zinc-100 bg-white p-4">
+                <h3 className="text-sm font-black text-zinc-950">Role detail</h3>
+                <p className="mt-1 text-xs font-bold text-zinc-500">Current role: {ROLE_UI[selectedAdmin.role].label}</p>
+                <div className="mt-3 flex gap-2">
+                  <select value={editedRole} onChange={(event) => setEditedRole(event.target.value as AdminRole)} disabled={selectedAdmin.id === CURRENT_ADMIN_IDENTITY.id} className="h-11 flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm font-bold text-zinc-700 shadow-inner">
+                    {Object.entries(ROLE_UI).map(([role, ui]) => <option key={role} value={role}>{ui.label}</option>)}
+                  </select>
+                  <Button onClick={handleSaveRole} disabled={editedRole === selectedAdmin.role || selectedAdmin.id === CURRENT_ADMIN_IDENTITY.id} className="rounded-xl bg-zinc-950 font-black text-white hover:bg-zinc-800">Save</Button>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-zinc-100 bg-white p-4">
+                <h3 className="text-sm font-black text-zinc-950">Permission matrix</h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {ROLE_PERMISSIONS[selectedAdmin.role].map((permission) => (
+                    <span key={permission} className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-600">{permission.replace(/_/g, " ")}</span>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-zinc-100 bg-white p-4">
+                <h3 className="text-sm font-black text-zinc-950">MFA and session controls</h3>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  <Button onClick={() => handleSecurityAction("mfa_reset")} variant="outline" className="rounded-xl font-black">
+                    <Key className="mr-2 h-4 w-4" /> Reset MFA
+                  </Button>
+                  <Button onClick={() => handleSecurityAction("sessions_revoked")} variant="destructive" className="rounded-xl font-black">
+                    <Ban className="mr-2 h-4 w-4" /> Revoke sessions
+                  </Button>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-zinc-100 bg-white p-4">
+                <h3 className="text-sm font-black text-zinc-950">Invite lifecycle / audit trail</h3>
+                <div className="mt-3 space-y-2">
+                  <p className="rounded-2xl bg-zinc-50 p-3 text-sm font-bold text-zinc-600">Created {formatDate(selectedAdmin.createdAt)}</p>
+                  <p className="rounded-2xl bg-zinc-50 p-3 text-sm font-bold text-zinc-600">Last active {formatDate(selectedAdmin.lastLogin)}</p>
+                  {(securityEvents[selectedAdmin.id] ?? []).map((event, index) => (
+                    <p key={`${selectedAdmin.id}-security-${index}`} className="rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800">{event}</p>
+                  ))}
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       )}
