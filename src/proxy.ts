@@ -1,29 +1,32 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import {
+  ADMIN_DASHBOARD_PATH,
+  ADMIN_LOGIN_PATH,
+  ADMIN_SESSION_COOKIE,
+  isUsableAdminSessionToken,
+} from "@/services/admin/session-cookie";
 
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  
-  // Only protect /admin routes
-  if (path.startsWith('/admin')) {
-    const isLoginPage = path === '/admin/login';
-    // Look for our secure mock token
-    const token = request.cookies.get('zamoyo_admin_session')?.value;
 
-    // No token? Kick them to login.
-    if (!token && !isLoginPage) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
+  if (path.startsWith("/admin")) {
+    const isLoginPage = path === ADMIN_LOGIN_PATH;
+    const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+    const hasSession = isUsableAdminSessionToken(token);
+
+    if (!hasSession && !isLoginPage) {
+      return NextResponse.redirect(new URL(ADMIN_LOGIN_PATH, request.url));
     }
-    // Have a token but trying to view login? Push to dashboard.
-    if (token && isLoginPage) {
-      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+
+    if (hasSession && isLoginPage) {
+      return NextResponse.redirect(new URL(ADMIN_DASHBOARD_PATH, request.url));
     }
   }
 
   return NextResponse.next();
 }
 
-// Run proxy only on admin routes
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ["/admin/:path*"],
 };

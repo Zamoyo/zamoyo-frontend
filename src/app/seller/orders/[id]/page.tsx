@@ -157,7 +157,6 @@ export default function OrderDetailsPage({
     setTimeout(() => window.print(), 400);
   };
 
-  // Local-first flow: keep seller action visible and auditable before backend integration.
   const handleContestRefund = () => {
     const normalizedReason = refundReason.trim();
     if (!normalizedReason) {

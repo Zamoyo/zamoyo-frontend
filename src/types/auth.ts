@@ -46,7 +46,7 @@ export interface AuthUser {
 
 export interface AuthSession {
   user: AuthUser;
-  accessToken: string;
+  accessToken?: string;
   refreshToken?: string;
 }
 

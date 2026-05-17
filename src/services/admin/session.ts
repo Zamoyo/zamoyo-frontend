@@ -1,11 +1,12 @@
 import {
   hasPermission,
-  MOCK_CURRENT_ADMIN,
+  CURRENT_ADMIN_FALLBACK,
   type AdminRole,
   type Permission,
 } from "@/services/rbac";
+import { ADMIN_SESSION_COOKIE } from "@/services/admin/session-cookie";
 
-export const ADMIN_SESSION_COOKIE = "zamoyo_admin_session";
+export { ADMIN_SESSION_COOKIE };
 
 export type AdminAuthStrength = "password" | "mfa_ready" | "passkey_ready";
 export type AdminSessionStatus = "authenticated" | "expired" | "unauthorized";
@@ -26,11 +27,11 @@ export interface AdminIdentity {
 }
 
 export const CURRENT_ADMIN_IDENTITY: AdminIdentity = {
-  id: MOCK_CURRENT_ADMIN.id,
-  name: MOCK_CURRENT_ADMIN.name,
+  id: CURRENT_ADMIN_FALLBACK.id,
+  name: CURRENT_ADMIN_FALLBACK.name,
   email: "danny@zamoyo.com",
   claims: {
-    role: MOCK_CURRENT_ADMIN.role,
+    role: CURRENT_ADMIN_FALLBACK.role,
     authStrength: "mfa_ready",
     issuedAt: "2026-05-01T08:00:00Z",
   },
@@ -52,13 +53,4 @@ export function getAdminInitials(name = CURRENT_ADMIN_IDENTITY.name) {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
-}
-
-export function buildAdminSessionCookie(token: string, isHttps: boolean) {
-  const secureFlag = isHttps ? "; Secure" : "";
-  return `${ADMIN_SESSION_COOKIE}=${token}; path=/; max-age=86400; SameSite=Strict${secureFlag}`;
-}
-
-export function clearAdminSessionCookie() {
-  return `${ADMIN_SESSION_COOKIE}=; path=/; max-age=0; SameSite=Strict`;
 }

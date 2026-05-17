@@ -87,8 +87,7 @@ export function hasPermission(role: AdminRole, permission: Permission): boolean 
   return ROLE_PERMISSIONS[role]?.includes(permission) || false;
 }
 
-// Mock Current Session (Replace with actual auth token data later)
-export const MOCK_CURRENT_ADMIN = {
+export const CURRENT_ADMIN_FALLBACK = {
   id: "ADM-001",
   name: "Danny Diara",
   role: "super_admin" as AdminRole, 

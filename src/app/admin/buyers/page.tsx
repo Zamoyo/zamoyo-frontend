@@ -190,7 +190,7 @@ export default function AdminBuyersPage() {
         <AdminMetricCard title="Buyer records" value={buyers.length} note="Loaded into admin CRM" icon={<Users className="h-5 w-5" />} tone="indigo" />
         <AdminMetricCard title="Under review" value={metrics.underReview} note="Manual fraud or trust review" icon={<AlertTriangle className="h-5 w-5" />} tone="amber" />
         <AdminMetricCard title="High risk" value={metrics.highRisk} note="Requires stricter handling" icon={<ShieldCheck className="h-5 w-5" />} tone="rose" />
-        <AdminMetricCard title="Buyer GMV" value={formatAdminCurrency(metrics.totalSpend)} note="Lifetime spend in sample" icon={<UserCheck className="h-5 w-5" />} tone="emerald" />
+        <AdminMetricCard title="Buyer GMV" value={formatAdminCurrency(metrics.totalSpend)} note="Lifetime buyer spend" icon={<UserCheck className="h-5 w-5" />} tone="emerald" />
       </div>
 
       <AdminToolbar>

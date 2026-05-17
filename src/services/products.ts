@@ -1,4 +1,5 @@
 import { normalizeProduct } from "@/lib/normalizers/product";
+import { apiClient } from "@/services/api";
 import type {
   CategoryFilterOption,
   CategoryPageData,
@@ -653,6 +654,84 @@ const CATEGORY_META: Record<string, CategoryPageData["meta"]> = {
   },
 };
 
+const PRODUCT_IMAGE_PLACEHOLDER = "/file.svg";
+
+const BACKEND_CATEGORY_BY_SLUG = {
+  "phones-and-tablets": "PHONES",
+  computing: "LAPTOPS",
+  fashion: "FASHIONS",
+  electronics: "ELECTRONICS",
+  accessories: "ACCESSORIES",
+  "home-and-living": "OTHERS",
+} as const;
+
+const FRONTEND_CATEGORY_BY_BACKEND: Record<string, { name: string; slug: string }> = {
+  PHONES: { name: "Phones & Tablets", slug: "phones-and-tablets" },
+  LAPTOPS: { name: "Computing", slug: "computing" },
+  ACCESSORIES: { name: "Accessories", slug: "accessories" },
+  FASHIONS: { name: "Fashion", slug: "fashion" },
+  ELECTRONICS: { name: "Electronics", slug: "electronics" },
+  OTHERS: { name: "Other Finds", slug: "products" },
+};
+
+const BACKEND_SORT_BY_CATEGORY_SORT: Record<CategorySortOption, "newest" | "price_asc" | "price_desc" | "popular"> = {
+  recommended: "newest",
+  "price-low": "price_asc",
+  "price-high": "price_desc",
+  "top-rated": "popular",
+};
+
+type BackendProductUser = {
+  id?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  telephone?: string | null;
+};
+
+type BackendReview = {
+  rating?: number | null;
+};
+
+type BackendProduct = {
+  id?: string;
+  slug?: string | null;
+  title?: string | null;
+  description?: string | null;
+  price?: number | string | null;
+  images?: unknown;
+  condition?: string | null;
+  category?: string | null;
+  location?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  ram?: string | null;
+  storage?: string | null;
+  batteryHealth?: string | null;
+  size?: string | null;
+  color?: string | null;
+  material?: string | null;
+  compatibility?: string | null;
+  isSold?: boolean | null;
+  createdAt?: string | null;
+  views?: number | null;
+  user?: BackendProductUser | null;
+  reviews?: BackendReview[] | null;
+};
+
+type BackendProductListResponse = {
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    pages?: number;
+  };
+  data?: {
+    products?: BackendProduct[];
+    product?: BackendProduct;
+  };
+};
+
 function titleFromSlug(slug: string): string {
   return decodeURIComponent(slug)
     .replace(/-/g, " ")
@@ -667,6 +746,267 @@ function getCategoryMeta(slug: string): CategoryPageData["meta"] {
       subcategories: [{ id: "all", slug: "all", name: "All" }],
     }
   );
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function toNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  return fallback;
+}
+
+function parseBackendImages(value: unknown): string[] {
+  let candidate = value;
+
+  if (typeof value === "string" && value.trim().startsWith("[")) {
+    try {
+      candidate = JSON.parse(value) as unknown;
+    } catch {
+      candidate = [];
+    }
+  }
+
+  if (!Array.isArray(candidate)) return [];
+
+  return candidate
+    .map((item) => asString(item))
+    .filter((item): item is string => Boolean(item));
+}
+
+function getBackendCategoryMeta(category?: string | null) {
+  const key = asString(category)?.toUpperCase() ?? "OTHERS";
+  return FRONTEND_CATEGORY_BY_BACKEND[key] ?? FRONTEND_CATEGORY_BY_BACKEND.OTHERS;
+}
+
+function getBackendCategoryForSlug(slug: string): string | undefined {
+  return BACKEND_CATEGORY_BY_SLUG[slug as keyof typeof BACKEND_CATEGORY_BY_SLUG];
+}
+
+function getBackendPriceQuery(filter: CategoryFilterOption) {
+  if (filter === "under-500") return { maxPrice: 499 };
+  if (filter === "500-2000") return { minPrice: 500, maxPrice: 2000 };
+  if (filter === "over-2000") return { minPrice: 2001 };
+  return {};
+}
+
+function isRecentProduct(createdAt?: string | null): boolean {
+  if (!createdAt) return false;
+  const created = new Date(createdAt).getTime();
+  if (!Number.isFinite(created)) return false;
+  return Date.now() - created <= 14 * 24 * 60 * 60 * 1000;
+}
+
+function getAverageRating(reviews?: BackendReview[] | null): number {
+  if (!reviews?.length) return 0;
+  const total = reviews.reduce((sum, review) => sum + toNumber(review.rating), 0);
+  return Number((total / reviews.length).toFixed(1));
+}
+
+function normalizeBackendProduct(product: BackendProduct): Product {
+  const title = asString(product.title) ?? titleFromSlug(asString(product.slug) ?? "product");
+  const slug = asString(product.slug) ?? normalizeToSlug(title);
+  const category = getBackendCategoryMeta(product.category);
+  const images = parseBackendImages(product.images);
+  const reviews = product.reviews?.length ?? 0;
+
+  return normalizeProduct({
+    id: asString(product.id) ?? slug,
+    slug,
+    title,
+    name: title,
+    categoryName: category.name,
+    price: toNumber(product.price),
+    originalPrice: null,
+    badge: isRecentProduct(product.createdAt) ? "New" : null,
+    isNew: isRecentProduct(product.createdAt),
+    rating: getAverageRating(product.reviews),
+    reviews,
+    image: images[0] ?? PRODUCT_IMAGE_PLACEHOLDER,
+  });
+}
+
+function getBackendProducts(payload: BackendProductListResponse): BackendProduct[] {
+  return Array.isArray(payload.data?.products) ? payload.data.products : [];
+}
+
+function toPaginationMeta(
+  payload: BackendProductListResponse,
+  fallbackPage: number,
+  fallbackPageSize: number,
+  productCount: number,
+): ProductPaginationMeta {
+  const total = payload.pagination?.total ?? productCount;
+  const page = payload.pagination?.page ?? fallbackPage;
+  const pageSize = payload.pagination?.limit ?? fallbackPageSize;
+  const totalPages = payload.pagination?.pages ?? Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
+  const startItem = total ? (page - 1) * pageSize + 1 : 0;
+  const endItem = total ? Math.min(startItem + productCount - 1, total) : 0;
+
+  return {
+    page,
+    pageSize,
+    total,
+    totalPages,
+    startItem,
+    endItem,
+  };
+}
+
+async function fetchBackendProducts(
+  query: Record<string, string | number | boolean | null | undefined>,
+): Promise<{ products: Product[]; pagination: ProductPaginationMeta } | null> {
+  try {
+    const payload = await apiClient<BackendProductListResponse>("/products", {
+      method: "GET",
+      authMode: "omit",
+      cache: "no-store",
+      query,
+    });
+    const backendProducts = getBackendProducts(payload);
+    const products = backendProducts.map(normalizeBackendProduct);
+    const page = toNumber(query.page, 1);
+    const pageSize = toNumber(query.limit, products.length || 20);
+
+    if (!products.length) return null;
+
+    return {
+      products,
+      pagination: toPaginationMeta(payload, page, pageSize, products.length),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchBackendProductCollection(
+  endpoint: string,
+  query: Record<string, string | number | boolean | null | undefined>,
+): Promise<Product[] | null> {
+  try {
+    const payload = await apiClient<BackendProductListResponse>(endpoint, {
+      method: "GET",
+      authMode: "omit",
+      cache: "no-store",
+      query,
+    });
+    const products = getBackendProducts(payload).map(normalizeBackendProduct);
+    return products.length ? products : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildBackendProductSpecs(product: BackendProduct): ProductDetail["specs"] {
+  return [
+    { label: "Category", value: getBackendCategoryMeta(product.category).name },
+    { label: "Condition", value: asString(product.condition) ?? "Seller provided" },
+    { label: "Location", value: asString(product.location) ?? "Confirmed at checkout" },
+    { label: "Brand", value: asString(product.brand) ?? "Not specified" },
+    { label: "Model", value: asString(product.model) ?? "Not specified" },
+    { label: "RAM", value: asString(product.ram) ?? "Not specified" },
+    { label: "Storage", value: asString(product.storage) ?? "Not specified" },
+    { label: "Size", value: asString(product.size) ?? "Not specified" },
+    { label: "Color", value: asString(product.color) ?? "Not specified" },
+  ].filter((spec) => spec.value !== "Not specified");
+}
+
+function buildBackendProductVariants(product: BackendProduct): ProductDetail["variants"] {
+  const variants = [
+    asString(product.color)
+      ? { id: "color", label: "Color", value: asString(product.color)!, swatchClass: "bg-white border-[#FF6B00]" }
+      : null,
+    asString(product.size)
+      ? { id: "size", label: "Size", value: asString(product.size)!, swatchClass: "bg-zinc-100 border-[#FF6B00]" }
+      : null,
+    asString(product.condition)
+      ? { id: "condition", label: "Condition", value: asString(product.condition)!, swatchClass: "bg-zinc-200 border-[#FF6B00]" }
+      : null,
+  ].filter((variant): variant is ProductDetail["variants"][number] => Boolean(variant));
+
+  return variants.length
+    ? variants
+    : [{ id: "standard", label: "Option", value: "Standard", swatchClass: "bg-white border-[#FF6B00]" }];
+}
+
+function normalizeBackendProductDetail(product: BackendProduct): ProductDetail {
+  const summary = normalizeBackendProduct(product);
+  const category = getBackendCategoryMeta(product.category);
+  const images = parseBackendImages(product.images);
+  const title = summary.title ?? summary.name ?? titleFromSlug(summary.slug);
+  const sellerName = [product.user?.firstName, product.user?.lastName]
+    .map((part) => asString(part))
+    .filter(Boolean)
+    .join(" ");
+  const brand = asString(product.brand) ?? "Zamoyo";
+
+  return {
+    id: summary.id,
+    slug: summary.slug,
+    title,
+    brand,
+    category: { name: category.name, href: `/category/${category.slug}` },
+    subcategory: { name: category.name, href: `/category/${category.slug}` },
+    sku: `ZM-${String(summary.id).replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase() || "ITEM"}`,
+    price: summary.price,
+    originalPrice: summary.originalPrice ?? summary.price,
+    rating: summary.rating,
+    reviewCount: summary.reviews,
+    badge: summary.badge ?? null,
+    seller: {
+      name: sellerName || "Zamoyo Seller",
+      href: `/store/${normalizeToSlug(sellerName || "zamoyo-seller")}`,
+      avatar: "https://github.com/shadcn.png",
+      verified: false,
+      positiveRate: "Marketplace seller",
+      followers: asString(product.location) ?? "Zambia",
+    },
+    stock: product.isSold ? 0 : 99,
+    shippingText: "Delivery options and exact availability are confirmed at checkout.",
+    images: images.length ? images : [PRODUCT_IMAGE_PLACEHOLDER],
+    variants: buildBackendProductVariants(product),
+    description: asString(product.description) ?? `${title} is available from a Zamoyo marketplace seller.`,
+    specs: buildBackendProductSpecs(product),
+    boxItems: [title, "Seller provided packaging", "Zamoyo order receipt"],
+  };
+}
+
+async function fetchBackendProductDetailBySlug(slug: string): Promise<ProductDetail | null> {
+  try {
+    const payload = await apiClient<BackendProductListResponse>(`/products/${encodeURIComponent(slug)}`, {
+      method: "GET",
+      authMode: "omit",
+      cache: "no-store",
+    });
+    const product = payload.data?.product;
+    return product ? normalizeBackendProductDetail(product) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchBackendRelatedProducts(
+  productId: string | number,
+  limit: number,
+): Promise<Product[] | null> {
+  try {
+    const payload = await apiClient<BackendProductListResponse>(`/products/${productId}/related`, {
+      method: "GET",
+      authMode: "omit",
+      cache: "no-store",
+      query: { limit },
+    });
+    const products = getBackendProducts(payload).map(normalizeBackendProduct);
+    return products.length ? products : null;
+  } catch {
+    return null;
+  }
 }
 
 function applyPriceFilter(products: Product[], filter: CategoryFilterOption): Product[] {
@@ -771,10 +1111,19 @@ function paginateProducts(
 }
 
 export async function getTrendingProducts(): Promise<Product[]> {
+  const backendProducts = await fetchBackendProductCollection("/products/featured", { limit: 10 });
+  if (backendProducts) return backendProducts;
+
   return TRENDING_PRODUCTS;
 }
 
 export async function getFlashSaleProducts(): Promise<Product[]> {
+  const backendProducts = await fetchBackendProductCollection("/products", {
+    limit: 8,
+    sort: "price_asc",
+  });
+  if (backendProducts) return backendProducts;
+
   return FLASH_SALE_PRODUCTS;
 }
 
@@ -788,6 +1137,7 @@ export async function getCategoryPageData(
     pageSize?: number;
   } = {},
 ): Promise<CategoryPageData> {
+  const backendCategory = getBackendCategoryForSlug(slug);
   const categoryProducts = buildMarketplaceCatalogProducts().filter((product) => {
     const normalizedCategory =
       product.categoryName?.toLowerCase().replace(/ & /g, " and ").replace(/\s+/g, "-") ?? "";
@@ -799,6 +1149,26 @@ export async function getCategoryPageData(
   const activeSort = options.sort ?? "recommended";
   const activePage = options.page ?? 1;
   const activePageSize = options.pageSize ?? 50;
+  const backendPriceQuery = getBackendPriceQuery(activeFilter);
+
+  if (backendCategory && activeFilter !== "4-stars") {
+    const backendData = await fetchBackendProducts({
+      category: backendCategory,
+      sort: BACKEND_SORT_BY_CATEGORY_SORT[activeSort],
+      page: activePage,
+      limit: activePageSize,
+      ...backendPriceQuery,
+    });
+
+    if (backendData) {
+      return {
+        slug,
+        meta: getCategoryMeta(slug),
+        products: backendData.products,
+        pagination: backendData.pagination,
+      };
+    }
+  }
 
   const subcategoryProducts =
     activeSubcategory === "all"
@@ -904,6 +1274,9 @@ function buildProductDetailFromProduct(product: Product, requestedSlug: string):
 
 export async function getProductDetailBySlug(slug: string): Promise<ProductDetail> {
   const normalizedSlug = decodeURIComponent(slug).trim().toLowerCase();
+  const backendProductDetail = await fetchBackendProductDetailBySlug(normalizedSlug);
+  if (backendProductDetail) return backendProductDetail;
+
   const sellerProductDetail = getSellerConsumerProductDetailBySlug(normalizedSlug);
 
   if (sellerProductDetail) return sellerProductDetail;
@@ -937,6 +1310,14 @@ export async function getSellerProducts(options: { excludeSlug?: string } = {}):
 export async function getRelatedProducts(
   options: { excludeSlug?: string; categoryName?: string } = {},
 ): Promise<Product[]> {
+  if (options.excludeSlug) {
+    const currentProduct = await fetchBackendProductDetailBySlug(options.excludeSlug);
+    if (currentProduct) {
+      const backendRelated = await fetchBackendRelatedProducts(currentProduct.id, 8);
+      if (backendRelated) return backendRelated;
+    }
+  }
+
   const source = dedupeProducts([...RELATED_PRODUCTS, ...CATEGORY_PRODUCTS, ...TRENDING_PRODUCTS]);
   const normalizedCategory = options.categoryName?.toLowerCase();
   const sameCategory = normalizedCategory
@@ -951,6 +1332,13 @@ export async function getRelatedProducts(
 }
 
 export async function getSearchableProducts(): Promise<Product[]> {
+  const backendData = await fetchBackendProducts({
+    page: 1,
+    limit: 100,
+    sort: "newest",
+  });
+  if (backendData?.products.length) return backendData.products;
+
   return getCatalogProducts();
 }
 
@@ -966,6 +1354,18 @@ export async function getAllProductsPageData(
   const activeSort = options.sort ?? "recommended";
   const activePage = options.page ?? 1;
   const activePageSize = options.pageSize ?? 50;
+  const backendPriceQuery = getBackendPriceQuery(activeFilter);
+
+  if (activeFilter !== "4-stars") {
+    const backendData = await fetchBackendProducts({
+      page: activePage,
+      limit: activePageSize,
+      sort: BACKEND_SORT_BY_CATEGORY_SORT[activeSort],
+      ...backendPriceQuery,
+    });
+    if (backendData) return backendData;
+  }
+
   const products = applySort(applyPriceFilter(getCatalogProducts(), activeFilter), activeSort);
 
   return paginateProducts(products, activePage, activePageSize);

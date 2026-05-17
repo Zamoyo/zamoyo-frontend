@@ -12,10 +12,10 @@ import { cn } from "@/lib/utils";
 import type { Permission } from "@/services/rbac";
 import {
   adminHasPermission,
-  clearAdminSessionCookie,
   CURRENT_ADMIN_IDENTITY,
   getAdminInitials,
 } from "@/services/admin/session";
+import { logoutAdmin } from "@/services/admin/auth";
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }>; permission: Permission; };
 
@@ -38,20 +38,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
   const authorizedNavItems = NAV_ITEMS.filter(item => adminHasPermission(item.permission));
 
-  const handleSignOut = () => {
-    document.cookie = clearAdminSessionCookie();
-    toast.success("Admin session ended.");
-    router.replace("/admin/login");
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+
+    setIsSigningOut(true);
+
+    try {
+      const session = await logoutAdmin();
+      toast.success(session.message);
+      router.replace(session.nextPath);
+      router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not end admin session.";
+      toast.error(message);
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   if (pathname === "/admin/login") return <>{children}</>;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(0,158,73,0.12),transparent_32rem),linear-gradient(135deg,#f8fafc_0%,#e4e4e7_45%,#f4f4f5_100%)]">
-      
+
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-zinc-900/50 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
@@ -83,8 +96,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             );
 
             return (
-              <Link 
-                key={item.name} 
+              <Link
+                key={item.name}
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={navClasses}
@@ -123,14 +136,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <button aria-label="Open admin menu" className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 lg:hidden" onClick={() => setIsMobileMenuOpen(true)}>
             <Menu className="h-5 w-5" />
           </button>
-          
+
           <div className="hidden items-center gap-2 rounded-full border border-emerald-300/40 bg-emerald-50/80 px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm shadow-emerald-900/5 lg:flex">
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span></span>
             System Operational
           </div>
 
-          <button onClick={handleSignOut} className="flex items-center gap-2 rounded-xl border border-rose-200/70 bg-white/80 px-3 py-2 text-xs font-bold text-rose-700 shadow-sm transition-all hover:bg-rose-50 hover:shadow-md">
-            <LogOut className="h-4 w-4" /> Sign Out
+          <button onClick={handleSignOut} disabled={isSigningOut} className="flex items-center gap-2 rounded-xl border border-rose-200/70 bg-white/80 px-3 py-2 text-xs font-bold text-rose-700 shadow-sm transition-all hover:bg-rose-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">
+            <LogOut className="h-4 w-4" /> {isSigningOut ? "Signing Out" : "Sign Out"}
           </button>
         </header>
 

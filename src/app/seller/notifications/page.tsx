@@ -39,39 +39,18 @@ type NotificationTypeMeta = {
   border: string;
 };
 
-// ============================================================================
-// 2. FRONTEND FIXTURE SERVICE
-// ============================================================================
-const now = new Date();
-const today1 = new Date(now.getTime() - 15 * 60000).toISOString();
-const today2 = new Date(now.getTime() - 4 * 3600000).toISOString();
-const yesterday1 = new Date(now.getTime() - 26 * 3600000).toISOString();
-const older1 = new Date(now.getTime() - 5 * 86400000).toISOString();
-
-const MOCK_NOTIFICATIONS: SellerNotification[] = [
-  { id: "NOTIF-001", type: "order", title: "New Order Received", message: "Chanda M. placed an order for MacBook Air M2 (K18,500).", createdAt: today1, isRead: false, link: "/seller/orders/ORD-9921", meta: { orderId: "ORD-9921" } },
-  { id: "NOTIF-002", type: "inventory", title: "Low Stock Alert", message: "Samsung 45W Fast Charger has dropped to 0 units.", createdAt: today2, isRead: false, link: "/seller/products", meta: { productId: "ZM-P-102" } },
-  { id: "NOTIF-003", type: "payout", title: "Payout Processed", message: "Your withdrawal of K4,455 has been sent to MTN Mobile Money.", createdAt: yesterday1, isRead: true, link: "/seller/payouts", meta: { payoutId: "WD-8892" } },
-  { id: "NOTIF-004", type: "support", title: "Message from Buyer", message: "Emmanuel B. asked a question about their pending order.", createdAt: yesterday1, isRead: true, link: "/seller/orders/ORD-9918", meta: { orderId: "ORD-9918" } },
-  { id: "NOTIF-005", type: "system", title: "Platform Update", message: "Zamoyo Seller Hub v2.1 is live. Check out the new bulk inventory tools.", createdAt: older1, isRead: true },
-];
-
 const notificationsApi = {
   async fetchAll(): Promise<SellerNotification[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(MOCK_NOTIFICATIONS.map((notification) => ({ ...notification, meta: notification.meta ? { ...notification.meta } : undefined })));
-      }, 600);
-    });
+    return [];
   },
   async markAsRead(): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, 200));
+    return;
   },
   async markAllAsRead(): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, 400));
+    return;
   },
   async clearAll(): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, 400));
+    return;
   }
 };
 

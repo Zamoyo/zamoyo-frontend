@@ -1,5 +1,6 @@
 import Navbar from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { CartSyncBridge } from "@/components/cart/CartSyncBridge";
 
 export default function ConsumerLayout({
   children,
@@ -9,6 +10,7 @@ export default function ConsumerLayout({
   return (
     <div className="flex min-h-screen flex-col bg-green-100">
       <Navbar />
+      <CartSyncBridge />
       <main className="flex-1">
         {children}
       </main>

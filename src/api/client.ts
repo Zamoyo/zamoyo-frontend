@@ -1,7 +1,7 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 const SELLER_TOKEN_KEY = "zamoyo_seller_token";
 
@@ -13,6 +13,7 @@ function getSellerToken(): string | null {
 export const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 10000,
+  withCredentials: true,
   headers: {
     Accept: "application/json",
   },
@@ -33,15 +34,5 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      console.warn("Token expired or unauthorized.");
-      // later:
-      // - clear auth state
-      // - remove token
-      // - redirect seller to login
-    }
-
-    return Promise.reject(error);
-  },
+  (error) => Promise.reject(error),
 );
