@@ -220,28 +220,19 @@ export default function AdminDashboardPage() {
         <KPICard title="Active Buyers" value={data.kpis.activeBuyers} growth={data.kpis.buyerGrowth} icon={Users} tone="indigo" comparisonLabel={comparisonLabel} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <MarketplaceSignal label="AOV" value={`K${data.marketplace.averageOrderValue.toLocaleString()}`} note="Average order value" tone="emerald" />
-        <MarketplaceSignal label="Take rate" value={`${data.marketplace.takeRate}%`} note="Commission capture" tone="indigo" />
-        <MarketplaceSignal label="Conversion" value={`${data.marketplace.conversionRate}%`} note="Visit to order" tone="amber" />
-        <MarketplaceSignal label="Repeat rate" value={`${data.marketplace.repeatPurchaseRate}%`} note="Buyer retention" tone="sky" />
-        <MarketplaceSignal label="Delivery SLA" value={`${data.marketplace.deliverySla}%`} note="On-time fulfilment" tone="emerald" />
-        <MarketplaceSignal label="Refund rate" value={`${data.marketplace.refundRate}%`} note="Trust pressure" tone="rose" />
-      </div>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         
         {/* 3. TREND CHART */}
-        <div className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-md shadow-zinc-900/5 backdrop-blur-xl transition-all hover:shadow-lg md:p-6 lg:col-span-2 flex flex-col">
+        <div className="flex min-w-0 flex-col rounded-3xl border border-white/70 bg-white/75 p-4 shadow-md shadow-zinc-900/5 backdrop-blur-xl transition-all hover:shadow-lg md:p-6 lg:col-span-2">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-base font-black text-zinc-900">GMV Growth</h2>
               <p className="mt-1 text-xs font-medium text-zinc-500">Selected range: {dateRangeLabel}</p>
             </div>
           </div>
-          <div className="h-62.5 w-full flex-1">
+          <div className="min-h-[248px] w-full min-w-0 md:min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.trends} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <AreaChart data={data.trends} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorGmv" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#18181b" stopOpacity={0.3} />
@@ -303,6 +294,15 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <MarketplaceSignal label="AOV" value={`K${data.marketplace.averageOrderValue.toLocaleString()}`} note="Average order value" tone="emerald" />
+        <MarketplaceSignal label="Take rate" value={`${data.marketplace.takeRate}%`} note="Commission capture" tone="indigo" />
+        <MarketplaceSignal label="Conversion" value={`${data.marketplace.conversionRate}%`} note="Visit to order" tone="amber" />
+        <MarketplaceSignal label="Repeat rate" value={`${data.marketplace.repeatPurchaseRate}%`} note="Buyer retention" tone="sky" />
+        <MarketplaceSignal label="Delivery SLA" value={`${data.marketplace.deliverySla}%`} note="On-time fulfilment" tone="emerald" />
+        <MarketplaceSignal label="Refund rate" value={`${data.marketplace.refundRate}%`} note="Trust pressure" tone="rose" />
       </div>
 
       <div className="rounded-3xl border border-white/70 bg-white/75 p-5 shadow-md shadow-zinc-900/5 backdrop-blur-xl">
