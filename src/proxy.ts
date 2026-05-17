@@ -4,19 +4,33 @@ import {
   ADMIN_DASHBOARD_PATH,
   ADMIN_LOGIN_PATH,
   ADMIN_SESSION_COOKIE,
-  isUsableAdminSessionToken,
 } from "@/services/admin/session-cookie";
+import { validateAdminSessionToken } from "@/services/admin/backend-session";
 
-export function proxy(request: NextRequest) {
+function clearAdminSession(response: NextResponse) {
+  response.cookies.set(ADMIN_SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    maxAge: 0,
+  });
+  return response;
+}
+
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   if (path.startsWith("/admin")) {
     const isLoginPage = path === ADMIN_LOGIN_PATH;
     const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-    const hasSession = isUsableAdminSessionToken(token);
+    const identity = await validateAdminSessionToken(token);
+    const hasSession = Boolean(identity);
 
     if (!hasSession && !isLoginPage) {
-      return NextResponse.redirect(new URL(ADMIN_LOGIN_PATH, request.url));
+      return clearAdminSession(
+        NextResponse.redirect(new URL(ADMIN_LOGIN_PATH, request.url)),
+      );
     }
 
     if (hasSession && isLoginPage) {

@@ -46,6 +46,10 @@ export function adminHasPermission(permission: Permission) {
   return hasPermission(getCurrentAdminRole(), permission);
 }
 
+export function adminIdentityHasPermission(identity: AdminIdentity, permission: Permission) {
+  return hasPermission(identity.claims.role, permission);
+}
+
 export function getAdminInitials(name = CURRENT_ADMIN_IDENTITY.name) {
   return name
     .split(" ")

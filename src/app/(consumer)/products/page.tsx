@@ -1,33 +1,11 @@
 import Link from "next/link";
-import { ArrowDownWideNarrow, ChevronRight, Grid3X3, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, Grid3X3 } from "lucide-react";
 import { ProductCard } from "@/components/productCard";
+import { ProductBrowseControls } from "@/components/product/ProductBrowseControls";
 import { ProductPagination } from "@/components/product/ProductPagination";
 import { getCategoryDirectory } from "@/services/categories";
 import { getAllProductsPageData } from "@/services/products";
 import type { CategoryFilterOption, CategorySortOption } from "@/types/category";
-
-function FilterPill({
-  active,
-  label,
-  href,
-}: {
-  active: boolean;
-  label: string;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold shadow-sm transition-all ${
-        active
-          ? "border-[#009E49] bg-[#009E49]/10 text-[#009E49]"
-          : "border-zinc-200 bg-white text-zinc-600 hover:border-[#009E49] hover:bg-[#009E49]/5 hover:text-[#009E49]"
-      }`}
-    >
-      {label}
-    </Link>
-  );
-}
 
 export default async function AllProductsPage({
   searchParams,
@@ -121,45 +99,11 @@ export default async function AllProductsPage({
       </div>
 
       <div className="container mx-auto max-w-7xl px-4 md:px-6">
-        <div className="sticky top-25 z-30 mb-8 flex flex-col items-start justify-between gap-4 rounded-2xl border border-white/80 bg-white/70 p-2 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl md:flex-row md:items-center md:rounded-full lg:top-35">
-          <div className="hide-scrollbar flex w-full items-center gap-2 overflow-x-auto px-2 pb-2 md:w-auto md:pb-0">
-            <div className="mr-2 flex shrink-0 items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5">
-              <SlidersHorizontal className="h-4 w-4 text-zinc-500" />
-              <span className="text-xs font-bold text-zinc-700">Filters:</span>
-            </div>
-
-            <FilterPill active={activeFilter === "all"} label="All" href={buildUrl({ filter: "all" })} />
-            <FilterPill active={activeFilter === "under-500"} label="Under K500" href={buildUrl({ filter: "under-500" })} />
-            <FilterPill active={activeFilter === "500-2000"} label="K500 - K2k" href={buildUrl({ filter: "500-2000" })} />
-            <FilterPill active={activeFilter === "over-2000"} label="Over K2k" href={buildUrl({ filter: "over-2000" })} />
-            <FilterPill active={activeFilter === "4-stars"} label="4+ Stars" href={buildUrl({ filter: "4-stars" })} />
-          </div>
-
-          <div className="flex w-full items-center justify-end gap-2 px-2 md:w-auto">
-            <span className="hidden text-xs font-bold text-zinc-500 md:inline">Sort:</span>
-            <div className="hide-scrollbar flex items-center gap-2 overflow-x-auto">
-              {[
-                { value: "recommended", label: "Recommended" },
-                { value: "price-low", label: "Price Low" },
-                { value: "price-high", label: "Price High" },
-                { value: "top-rated", label: "Top Rated" },
-              ].map((sort) => (
-                <Link
-                  key={sort.value}
-                  href={buildUrl({ sort: sort.value as CategorySortOption })}
-                  className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold shadow-md transition-colors ${
-                    activeSort === sort.value
-                      ? "bg-zinc-900 text-white hover:bg-zinc-800"
-                      : "border border-zinc-200 bg-white text-zinc-700 hover:border-[#009E49] hover:text-[#009E49]"
-                  }`}
-                >
-                  {sort.label}
-                  <ArrowDownWideNarrow className="h-3.5 w-3.5" />
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
+        <ProductBrowseControls
+          activeFilter={activeFilter}
+          activeSort={activeSort}
+          buildUrl={buildUrl}
+        />
 
         <div className="mb-5 flex items-center justify-between gap-4">
           <p className="text-sm font-black text-zinc-900">
