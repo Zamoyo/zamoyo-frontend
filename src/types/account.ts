@@ -23,7 +23,7 @@ export interface AccountOverview {
   activeOrdersCount: number;
   recentOrders: OrderSummary[];
   notifications: AccountNotification[];
-  defaultAddress: Address;
+  defaultAddress: Address | null;
   recentlyViewed: Product[];
 }
 

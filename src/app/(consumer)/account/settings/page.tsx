@@ -276,43 +276,49 @@ export default function SettingsPage() {
             </h2>
 
             <div className="space-y-3">
-              {settings.payments.map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between rounded-2xl border border-zinc-200/60 bg-white p-4 shadow-sm transition-all hover:border-zinc-300">
-                  <div className="flex items-center gap-4">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${payment.type === "Mobile Money" ? "bg-amber-100 text-amber-600" : "bg-indigo-100 text-indigo-600"}`}>
-                      {payment.type === "Mobile Money" ? <Smartphone className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-zinc-900">
-                          {payment.provider} <span className="hidden sm:inline">{payment.type}</span>
-                        </p>
-                        {payment.isDefault ? (
-                          <Badge className="border-none bg-[#009E49]/10 px-2 py-0 text-[10px] text-[#009E49]">
-                            <CheckCircle2 className="mr-1 h-3 w-3" /> Default
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <p className="text-xs font-medium text-zinc-500">{payment.account}</p>
-                    </div>
-                  </div>
-
-                  <Button
-                    aria-label={payment.isDefault ? `Default payment method ${payment.provider}` : `Remove payment method ${payment.provider}`}
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeletePayment(payment.id)}
-                    disabled={payment.isDefault || deletingPaymentId === payment.id}
-                    className={`h-8 w-8 rounded-xl ${
-                      payment.isDefault
-                        ? "cursor-not-allowed text-zinc-300 opacity-60 hover:bg-transparent hover:text-zinc-300"
-                        : "text-zinc-400 hover:bg-red-50 hover:text-red-500"
-                    }`}
-                  >
-                    {deletingPaymentId === payment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </Button>
+              {settings.payments.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/70 p-4 text-sm font-medium text-zinc-500">
+                  No payment methods are connected yet.
                 </div>
-              ))}
+              ) : (
+                settings.payments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between rounded-2xl border border-zinc-200/60 bg-white p-4 shadow-sm transition-all hover:border-zinc-300">
+                    <div className="flex items-center gap-4">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${payment.type === "Mobile Money" ? "bg-amber-100 text-amber-600" : "bg-indigo-100 text-indigo-600"}`}>
+                        {payment.type === "Mobile Money" ? <Smartphone className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-zinc-900">
+                            {payment.provider} <span className="hidden sm:inline">{payment.type}</span>
+                          </p>
+                          {payment.isDefault ? (
+                            <Badge className="border-none bg-[#009E49]/10 px-2 py-0 text-[10px] text-[#009E49]">
+                              <CheckCircle2 className="mr-1 h-3 w-3" /> Default
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-xs font-medium text-zinc-500">{payment.account}</p>
+                      </div>
+                    </div>
+
+                    <Button
+                      aria-label={payment.isDefault ? `Default payment method ${payment.provider}` : `Remove payment method ${payment.provider}`}
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeletePayment(payment.id)}
+                      disabled={payment.isDefault || deletingPaymentId === payment.id}
+                      className={`h-8 w-8 rounded-xl ${
+                        payment.isDefault
+                          ? "cursor-not-allowed text-zinc-300 opacity-60 hover:bg-transparent hover:text-zinc-300"
+                          : "text-zinc-400 hover:bg-red-50 hover:text-red-500"
+                      }`}
+                    >
+                      {deletingPaymentId === payment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 

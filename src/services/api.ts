@@ -1,4 +1,7 @@
-import { getStoredAccessToken } from "@/services/auth-session";
+import {
+  clearStoredAuthSession,
+  getStoredAccessToken,
+} from "@/services/auth-session";
 
 export class ApiError extends Error {
   status: number;
@@ -13,13 +16,19 @@ export class ApiError extends Error {
 }
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
+type CsrfMode = "body" | "query" | "header";
 
 interface FetchOptions extends RequestInit {
   timeout?: number;
   query?: Record<string, string | number | boolean | null | undefined>;
   authMode?: "include" | "omit";
+  csrf?: boolean | CsrfMode;
+  skipAuthRefresh?: boolean;
 }
+
+let csrfTokenPromise: Promise<string> | null = null;
 
 function buildUrl(endpoint: string, query?: FetchOptions["query"]): string {
   const url = new URL(`${BASE_URL}${endpoint}`);
@@ -38,25 +47,159 @@ function isJsonResponse(contentType: string | null): boolean {
   return contentType?.includes("application/json") ?? false;
 }
 
-export async function apiClient<T>(
-  endpoint: string,
-  options: FetchOptions = {},
-): Promise<T> {
-  if (process.env.NODE_ENV === "development") {
-    await new Promise((resolve) => setTimeout(resolve, 800));
+function isJsonString(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.startsWith("{") && trimmed.endsWith("}");
+}
+
+function getRequestMethod(options: RequestInit): string {
+  return (options.method ?? "GET").toUpperCase();
+}
+
+function shouldSendCsrf(options: FetchOptions): boolean {
+  if (!options.csrf) return false;
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(getRequestMethod(options));
+}
+
+function getCsrfMode(csrf: FetchOptions["csrf"]): CsrfMode {
+  if (csrf === "body" || csrf === "query" || csrf === "header") return csrf;
+  return "header";
+}
+
+function extractMessage(payload: unknown, fallback: string): string {
+  if (payload && typeof payload === "object" && "message" in payload) {
+    const message = (payload as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
   }
 
+  return fallback;
+}
+
+function extractCsrfToken(payload: unknown): string {
+  const root = payload && typeof payload === "object" ? payload as Record<string, unknown> : null;
+  const data = root?.data && typeof root.data === "object" ? root.data as Record<string, unknown> : null;
+  const token = data?.csrfToken ?? root?.csrfToken;
+
+  if (typeof token !== "string" || !token.trim()) {
+    throw new ApiError("Backend did not return a CSRF token.", 500, payload);
+  }
+
+  return token;
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeout: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      credentials: "include",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function requestCsrfToken(timeout: number): Promise<string> {
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = (async () => {
+      const headers = new Headers();
+      headers.set("Accept", "application/json");
+
+      const response = await fetchWithTimeout(
+        buildUrl("/auth/csrf-token"),
+        { method: "GET", headers },
+        timeout,
+      );
+
+      const contentType = response.headers.get("content-type");
+      const payload = isJsonResponse(contentType)
+        ? await response.json()
+        : await response.text();
+
+      if (!response.ok) {
+        csrfTokenPromise = null;
+        throw new ApiError(
+          extractMessage(payload, "Failed to prepare a secure request."),
+          response.status,
+          payload,
+        );
+      }
+
+      return extractCsrfToken(payload);
+    })();
+  }
+
+  return csrfTokenPromise;
+}
+
+async function refreshCookieSession(timeout: number): Promise<boolean> {
+  const headers = new Headers();
+  headers.set("Accept", "application/json");
+
+  try {
+    const response = await fetchWithTimeout(
+      buildUrl("/auth/refresh-token"),
+      { method: "POST", headers },
+      timeout,
+    );
+
+    if (!response.ok) {
+      clearStoredAuthSession();
+      return false;
+    }
+
+    return true;
+  } catch {
+    clearStoredAuthSession();
+    return false;
+  }
+}
+
+function withCsrfBody(body: BodyInit | null | undefined, token: string): BodyInit {
+  if (typeof FormData !== "undefined" && body instanceof FormData) {
+    body.set("_csrf", token);
+    return body;
+  }
+
+  if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) {
+    body.set("_csrf", token);
+    return body;
+  }
+
+  if (typeof body === "string" && isJsonString(body)) {
+    const parsed = JSON.parse(body) as Record<string, unknown>;
+    return JSON.stringify({ ...parsed, _csrf: token });
+  }
+
+  if (!body) return JSON.stringify({ _csrf: token });
+
+  return body;
+}
+
+async function prepareRequest(
+  endpoint: string,
+  options: FetchOptions,
+): Promise<{ url: string; init: RequestInit }> {
+  const method = getRequestMethod(options);
   const {
-    timeout = 10_000,
+    timeout,
     query,
     authMode = "include",
+    csrf,
+    skipAuthRefresh,
     headers,
     body,
     ...fetchOptions
   } = options;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  void timeout;
+  void skipAuthRefresh;
 
   const resolvedHeaders = new Headers(headers);
   if (!resolvedHeaders.has("Accept")) {
@@ -64,69 +207,116 @@ export async function apiClient<T>(
   }
 
   if (authMode === "include" && !resolvedHeaders.has("Authorization")) {
-    const token = getStoredAccessToken();
-    if (token) {
-      resolvedHeaders.set("Authorization", `Bearer ${token}`);
+    const legacyToken = getStoredAccessToken();
+    if (legacyToken) {
+      resolvedHeaders.set("Authorization", `Bearer ${legacyToken}`);
     }
   }
 
-  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
-  const hasBody = body !== undefined && body !== null;
+  let resolvedBody = body as BodyInit | null | undefined;
+  const resolvedQuery = { ...(query ?? {}) };
 
-  if (hasBody && !isFormData && !resolvedHeaders.has("Content-Type")) {
+  if (shouldSendCsrf(options)) {
+    const token = await requestCsrfToken(options.timeout ?? 10_000);
+    const mode = getCsrfMode(csrf);
+
+    if (mode === "header") {
+      resolvedHeaders.set("X-CSRF-Token", token);
+    } else if (mode === "query") {
+      resolvedQuery._csrf = token;
+    } else {
+      resolvedBody = withCsrfBody(resolvedBody, token);
+    }
+  }
+
+  const isFormData =
+    typeof FormData !== "undefined" && resolvedBody instanceof FormData;
+  const isUrlSearchParams =
+    typeof URLSearchParams !== "undefined" && resolvedBody instanceof URLSearchParams;
+  const hasBody = resolvedBody !== undefined && resolvedBody !== null;
+
+  if (
+    hasBody &&
+    !isFormData &&
+    !isUrlSearchParams &&
+    !resolvedHeaders.has("Content-Type")
+  ) {
     resolvedHeaders.set("Content-Type", "application/json");
   }
 
-  try {
-    const response = await fetch(buildUrl(endpoint, query), {
+  return {
+    url: buildUrl(endpoint, resolvedQuery),
+    init: {
       ...fetchOptions,
-      body,
+      method,
+      body: resolvedBody,
       headers: resolvedHeaders,
-      signal: controller.signal,
-    });
+    },
+  };
+}
 
-    const contentType = response.headers.get("content-type");
-    const hasJsonBody = isJsonResponse(contentType);
-    const isNoContent = response.status === 204;
+async function parseResponse(response: Response): Promise<unknown> {
+  if (response.status === 204) return null;
 
-    let responseData: unknown = null;
+  const contentType = response.headers.get("content-type");
+  return isJsonResponse(contentType) ? response.json() : response.text();
+}
 
-    if (!isNoContent) {
-      responseData = hasJsonBody ? await response.json() : await response.text();
-    }
+export async function apiClient<T>(
+  endpoint: string,
+  options: FetchOptions = {},
+): Promise<T> {
+  const timeout = options.timeout ?? 10_000;
+  let didRefresh = false;
+  let didRefreshCsrf = false;
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        console.warn("Unauthorized: token expired or missing.");
+  while (true) {
+    try {
+      const { url, init } = await prepareRequest(endpoint, options);
+      const response = await fetchWithTimeout(url, init, timeout);
+      const responseData = await parseResponse(response);
+
+      if (response.ok) return responseData as T;
+
+      const message = extractMessage(
+        responseData,
+        `Backend returned ${response.status}`,
+      );
+
+      if (
+        response.status === 401 &&
+        options.authMode !== "omit" &&
+        !options.skipAuthRefresh &&
+        !didRefresh &&
+        endpoint !== "/auth/refresh-token"
+      ) {
+        didRefresh = true;
+        if (await refreshCookieSession(timeout)) continue;
       }
 
-      const message =
-        typeof responseData === "object" &&
-        responseData !== null &&
-        "message" in responseData &&
-        typeof (responseData as { message?: unknown }).message === "string"
-          ? (responseData as { message: string }).message
-          : `Backend returned ${response.status}`;
+      if (
+        response.status === 403 &&
+        shouldSendCsrf(options) &&
+        !didRefreshCsrf &&
+        message.toLowerCase().includes("csrf")
+      ) {
+        didRefreshCsrf = true;
+        csrfTokenPromise = null;
+        continue;
+      }
 
       throw new ApiError(message, response.status, responseData);
-    }
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
 
-    return responseData as T;
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new ApiError(
+          "Request timed out. Please check your connection.",
+          408,
+        );
+      }
 
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new ApiError(
-        "Request timed out. Please check your connection.",
-        408,
-      );
+      throw new ApiError("Network connection failed.", 503, error);
     }
-
-    console.error("API Client Error:", error);
-    throw new ApiError("Network connection failed.", 503, error);
-  } finally {
-    clearTimeout(timeoutId);
   }
 }

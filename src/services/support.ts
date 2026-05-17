@@ -30,106 +30,39 @@ export interface SupportStats {
   avgResponseHrs: number;
 }
 
-// --- FRONTEND FIXTURE DATA & SERVICE ---
-const now = new Date();
-const timeAgo = (hours: number) => new Date(now.getTime() - hours * 3600000).toISOString();
-
-const MOCK_TICKETS: SupportTicket[] = [
-  {
-    id: "TCK-4921",
-    subject: "Order ORD-9921 showing incorrect delivery fee",
-    status: "waiting-seller",
-    priority: "high",
-    category: "order",
-    createdAt: timeAgo(24),
-    updatedAt: timeAgo(2),
-    messages: [
-      { id: "msg-1", senderType: "seller", senderName: "Zamoyo Store", body: "Hi, the delivery fee for this order in Kabulonga is showing as K50, but my standard rate is K150. Please advise.", createdAt: timeAgo(24) },
-      { id: "msg-2", senderType: "support", senderName: "Zamoyo Support", body: "Hello! We are looking into this. Can you confirm if you updated your zonal delivery rates recently?", createdAt: timeAgo(2) }
-    ]
-  },
-  {
-    id: "TCK-4920",
-    subject: "Missing payout for last week",
-    status: "waiting-support",
-    priority: "urgent",
-    category: "payout",
-    createdAt: timeAgo(5),
-    updatedAt: timeAgo(5),
-    messages: [
-      { id: "msg-3", senderType: "seller", senderName: "Zamoyo Store", body: "My payout of K4,455 hasn't hit my MTN mobile money yet. It usually arrives by Tuesday.", createdAt: timeAgo(5) }
-    ]
-  },
-  {
-    id: "TCK-4890",
-    subject: "How do I bulk update inventory?",
-    status: "resolved",
-    priority: "low",
-    category: "inventory",
-    createdAt: timeAgo(120),
-    updatedAt: timeAgo(48),
-    messages: [
-      { id: "msg-4", senderType: "seller", senderName: "Zamoyo Store", body: "Is there a way to update all my low stock items at once?", createdAt: timeAgo(120) },
-      { id: "msg-5", senderType: "support", senderName: "Zamoyo Support", body: "Yes! Go to Inventory, select multiple checkboxes, and use the Bulk Action bar at the top.", createdAt: timeAgo(48) },
-      { id: "msg-6", senderType: "system", senderName: "System", body: "Ticket marked as resolved.", createdAt: timeAgo(48) }
-    ]
-  }
-];
-
 export const supportApi = {
   async fetchTickets(): Promise<SupportTicket[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(MOCK_TICKETS.map(cloneTicket));
-      }, 800);
-    });
+    return [];
   },
   async createTicket(subject: string, category: TicketCategory, priority: TicketPriority, message: string): Promise<SupportTicket> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const newId = `TCK-${Date.now().toString().slice(-6)}`;
-        const timestamp = new Date().toISOString();
-        resolve({
-          id: newId,
-          subject,
-          status: "open",
-          priority,
-          category,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          messages: [
-            { id: buildMessageId(), senderType: "seller", senderName: "You", body: message, createdAt: timestamp }
-          ]
-        });
-      }, 600);
-    });
+    const timestamp = new Date().toISOString();
+    return {
+      id: crypto.randomUUID(),
+      subject,
+      status: "open",
+      priority,
+      category,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      messages: [
+        { id: buildMessageId(), senderType: "seller", senderName: "You", body: message, createdAt: timestamp },
+      ],
+    };
   },
   async replyToTicket(ticketId: string, message: string): Promise<SupportMessage> {
-    void ticketId; // Prevent TS error
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: buildMessageId(),
-          senderType: "seller",
-          senderName: "You",
-          body: message,
-          createdAt: new Date().toISOString()
-        });
-      }, 500);
-    });
+    void ticketId;
+    return {
+      id: buildMessageId(),
+      senderType: "seller",
+      senderName: "You",
+      body: message,
+      createdAt: new Date().toISOString()
+    };
   },
   async resolveTicket(ticketId: string): Promise<void> {
-    void ticketId; 
-    return new Promise((resolve) => setTimeout(resolve, 400));
+    void ticketId;
   }
 };
-
-function cloneTicket(ticket: SupportTicket): SupportTicket {
-  return {
-    ...ticket,
-    messages: ticket.messages.map((message) => ({ ...message })),
-  };
-}
 
 function buildMessageId(): string {
   return `msg-${globalThis.crypto?.randomUUID?.() ?? Date.now().toString()}`;

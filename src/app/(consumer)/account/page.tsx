@@ -227,18 +227,22 @@ export default function AccountOverviewPage() {
             </div>
 
             <div className="space-y-4">
-              {data.notifications.map((notification) => (
-                <div key={notification.id} className="relative border-l-2 border-zinc-100 pl-4">
-                  {notification.unread ? (
-                    <span className="absolute -left-1.25 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-4 ring-white" />
-                  ) : null}
-                  <h4 className={`text-sm font-bold ${notification.unread ? "text-zinc-900" : "text-zinc-600"}`}>
-                    {notification.title}
-                  </h4>
-                  <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{notification.desc}</p>
-                  <span className="mt-1 block text-[10px] font-bold text-zinc-400">{notification.time}</span>
-                </div>
-              ))}
+              {data.notifications.length === 0 ? (
+                <p className="text-sm text-zinc-500">No account updates yet.</p>
+              ) : (
+                data.notifications.map((notification) => (
+                  <div key={notification.id} className="relative border-l-2 border-zinc-100 pl-4">
+                    {notification.unread ? (
+                      <span className="absolute -left-1.25 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-4 ring-white" />
+                    ) : null}
+                    <h4 className={`text-sm font-bold ${notification.unread ? "text-zinc-900" : "text-zinc-600"}`}>
+                      {notification.title}
+                    </h4>
+                    <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{notification.desc}</p>
+                    <span className="mt-1 block text-[10px] font-bold text-zinc-400">{notification.time}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -251,17 +255,24 @@ export default function AccountOverviewPage() {
                 Manage
               </Link>
             </div>
-            <div className="rounded-2xl border border-zinc-100 bg-zinc-50/80 p-4">
-              <p className="mb-1 text-sm font-bold text-zinc-900">{data.defaultAddress.name}</p>
-              <p className="text-xs leading-relaxed text-zinc-600">
-                {data.defaultAddress.street}
-                <br />
-                {data.defaultAddress.area}
-                <br />
-                {data.defaultAddress.city}
-              </p>
-              <p className="mt-2 text-xs font-medium text-zinc-500">{data.defaultAddress.phone}</p>
-            </div>
+            {data.defaultAddress ? (
+              <div className="rounded-2xl border border-zinc-100 bg-zinc-50/80 p-4">
+                <p className="mb-1 text-sm font-bold text-zinc-900">{data.defaultAddress.name}</p>
+                <p className="text-xs leading-relaxed text-zinc-600">
+                  {data.defaultAddress.street}
+                  <br />
+                  {data.defaultAddress.area}
+                  <br />
+                  {data.defaultAddress.city}
+                </p>
+                <p className="mt-2 text-xs font-medium text-zinc-500">{data.defaultAddress.phone}</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 p-4">
+                <p className="text-sm font-bold text-zinc-900">No default address</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">Add a delivery address before checkout.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -273,11 +284,17 @@ export default function AccountOverviewPage() {
             Continue Shopping
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {data.recentlyViewed.map((product) => (
-            <ProductCard key={`${product.id}-${product.slug}`} product={product} />
-          ))}
-        </div>
+        {data.recentlyViewed.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-zinc-200 bg-white p-6 text-sm font-medium text-zinc-500">
+            Products you view will appear here.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {data.recentlyViewed.map((product) => (
+              <ProductCard key={`${product.id}-${product.slug}`} product={product} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

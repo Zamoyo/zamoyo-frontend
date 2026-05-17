@@ -2,17 +2,11 @@ import { ApiError, apiClient } from "@/services/api";
 import {
   clearStoredAuthSession,
   getLastAuthEmail,
-  getStoredAccessToken,
   getStoredAuthUser,
-  getStoredRefreshToken,
-  removeStoredRefreshToken,
-  storeAccessToken,
   storeAuthSession,
   storeAuthUser,
   storeLastAuthEmail,
-  storeRefreshToken,
 } from "@/services/auth-session";
-import { simulateRequest } from "@/services/mock";
 import type {
   AuthActionResult,
   AuthRole,
@@ -33,13 +27,14 @@ const AUTH_ENDPOINTS = {
   register: "/auth/register",
   login: "/auth/login",
   logout: "/auth/logout",
-  me: "/auth/me",
+  me: "/user/me",
   refreshToken: "/auth/refresh-token",
   forgotPassword: "/auth/forgot-password",
   verifyCode: "/auth/verify-code",
   resetPassword: "/auth/reset-password",
-  updateMe: "/auth/update-me",
-  changePassword: "/auth/change-password",
+  updateMe: "/user/update-me",
+  changePassword: "/user/change-password",
+  sellerApplication: "/vendor/applications",
 } as const;
 
 const ROLE_REDIRECTS: Record<AuthRole, string> = {
@@ -176,20 +171,12 @@ function normalizeUser(payload: unknown, fallbackEmail?: string): AuthUser {
     lastName: lastName || "",
     email,
     role,
-    phone: getStringByKeys(records, ["phone", "phoneNumber", "mobile"]),
+    phone: getStringByKeys(records, ["phone", "phoneNumber", "telephone", "mobile"]),
     avatarUrl: getStringByKeys(records, ["avatarUrl", "avatar", "photoUrl"]),
   };
 }
 
-function tryNormalizeUser(payload: unknown, fallbackEmail?: string): AuthUser | null {
-  try {
-    return normalizeUser(payload, fallbackEmail);
-  } catch {
-    return null;
-  }
-}
-
-function extractTokens(payload: unknown): { accessToken: string; refreshToken?: string } {
+function extractAccessToken(payload: unknown): string | undefined {
   const records = collectCandidateRecords(payload);
   const accessToken = getStringByKeys(records, [
     "accessToken",
@@ -197,16 +184,7 @@ function extractTokens(payload: unknown): { accessToken: string; refreshToken?: 
     "token",
     "jwt",
   ]);
-  const refreshToken = getStringByKeys(records, [
-    "refreshToken",
-    "refresh_token",
-  ]);
-
-  if (!accessToken) {
-    throw new ApiError("Auth response did not include an access token.", 500, payload);
-  }
-
-  return { accessToken, refreshToken };
+  return accessToken;
 }
 
 function sanitizeInternalPath(path?: string | null): string | undefined {
@@ -244,14 +222,20 @@ function buildActionResult(
   };
 }
 
-function applyTokenUpdate(tokens: { accessToken: string; refreshToken?: string }): void {
-  storeAccessToken(tokens.accessToken);
+function buildRegisterPayload(input: RegisterInput) {
+  const normalizedPhone = input.phone.replace(/[\s()-]/g, "");
+  const telephone =
+    /^(9|7)\d{8}$/.test(normalizedPhone)
+      ? `0${normalizedPhone}`
+      : normalizedPhone;
 
-  if (tokens.refreshToken) {
-    storeRefreshToken(tokens.refreshToken);
-  } else {
-    removeStoredRefreshToken();
-  }
+  return {
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    email: input.email.trim().toLowerCase(),
+    password: input.password,
+    telephone,
+  };
 }
 
 export function getDemoVerificationEmail(): string {
@@ -270,17 +254,14 @@ export function getPostLoginRedirectPath(
 }
 
 export function getStoredAuthSession(): AuthSession | null {
-  const accessToken = getStoredAccessToken();
   const user = getStoredAuthUser();
 
-  if (!accessToken || !user) return null;
-
-  const refreshToken = getStoredRefreshToken() ?? undefined;
-  return { accessToken, refreshToken, user };
+  if (!user) return null;
+  return { user };
 }
 
 export function isAuthenticated(): boolean {
-  return Boolean(getStoredAccessToken());
+  return Boolean(getStoredAuthUser());
 }
 
 export async function login(input: LoginInput): Promise<AuthSession> {
@@ -292,26 +273,27 @@ export async function login(input: LoginInput): Promise<AuthSession> {
     body: JSON.stringify(input),
   });
 
-  const tokens = extractTokens(payload);
-  applyTokenUpdate(tokens);
+  const records = collectCandidateRecords(payload);
+  const action = getStringByKeys(records, ["action"]);
+  if (action === "CHANGE_PASSWORD_REQUIRED") {
+    throw new ApiError(
+      extractActionMessage(payload, "Please change your temporary password before continuing."),
+      403,
+      payload,
+    );
+  }
 
-  let user = tryNormalizeUser(payload, input.email);
-
+  let user: AuthUser;
   try {
     user = await getCurrentUser();
   } catch (error) {
-    if (!user) {
-      clearStoredAuthSession();
-      throw error;
-    }
-
-    storeAuthUser(user);
+    clearStoredAuthSession();
+    throw error;
   }
 
   const session: AuthSession = {
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
     user,
+    accessToken: extractAccessToken(payload),
   };
 
   storeAuthSession(session);
@@ -324,24 +306,31 @@ export async function register(input: RegisterInput): Promise<AuthActionResult> 
   const payload = await apiClient<unknown>(AUTH_ENDPOINTS.register, {
     method: "POST",
     authMode: "omit",
-    body: JSON.stringify(input),
+    body: JSON.stringify(buildRegisterPayload(input)),
   });
 
   return buildActionResult(payload, "Account created successfully.", "/auth/permissions");
 }
 
 export async function logout(): Promise<AuthActionResult> {
+  let backendLogoutCompleted = true;
+
   try {
     await apiClient<unknown>(AUTH_ENDPOINTS.logout, {
       method: "POST",
+      csrf: true,
     });
+  } catch {
+    backendLogoutCompleted = false;
   } finally {
     clearStoredAuthSession();
   }
 
   return {
     success: true,
-    message: "Signed out successfully.",
+    message: backendLogoutCompleted
+      ? "Signed out successfully."
+      : "Signed out on this device. Backend session could not be reached.",
     nextPath: "/auth/login",
   };
 }
@@ -359,24 +348,18 @@ export async function getCurrentUser(): Promise<AuthUser> {
 }
 
 export async function refreshAccessToken(): Promise<string> {
-  const currentRefreshToken = getStoredRefreshToken();
-  const refreshBody = currentRefreshToken
-    ? { refreshToken: currentRefreshToken }
-    : {};
-
   const payload = await apiClient<unknown>(AUTH_ENDPOINTS.refreshToken, {
     method: "POST",
     authMode: "omit",
-    body: JSON.stringify(refreshBody),
+    skipAuthRefresh: true,
   });
 
-  const nextTokens = extractTokens(payload);
-  if (!nextTokens.refreshToken && currentRefreshToken) {
-    nextTokens.refreshToken = currentRefreshToken;
+  const accessToken = extractAccessToken(payload);
+  if (!accessToken) {
+    throw new ApiError("Backend did not return a refreshed access token.", 500, payload);
   }
 
-  applyTokenUpdate(nextTokens);
-  return nextTokens.accessToken;
+  return accessToken;
 }
 
 export async function requestPasswordReset(
@@ -426,9 +409,16 @@ export async function resetPassword(
 }
 
 export async function updateMe(input: UpdateMeInput): Promise<AuthUser> {
+  const { phone, ...rest } = input;
+  const body = {
+    ...rest,
+    ...(phone !== undefined ? { telephone: phone } : {}),
+  };
+
   const payload = await apiClient<unknown>(AUTH_ENDPOINTS.updateMe, {
     method: "PATCH",
-    body: JSON.stringify(input),
+    csrf: true,
+    body: JSON.stringify(body),
   });
 
   const fallbackEmail = getStoredAuthUser()?.email;
@@ -442,9 +432,14 @@ export async function changePassword(
 ): Promise<AuthActionResult> {
   const payload = await apiClient<unknown>(AUTH_ENDPOINTS.changePassword, {
     method: "POST",
-    body: JSON.stringify(input),
+    csrf: true,
+    body: JSON.stringify({
+      ...input,
+      confirmPassword: input.confirmPassword ?? input.newPassword,
+    }),
   });
 
+  clearStoredAuthSession();
   return buildActionResult(payload, "Password changed successfully.");
 }
 
@@ -463,17 +458,18 @@ export async function savePermissionPreferences(
 export async function submitSellerApplication(
   input: SellerApplicationInput,
 ): Promise<SellerApplicationResult> {
-  void input;
-  return simulateRequest(
-    {
-      success: true as const,
-      applicationId: "seller-app-001",
-      nextPath: "/seller",
-    },
-    {
-      delay: 900,
-      errorRate: 0.04,
-      errorMessage: "Failed to submit seller application.",
-    },
-  );
+  const payload = await apiClient<unknown>(AUTH_ENDPOINTS.sellerApplication, {
+    method: "POST",
+    csrf: true,
+    body: JSON.stringify(input),
+  });
+  const records = collectCandidateRecords(payload);
+  const applicationId =
+    getStringByKeys(records, ["applicationId", "id", "_id"]) ?? input.email;
+
+  return {
+    success: true,
+    applicationId,
+    nextPath: "/seller",
+  };
 }

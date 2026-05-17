@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { submitSellerApplication } from "@/services/auth";
+import { toast } from "sonner";
 
 export default function SellOnZamoyoLanding() {
   const router = useRouter();
@@ -39,6 +40,8 @@ export default function SellOnZamoyoLanding() {
       setIsSubmitting(true);
       const result = await submitSellerApplication(form);
       router.push(result.nextPath);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to submit seller application.");
     } finally {
       setIsSubmitting(false);
     }

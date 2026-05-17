@@ -1,5 +1,6 @@
 export interface CartItem {
   id: string | number;
+  serverCartItemId?: string;
   slug: string;
   name: string;
   price: number;

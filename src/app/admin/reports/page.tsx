@@ -201,7 +201,7 @@ export default function AdminReportsPage() {
       URL.revokeObjectURL(url);
       toast.success("CSV export downloaded.");
     } else {
-      toast.success("PDF export job queued for backend renderer.");
+      toast.success("PDF export job queued.");
     }
 
     setExportJobs((current) => [job, ...current]);
@@ -223,7 +223,7 @@ export default function AdminReportsPage() {
       createdAt,
     };
     setScheduledReports((current) => [job, ...current]);
-    toast.success("Report schedule saved locally for backend cron integration.");
+    toast.success("Report schedule saved.");
   };
 
   if (!canViewReports) {

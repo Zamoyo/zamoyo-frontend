@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, Zap } from "lucide-react";
 import { ProductCard } from "@/components/productCard";
 import type { Product } from "@/types/product";
 
@@ -68,7 +68,7 @@ export function FlashSales({ products }: { products: Product[] }) {
         <div className="flex items-center gap-4">
           <h3 className="flex items-center gap-2 text-xl font-black tracking-tight text-zinc-900 md:text-2xl">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FF6B00] text-sm text-white md:h-8 md:w-8 md:text-base">
-              ⚡
+              <Zap className="h-4 w-4 fill-current md:h-5 md:w-5" />
             </span>
             Flash Sales
           </h3>

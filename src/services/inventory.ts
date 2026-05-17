@@ -153,128 +153,42 @@ export function normalizeInventoryProduct(raw: RawInventoryData): InventoryProdu
   };
 }
 
-const RAW_MOCK_DATA: RawInventoryData[] = [
-  {
-    id: "ZM-P-101",
-    slug: "macbook-air-m2-256gb-midnight",
-    sku: "MAC-AIR-M2-MID",
-    name: "MacBook Air M2 - 256GB Midnight",
-    category: { id: "cat-1", name: "Electronics" },
-    price: 18500,
-    stock: 12,
-    threshold: 5,
-    lastUpdated: "2026-04-18T10:00:00Z",
-    hasVariants: false,
-    variants: [],
-    rating: 4.9,
-    reviews: 128,
-    badge: "Hot",
-  },
-  {
-    id: "ZM-P-102",
-    slug: "samsung-45w-fast-charger-type-c",
-    sku: "SAM-45W-CHG",
-    name: "Samsung 45W Fast Charger Type-C",
-    category: { id: "cat-1", name: "Electronics" },
-    price: 450,
-    stock: 0,
-    threshold: 10,
-    lastUpdated: "2026-04-18T09:30:00Z",
-    hasVariants: false,
-    variants: [],
-    rating: 4.6,
-    reviews: 84,
-    badge: null,
-  },
-  {
-    id: "ZM-P-106",
-    slug: "nike-air-max-270-black",
-    sku: "NKE-AM270-BLK",
-    name: "Nike Air Max 270",
-    category: { id: "cat-2", name: "Fashion" },
-    price: 1850,
-    stock: 3,
-    threshold: 6,
-    lastUpdated: "2026-04-14T08:45:00Z",
-    hasVariants: true,
-    variants: [{ id: "v1", name: "Black - 42", sku: "NKE-AM270-BLK-42", stock: 3 }],
-    rating: 4.8,
-    reviews: 215,
-    badge: null,
-  },
-  {
-    id: "ZM-P-104",
-    slug: "jbl-flip-6-portable-speaker",
-    sku: "JBL-FLIP-6",
-    name: "JBL Flip 6 Portable Speaker",
-    category: { id: "cat-1", name: "Electronics" },
-    price: 2100,
-    stock: 45,
-    threshold: 5,
-    lastUpdated: "2026-04-15T11:10:00Z",
-    hasVariants: false,
-    variants: [],
-    rating: 4.7,
-    reviews: 96,
-    badge: "Trending",
-  },
-];
-
-const MOCK_NETWORK_DELAY_MS = 500;
-
 export const inventoryApi = {
   async fetchAll(): Promise<InventoryProduct[]> {
     const sellerProducts = await fetchSellerCatalogProducts();
-    const source =
-      sellerProducts.length > 0
-        ? sellerProducts.map<RawInventoryData>((product) => ({
-            id: product.id,
-            slug: product.slug,
-            sku: product.sku,
-            name: product.title,
-            category: { id: product.categorySlug, name: product.categoryName },
-            image: product.images.find((image) => image.isPrimary)?.url ?? product.images[0]?.url ?? null,
-            price: product.salePrice ?? product.price,
-            originalPrice: product.salePrice ? product.price : null,
-            stock: product.stock,
-            threshold: product.lowStockThreshold,
-            lastUpdated: product.updatedAt,
-            hasVariants: product.variants.length > 1,
-            variants: product.variants.map((variant) => ({
-              id: variant.id,
-              name: `${variant.label}: ${variant.value}`,
-              sku: variant.sku,
-              stock: variant.stock,
-            })),
-            rating: 4.7,
-            reviews: 42,
-            badge: product.status === "pending_review" ? "Pending Review" : null,
-          }))
-        : RAW_MOCK_DATA;
-
-    return new Promise((resolve) => {
-      window.setTimeout(() => {
-        resolve(source.map(normalizeInventoryProduct));
-      }, MOCK_NETWORK_DELAY_MS);
-    });
+    return sellerProducts.map<RawInventoryData>((product) => ({
+      id: product.id,
+      slug: product.slug,
+      sku: product.sku,
+      name: product.title,
+      category: { id: product.categorySlug, name: product.categoryName },
+      image: product.images.find((image) => image.isPrimary)?.url ?? product.images[0]?.url ?? null,
+      price: product.salePrice ?? product.price,
+      originalPrice: product.salePrice ? product.price : null,
+      stock: product.stock,
+      threshold: product.lowStockThreshold,
+      lastUpdated: product.updatedAt,
+      hasVariants: product.variants.length > 1,
+      variants: product.variants.map((variant) => ({
+        id: variant.id,
+        name: `${variant.label}: ${variant.value}`,
+        sku: variant.sku,
+        stock: variant.stock,
+      })),
+      rating: 0,
+      reviews: 0,
+      badge: product.status === "pending_review" ? "Pending Review" : null,
+    })).map(normalizeInventoryProduct);
   },
 
   async updateStock(id: string, newStock: number): Promise<{ id: string; stock: number }> {
-    return new Promise((resolve) => {
-      window.setTimeout(() => {
-        resolve({ id, stock: Math.max(0, newStock) });
-      }, MOCK_NETWORK_DELAY_MS);
-    });
+    return { id, stock: Math.max(0, newStock) };
   },
 
   async bulkUpdateStock(
     ids: string[],
     newStock: number,
   ): Promise<{ ids: string[]; stock: number }> {
-    return new Promise((resolve) => {
-      window.setTimeout(() => {
-        resolve({ ids, stock: Math.max(0, newStock) });
-      }, MOCK_NETWORK_DELAY_MS + 200);
-    });
+    return { ids, stock: Math.max(0, newStock) };
   },
 };

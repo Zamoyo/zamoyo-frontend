@@ -35,7 +35,7 @@ function isDeliveryComplete(delivery: CheckoutDelivery) {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { hasHydrated, items, itemCount, totalAmount, clearCart } = useCart();
+  const { hasHydrated, items, itemCount, totalAmount, clearCart, syncWithBackend } = useCart();
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [contact, setContact] = React.useState<CheckoutContact>({
@@ -69,7 +69,7 @@ export default function CheckoutPage() {
     setDelivery((current) => ({ ...current, [field]: event.target.value }));
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError(null);
 
@@ -80,24 +80,30 @@ export default function CheckoutPage() {
     }
 
     setSubmitting(true);
-    const order = createCheckoutOrder({
-      items,
-      contact: {
-        firstName: contact.firstName.trim(),
-        lastName: contact.lastName.trim(),
-        email: contact.email.trim(),
-        phone: contact.phone.trim(),
-      },
-      delivery: {
-        street: delivery.street.trim(),
-        area: delivery.area.trim(),
-        instructions: delivery.instructions?.trim(),
-      },
-      paymentMethod,
-    });
+    try {
+      await syncWithBackend();
+      const order = createCheckoutOrder({
+        items,
+        contact: {
+          firstName: contact.firstName.trim(),
+          lastName: contact.lastName.trim(),
+          email: contact.email.trim(),
+          phone: contact.phone.trim(),
+        },
+        delivery: {
+          street: delivery.street.trim(),
+          area: delivery.area.trim(),
+          instructions: delivery.instructions?.trim(),
+        },
+        paymentMethod,
+      });
 
-    clearCart();
-    router.push(`/success?orderId=${encodeURIComponent(order.id)}`);
+      clearCart();
+      router.push(`/success?orderId=${encodeURIComponent(order.id)}`);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Could not sync your cart before checkout.");
+      setSubmitting(false);
+    }
   };
 
   if (!hasHydrated) {

@@ -51,61 +51,52 @@ export interface StoreSettings {
   seo: SeoSettings;
 }
 
-// --- FRONTEND FIXTURE DATA & SERVICE ---
-const MOCK_SETTINGS: StoreSettings = {
+const EMPTY_SETTINGS: StoreSettings = {
   profile: {
-    name: "Zamoyo Official Store",
-    slug: "zamoyo-official",
+    name: "",
+    slug: "",
     logo: null,
     banner: null,
-    description: "Your premium destination for authentic electronics and accessories in Lusaka.",
-    category: "Electronics",
+    description: "",
+    category: "",
   },
   business: {
-    ownerName: "Danny Diara",
-    phone: "+260971111111",
-    supportEmail: "support@zamoyostore.com",
-    address: "Plot 123, Independence Ave",
-    city: "Lusaka",
+    ownerName: "",
+    phone: "",
+    supportEmail: "",
+    address: "",
+    city: "",
     country: "Zambia",
-    taxNumber: "TPIN-9928172",
+    taxNumber: "",
   },
   fulfillment: {
-    deliveryEnabled: true,
-    pickupEnabled: true,
-    defaultDeliveryFee: 150,
-    freeDeliveryThreshold: 5000,
-    processingTimeDays: 1,
+    deliveryEnabled: false,
+    pickupEnabled: false,
+    defaultDeliveryFee: 0,
+    freeDeliveryThreshold: 0,
+    processingTimeDays: 0,
   },
   operations: {
-    storefrontVisible: true,
+    storefrontVisible: false,
     vacationMode: false,
-    autoAcceptOrders: true,
-    inventoryTracking: true,
-    lowStockAlerts: true,
-    autoReplyMessage: "Thanks for reaching out! We typically reply within 2 hours.",
-    returnPolicy: "Items can be returned within 7 days in original packaging.",
+    autoAcceptOrders: false,
+    inventoryTracking: false,
+    lowStockAlerts: false,
+    autoReplyMessage: "",
+    returnPolicy: "",
   },
   seo: {
-    metaTitle: "Zamoyo Official Store | Best Electronics in Lusaka",
-    metaDescription: "Shop authentic Apple, Samsung, and JBL products with fast delivery in Zambia.",
-    keywords: "electronics, zambia, lusaka, laptops, smartphones",
+    metaTitle: "",
+    metaDescription: "",
+    keywords: "",
   }
 };
 
 export const settingsApi = {
   async fetchSettings(): Promise<StoreSettings> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(structuredClone(MOCK_SETTINGS));
-      }, 800);
-    });
+    return structuredClone(EMPTY_SETTINGS);
   },
   async updateSettings(payload: StoreSettings): Promise<StoreSettings> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(structuredClone(payload));
-      }, 1000);
-    });
+    return structuredClone(payload);
   }
 };

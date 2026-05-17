@@ -41,6 +41,14 @@ export function storeAccessToken(token: string): void {
   storage.setItem(LEGACY_SELLER_TOKEN_KEY, token);
 }
 
+export function removeStoredAccessToken(): void {
+  const storage = getStorage();
+  if (!storage) return;
+
+  storage.removeItem(ACCESS_TOKEN_KEY);
+  storage.removeItem(LEGACY_SELLER_TOKEN_KEY);
+}
+
 export function storeRefreshToken(token: string): void {
   const storage = getStorage();
   if (!storage) return;
@@ -86,18 +94,13 @@ export function getStoredAuthUser(): AuthUser | null {
 }
 
 export function getAuthSessionSnapshot(): string {
-  const accessToken = getStoredAccessToken();
   const user = readString(AUTH_USER_KEY);
-  return accessToken && user ? `${accessToken}:${user}` : "";
+  return user ?? "";
 }
 
 export function storeAuthSession(session: AuthSession): void {
-  storeAccessToken(session.accessToken);
-  if (session.refreshToken) {
-    storeRefreshToken(session.refreshToken);
-  } else {
-    removeStoredRefreshToken();
-  }
+  removeStoredAccessToken();
+  removeStoredRefreshToken();
   storeAuthUser(session.user);
   storeLastAuthEmail(session.user.email);
   notifyAuthSessionChanged();
