@@ -8,7 +8,7 @@ import {
 } from "@/services/admin/session-cookie";
 
 const ADMIN_LOGIN_ENDPOINT =
-  process.env.ADMIN_AUTH_LOGIN_ENDPOINT ?? "/admin/auth/login";
+  process.env.ADMIN_AUTH_LOGIN_ENDPOINT ?? "/auth/login";
 const BACKEND_BASE_URL =
   process.env.ADMIN_API_URL ??
   process.env.NEXT_PUBLIC_API_URL ??

@@ -313,17 +313,24 @@ export async function register(input: RegisterInput): Promise<AuthActionResult> 
 }
 
 export async function logout(): Promise<AuthActionResult> {
+  let backendLogoutCompleted = true;
+
   try {
     await apiClient<unknown>(AUTH_ENDPOINTS.logout, {
       method: "POST",
+      csrf: true,
     });
+  } catch {
+    backendLogoutCompleted = false;
   } finally {
     clearStoredAuthSession();
   }
 
   return {
     success: true,
-    message: "Signed out successfully.",
+    message: backendLogoutCompleted
+      ? "Signed out successfully."
+      : "Signed out on this device. Backend session could not be reached.",
     nextPath: "/auth/login",
   };
 }
